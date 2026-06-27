@@ -1,0 +1,295 @@
+/**
+ * makeFakeSession — scripted FAKE FormSession for adapter + store tests.
+ *
+ * ADR-4: Provides a minimal stub implementing the shape the adapter consumes
+ * (navigator + evaluator + tree) without any real XForm parsing.
+ *
+ * The script drives a linear sequence of events. stepping forward/backward
+ * advances/retreats the internal cursor index.
+ */
+
+import type { FormSession } from '@nuup/ts-rosa';
+import type { NodeState, SelectChoice, AnswerResult, DataType } from '@nuup/ts-rosa';
+import type { ControlType } from '@nuup/ts-rosa';
+import type { TreeReference } from '@nuup/ts-rosa';
+import type { FormIndex, AtFormIndex, FormIndexLevel } from '@nuup/ts-rosa';
+import { atIndex, beginningOfForm, endOfForm } from '@nuup/ts-rosa';
+import type { FormEntryEvent } from '@nuup/ts-rosa';
+import type { InstanceTree, InstanceNode } from '@nuup/ts-rosa';
+
+// ---------------------------------------------------------------------------
+// Script event types — plain data, not ts-rosa FormEntryEvent
+// ---------------------------------------------------------------------------
+
+export type ScriptEventBof = { kind: 'bof' };
+export type ScriptEventEof = { kind: 'eof' };
+export type ScriptEventQuestion = {
+  kind: 'question';
+  ref: string; // XPath string for the ref
+  dataType: DataType;
+  controlType: ControlType;
+  label: string | null;
+  hint: string | null;
+  appearance: string | null;
+};
+export type ScriptEventGroup = {
+  kind: 'group';
+  ref: string;
+  label: string | null;
+  hint: string | null;
+};
+export type ScriptEventRepeat = {
+  kind: 'repeat';
+  ref: string;
+  label: string | null;
+  multiplicity: number;
+};
+export type ScriptEventPromptNewRepeat = {
+  kind: 'prompt-new-repeat';
+  ref: string;
+  label: string | null;
+};
+
+export type ScriptEvent =
+  | ScriptEventBof
+  | ScriptEventEof
+  | ScriptEventQuestion
+  | ScriptEventGroup
+  | ScriptEventRepeat
+  | ScriptEventPromptNewRepeat;
+
+export interface FakeSessionScript {
+  events: readonly ScriptEvent[];
+  nodeStates: Record<string, NodeState>;
+  relevance: Record<string, boolean>;
+  choices: Record<string, readonly SelectChoice[]>;
+  /** AnswerResult to return per ref string */
+  answerResults: Record<string, AnswerResult>;
+  /** Values to return via resolveReference per ref string */
+  values: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// Minimal TreeReference builder from XPath string
+// ---------------------------------------------------------------------------
+
+function parseXPath(xpath: string): TreeReference {
+  // Parse a simple absolute XPath like /data/name or /data/items[1]
+  const levels = xpath
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      const match = segment.match(/^([^\[]+)(?:\[(\d+)\])?$/);
+      const name = match?.[1] ?? segment;
+      const multStr = match?.[2];
+      const mult = multStr !== undefined ? parseInt(multStr, 10) - 1 : 0;
+      return { name, mult };
+    });
+
+  // Build a TreeReference that matches ts-rosa's structure.
+  // We use a minimal frozen object that satisfies TreeReference shape.
+  return Object.freeze({
+    refLevel: 0,
+    contextType: 0,
+    instanceName: null,
+    levels: Object.freeze(
+      levels.map((l) =>
+        Object.freeze({
+          name: l.name,
+          multiplicity: l.mult,
+          isAttribute: false,
+        }),
+      ),
+    ),
+  }) as unknown as TreeReference;
+}
+
+// ---------------------------------------------------------------------------
+// Fake InstanceNode + InstanceTree built from script values
+// ---------------------------------------------------------------------------
+
+function makeLeafNode(name: string, value: unknown): InstanceNode {
+  const node: InstanceNode = {
+    name,
+    multiplicity: 0,
+    value: value as null,
+    children: [],
+    attributes: new Map(),
+    dataType: 'string',
+    parent: null,
+  };
+  return node;
+}
+
+function buildFakeTree(values: Record<string, unknown>): InstanceTree {
+  const root: InstanceNode = {
+    name: 'data',
+    multiplicity: 0,
+    value: null,
+    children: [],
+    attributes: new Map(),
+    dataType: 'string',
+    parent: null,
+  };
+
+  for (const [xpath, val] of Object.entries(values)) {
+    const segments = xpath.split('/').filter(Boolean);
+    // For simplicity, build single-level children under root
+    const leafName = segments[segments.length - 1] ?? xpath;
+    const child = makeLeafNode(leafName, val);
+    child.parent = root;
+    root.children.push(child);
+  }
+
+  return { root, name: null };
+}
+
+// ---------------------------------------------------------------------------
+// Build fake FormIndex objects for each script event
+// ---------------------------------------------------------------------------
+
+function makeFormIndex(event: ScriptEvent, _position: number): FormIndex {
+  if (event.kind === 'bof') return beginningOfForm;
+  if (event.kind === 'eof') return endOfForm;
+
+  const ref = parseXPath(event.ref);
+  const levels = ref.levels as ReadonlyArray<{ name: string; multiplicity: number }>;
+  // For repeat events, use the script event's multiplicity on the last path level
+  const scriptMultiplicity = event.kind === 'repeat' ? event.multiplicity : undefined;
+  const path: FormIndexLevel[] = levels.map((lvl, i) => {
+    const mult =
+      scriptMultiplicity !== undefined && i === levels.length - 1
+        ? scriptMultiplicity
+        : lvl.multiplicity;
+    return { elementIndex: mult, multiplicity: mult };
+  });
+
+  return atIndex(path, ref) as AtFormIndex;
+}
+
+// ---------------------------------------------------------------------------
+// makeFakeSession factory
+// ---------------------------------------------------------------------------
+
+export function makeFakeSession(script: FakeSessionScript): FormSession {
+  const { events, nodeStates, relevance, choices, answerResults, values } = script;
+
+  // Pre-build FormIndex for each position
+  const formIndices: FormIndex[] = events.map(makeFormIndex);
+
+  let cursor = 0;
+
+  // Fake navigator
+  const navigator = {
+    getEvent(idx?: FormIndex): FormEntryEvent {
+      const pos = idx !== undefined ? formIndices.indexOf(idx) : cursor;
+      const ev = events[pos >= 0 ? pos : cursor];
+      if (ev === undefined) return { kind: 'end-of-form', code: 1, index: endOfForm };
+
+      if (ev.kind === 'bof') return { kind: 'beginning-of-form', code: 0, index: beginningOfForm };
+      if (ev.kind === 'eof') return { kind: 'end-of-form', code: 1, index: endOfForm };
+
+      const fi = formIndices[pos >= 0 ? pos : cursor] as AtFormIndex;
+
+      if (ev.kind === 'question') return { kind: 'question', code: 4, index: fi };
+      if (ev.kind === 'group') return { kind: 'group', code: 8, index: fi };
+      if (ev.kind === 'repeat') return { kind: 'repeat', code: 16, index: fi };
+      if (ev.kind === 'prompt-new-repeat') return { kind: 'prompt-new-repeat', code: 2, index: fi };
+
+      return { kind: 'end-of-form', code: 1, index: endOfForm };
+    },
+
+    stepToNextEvent(): FormEntryEvent {
+      if (cursor < events.length - 1) cursor++;
+      return navigator.getEvent();
+    },
+
+    stepToPreviousEvent(): FormEntryEvent {
+      if (cursor > 0) cursor--;
+      return navigator.getEvent();
+    },
+
+    jumpToIndex(idx: FormIndex): FormEntryEvent {
+      const pos = formIndices.indexOf(idx);
+      if (pos >= 0) cursor = pos;
+      return navigator.getEvent();
+    },
+
+    getQuestionAtIndex(
+      idx?: FormIndex,
+    ): {
+      getLabelInnerText(): string | null;
+      getControlType(): string;
+      getDataType(): DataType | null;
+    } | null {
+      const pos = idx !== undefined ? formIndices.indexOf(idx) : cursor;
+      const ev = events[pos >= 0 ? pos : cursor];
+      if (ev === undefined) return null;
+      if (ev.kind === 'bof' || ev.kind === 'eof') return null;
+      // For non-question events, return label from the script event (test-only)
+      const label = 'label' in ev ? ev.label : null;
+      if (ev.kind === 'question') {
+        const q = ev;
+        return {
+          getLabelInnerText: () => q.label,
+          getControlType: () => q.controlType,
+          getDataType: () => q.dataType,
+        };
+      }
+      return {
+        getLabelInnerText: () => label as string | null,
+        getControlType: () => 'input',
+        getDataType: () => null,
+      };
+    },
+  };
+
+  // Fake evaluator
+  const evaluator = {
+    getNodeState(ref: TreeReference): NodeState | undefined {
+      const key = refKey(ref);
+      return nodeStates[key];
+    },
+
+    isEffectivelyRelevant(ref: TreeReference): boolean {
+      const key = refKey(ref);
+      return relevance[key] ?? true;
+    },
+
+    getChoices(ref: TreeReference): readonly SelectChoice[] {
+      const key = refKey(ref);
+      return choices[key] ?? [];
+    },
+
+    answerQuestion(ref: TreeReference, _value: unknown): AnswerResult {
+      const key = refKey(ref);
+      // Return scripted result, default to AnswerResult.OK (value 0)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return answerResults[key] ?? ('OK' as AnswerResult);
+    },
+  };
+
+  // Build a fake tree that resolveReference can walk
+  const tree = buildFakeTree(values);
+
+  // Override resolveReference to return values directly
+  // We patch the tree so the real resolveReference can find nodes.
+  // The root has children named by the leaf segment of each xpath value.
+
+  return {
+    definition: null as never,
+    tree: tree as InstanceTree,
+    evaluator: evaluator as never,
+    navigator: navigator as never,
+    serializeToXml: () => '',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Helper: derive a string key from a TreeReference
+// ---------------------------------------------------------------------------
+
+function refKey(ref: TreeReference): string {
+  if (!ref.levels || ref.levels.length === 0) return '/';
+  return '/' + ref.levels.map((l: { name: string }) => l.name).join('/');
+}
