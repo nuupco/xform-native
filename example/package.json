@@ -1,0 +1,25 @@
+{
+  "name": "@nuup/xform-native-example",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
+    "clean": "react-native clean"
+  },
+  "dependencies": {
+    "@nuup/xform-native": "file:../",
+    "react": "19.2.7",
+    "react-native": "0.79.7"
+  },
+  "devDependencies": {
+    "@react-native/babel-preset": "0.79.7",
+    "@react-native/eslint-config": "0.79.7",
+    "@react-native/metro-config": "0.79.7",
+    "@react-native/typescript-config": "0.79.7",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.9.2"
+  }
+}
