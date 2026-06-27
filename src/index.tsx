@@ -16,3 +16,33 @@ export { createAdapter } from './adapter/createAdapter';
 export { FormSessionStore } from './store/FormSessionStore';
 export type { FormSessionSnapshot } from './store/FormSessionStore';
 export { useFormSession } from './store/useFormSession';
+
+// PR-3a: StyleSheet primitives
+export { AppModal } from './widgets/primitives/Modal';
+export type { AppModalProps } from './widgets/primitives/Modal';
+export { BottomSheet } from './widgets/primitives/BottomSheet';
+export type { BottomSheetProps } from './widgets/primitives/BottomSheet';
+
+// PR-3a: appearance taxonomy + dispatch
+export { resolveVariant, APPEARANCE_TABLE } from './widgets/appearance';
+export type { VariantId } from './widgets/appearance';
+export { pickWidget } from './widgets/pickWidget';
+export type { PickWidgetResult } from './widgets/pickWidget';
+
+// PR-3a: widgets
+export { StringWidget } from './widgets/StringWidget';
+export type { StringWidgetProps } from './widgets/StringWidget';
+export { IntWidget } from './widgets/IntWidget';
+export type { IntWidgetProps } from './widgets/IntWidget';
+export { DecimalWidget } from './widgets/DecimalWidget';
+export type { DecimalWidgetProps } from './widgets/DecimalWidget';
+export { LongWidget } from './widgets/LongWidget';
+export type { LongWidgetProps } from './widgets/LongWidget';
+export { BooleanWidget } from './widgets/BooleanWidget';
+export type { BooleanWidgetProps } from './widgets/BooleanWidget';
+export { NoteWidget } from './widgets/NoteWidget';
+export type { NoteWidgetProps } from './widgets/NoteWidget';
+export { UncastWidget } from './widgets/UncastWidget';
+export type { UncastWidgetProps } from './widgets/UncastWidget';
+export { UnsupportedWidget } from './widgets/UnsupportedWidget';
+export type { UnsupportedWidgetProps } from './widgets/UnsupportedWidget';
