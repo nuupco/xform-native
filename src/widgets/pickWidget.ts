@@ -1,9 +1,8 @@
 /**
  * pickWidget — dispatch (dataType, controlType, appearance) → { Widget, variant } (ADR-5).
  *
- * PR-3a covers: string, int, decimal, long, boolean, NoteWidget, UncastWidget.
- * PR-3b deferred types (selectOne, selectMulti, date, time, dateTime, range)
- * route to UnsupportedWidget — clearly marked TODO, does NOT crash.
+ * PR-3a: string, int, decimal, long, boolean, NoteWidget, UncastWidget.
+ * PR-3b: selectOne, selectMulti, date, time, dateTime, RangeWidget (controlType=range).
  */
 
 import type { DataType } from '@nuup/ts-rosa';
@@ -17,7 +16,12 @@ import { LongWidget } from './LongWidget';
 import { BooleanWidget } from './BooleanWidget';
 import { NoteWidget } from './NoteWidget';
 import { UncastWidget } from './UncastWidget';
-import { UnsupportedWidget } from './UnsupportedWidget';
+import { SelectOneWidget } from './SelectOneWidget';
+import { SelectMultiWidget } from './SelectMultiWidget';
+import { DateWidget } from './DateWidget';
+import { TimeWidget } from './TimeWidget';
+import { DateTimeWidget } from './DateTimeWidget';
+import { RangeWidget } from './RangeWidget';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WidgetComponent = React.ComponentType<any>;
@@ -44,10 +48,9 @@ export function pickWidget(
   controlType: ControlType,
   appearance: string | null | undefined,
 ): PickWidgetResult {
-  // 1. range controlType → TODO PR-3b
+  // 1. range controlType → RangeWidget (PR-3b)
   if (controlType === 'range') {
-    // TODO PR-3b: wire RangeWidget here
-    return { Widget: UnsupportedWidget, variant: 'default' };
+    return { Widget: RangeWidget, variant: resolveVariant(dataType, controlType, appearance) };
   }
 
   // 3. Note detection — must run BEFORE the dataType switch
@@ -80,14 +83,20 @@ export function pickWidget(
     case 'unsupported':
       return { Widget: UncastWidget, variant: 'default' };
 
-    // PR-3b deferred — TODO: wire dedicated widgets in PR-3b
-    case 'date':
-    case 'time':
-    case 'dateTime':
     case 'selectOne':
+      return { Widget: SelectOneWidget, variant: resolveVariant(dataType, controlType, appearance) };
+
     case 'selectMulti':
-      // TODO PR-3b: replace with DateWidget / TimeWidget / DateTimeWidget / SelectOneWidget / SelectMultiWidget
-      return { Widget: UnsupportedWidget, variant: 'default' };
+      return { Widget: SelectMultiWidget, variant: resolveVariant(dataType, controlType, appearance) };
+
+    case 'date':
+      return { Widget: DateWidget, variant: resolveVariant(dataType, controlType, appearance) };
+
+    case 'time':
+      return { Widget: TimeWidget, variant: resolveVariant(dataType, controlType, appearance) };
+
+    case 'dateTime':
+      return { Widget: DateTimeWidget, variant: resolveVariant(dataType, controlType, appearance) };
 
     default:
       // Unknown dataType — UncastWidget per ADR-5 rule 4

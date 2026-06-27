@@ -29,7 +29,7 @@ export type { VariantId } from './widgets/appearance';
 export { pickWidget } from './widgets/pickWidget';
 export type { PickWidgetResult } from './widgets/pickWidget';
 
-// PR-3a: widgets
+// PR-3a + PR-3b: widgets
 export { StringWidget } from './widgets/StringWidget';
 export type { StringWidgetProps } from './widgets/StringWidget';
 export { IntWidget } from './widgets/IntWidget';
@@ -46,3 +46,17 @@ export { UncastWidget } from './widgets/UncastWidget';
 export type { UncastWidgetProps } from './widgets/UncastWidget';
 export { UnsupportedWidget } from './widgets/UnsupportedWidget';
 export type { UnsupportedWidgetProps } from './widgets/UnsupportedWidget';
+
+// PR-3b: widgets
+export { SelectOneWidget } from './widgets/SelectOneWidget';
+export type { SelectOneWidgetProps } from './widgets/SelectOneWidget';
+export { SelectMultiWidget } from './widgets/SelectMultiWidget';
+export type { SelectMultiWidgetProps } from './widgets/SelectMultiWidget';
+export { DateWidget } from './widgets/DateWidget';
+export type { DateWidgetProps } from './widgets/DateWidget';
+export { TimeWidget } from './widgets/TimeWidget';
+export type { TimeWidgetProps } from './widgets/TimeWidget';
+export { DateTimeWidget } from './widgets/DateTimeWidget';
+export type { DateTimeWidgetProps } from './widgets/DateTimeWidget';
+export { RangeWidget } from './widgets/RangeWidget';
+export type { RangeWidgetProps } from './widgets/RangeWidget';

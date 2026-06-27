@@ -14,8 +14,6 @@ import { LongWidget } from '../widgets/LongWidget';
 import { BooleanWidget } from '../widgets/BooleanWidget';
 import { NoteWidget } from '../widgets/NoteWidget';
 import { UncastWidget } from '../widgets/UncastWidget';
-import { UnsupportedWidget } from '../widgets/UnsupportedWidget';
-
 describe('pickWidget — PR-3a types', () => {
   it('dispatches string → StringWidget default', () => {
     const { Widget, variant } = pickWidget('string', 'input', null);
@@ -85,19 +83,4 @@ describe('pickWidget — uncast/unsupported/unknown → UncastWidget', () => {
   });
 });
 
-describe('pickWidget — PR-3b deferred types route to UnsupportedWidget (no crash)', () => {
-  it('date → UnsupportedWidget (PR-3b TODO)', () => {
-    const { Widget } = pickWidget('date', 'input', null);
-    expect(Widget).toBe(UnsupportedWidget);
-  });
-
-  it('selectOne → UnsupportedWidget (PR-3b TODO)', () => {
-    const { Widget } = pickWidget('selectOne', 'select1', null);
-    expect(Widget).toBe(UnsupportedWidget);
-  });
-
-  it('range controlType → UnsupportedWidget (PR-3b TODO)', () => {
-    const { Widget } = pickWidget('int', 'range', null);
-    expect(Widget).toBe(UnsupportedWidget);
-  });
-});
+// PR-3b dispatch — now tested in pickWidget-pr3b.test.ts
