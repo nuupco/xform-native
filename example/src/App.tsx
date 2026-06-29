@@ -1,57 +1,53 @@
-/**
- * XFormNative Example App
- *
- * Demonstrates basic library import and token access.
- * Widgets (PR-3) and full form rendering (PR-4) will be added here
- * once those PRs land.
- *
- * Local dev setup:
- *   cd example
- *   npm install
- *   npm run ios        # requires Xcode + CocoaPods: cd ios && pod install
- *   npm run android    # requires Android SDK + an emulator running
- *
- * Metro resolves @nuup/xform-native to ../src via metro.config.js watchFolders,
- * so library changes are reflected immediately without a rebuild.
- */
 import React from 'react';
-import {SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View} from 'react-native';
-import {tokens, isWidgetAvailable} from '@nuup/xform-native';
+import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
+import { Form, FormSessionStore } from '@nuup/xform-native';
+import { parseDocument, createFormSession } from '@nuup/ts-rosa';
+import { DOMParser } from '@xmldom/xmldom';
+
+const DEMO_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Demo Form</h:title>
+    <model>
+      <instance>
+        <data id="demo">
+          <name/>
+          <age/>
+          <color/>
+          <birthdate/>
+          <photo/>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" required="true()"/>
+      <bind nodeset="/data/age" type="int"/>
+      <bind nodeset="/data/color" type="string"/>
+      <bind nodeset="/data/birthdate" type="date"/>
+      <bind nodeset="/data/photo" type="binary"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/name"><label>Name</label></input>
+    <input ref="/data/age"><label>Age</label></input>
+    <select1 ref="/data/color"><label>Favorite color</label><item><label>Red</label><value>red</value></item><item><label>Green</label><value>green</value></item><item><label>Blue</label><value>blue</value></item></select1>
+    <input ref="/data/birthdate"><label>Birth date</label></input>
+    <upload ref="/data/photo" mediatype="image/*"><label>Photo</label></upload>
+  </h:body>
+</h:html>`;
+
+function parseXml(xml: string) {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  return parseDocument(doc as unknown as Document);
+}
+
+const def = parseXml(DEMO_XML);
+const session = createFormSession(def);
+const store = new FormSessionStore(session);
 
 export default function App(): React.JSX.Element {
-  const available = isWidgetAvailable('string');
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentInsetAdjustmentBehavior="automatic">
-        <View style={styles.header}>
-          <Text style={styles.title}>@nuup/xform-native</Text>
-          <Text style={styles.subtitle}>Example App</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Token Sample</Text>
-                <View style={[styles.colorSwatch, {backgroundColor: tokens.color.primary}]} />
-          <Text style={styles.body}>
-            Primary spacing: {tokens.spacing.md}
-          </Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Widget Availability</Text>
-          <Text style={styles.body}>
-            isWidgetAvailable("string"): {String(available)}
-          </Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Next steps (PR-3)</Text>
-          <Text style={styles.body}>
-            StyleSheet primitives, NoteWidget, UncastWidget will be rendered here.
-          </Text>
-        </View>
-      </ScrollView>
+      <Form store={store} />
     </SafeAreaView>
   );
 }
@@ -60,45 +56,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAFAFA',
-  },
-  header: {
-    padding: 24,
-    backgroundColor: '#0D47A1',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#BBDEFB',
-    marginTop: 4,
-  },
-  section: {
-    margin: 16,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#1A237E',
-  },
-  body: {
-    fontSize: 14,
-    color: '#424242',
-  },
-  colorSwatch: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
-    marginBottom: 8,
   },
 });

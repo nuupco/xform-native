@@ -1,0 +1,27 @@
+{
+  "widgets": {
+    "StringWidget": { "dataType": "string", "optionalDeps": [], "file": "src/widgets/StringWidget.tsx" },
+    "IntWidget": { "dataType": "int", "optionalDeps": [], "file": "src/widgets/IntWidget.tsx" },
+    "DecimalWidget": { "dataType": "decimal", "optionalDeps": [], "file": "src/widgets/DecimalWidget.tsx" },
+    "LongWidget": { "dataType": "long", "optionalDeps": [], "file": "src/widgets/LongWidget.tsx" },
+    "BooleanWidget": { "dataType": "boolean", "optionalDeps": [], "file": "src/widgets/BooleanWidget.tsx" },
+    "DateWidget": { "dataType": "date", "optionalDeps": [], "file": "src/widgets/DateWidget.tsx" },
+    "TimeWidget": { "dataType": "time", "optionalDeps": [], "file": "src/widgets/TimeWidget.tsx" },
+    "DateTimeWidget": { "dataType": "dateTime", "optionalDeps": [], "file": "src/widgets/DateTimeWidget.tsx" },
+    "SelectOneWidget": { "dataType": "selectOne", "optionalDeps": [], "file": "src/widgets/SelectOneWidget.tsx" },
+    "SelectMultiWidget": { "dataType": "selectMulti", "optionalDeps": [], "file": "src/widgets/SelectMultiWidget.tsx" },
+    "NoteWidget": { "dataType": "string", "optionalDeps": [], "file": "src/widgets/NoteWidget.tsx" },
+    "RangeWidget": { "dataType": "int", "optionalDeps": [], "file": "src/widgets/RangeWidget.tsx" },
+    "UncastWidget": { "dataType": "uncast", "optionalDeps": [], "file": "src/widgets/UncastWidget.tsx" },
+    "UnsupportedWidget": { "dataType": "unsupported", "optionalDeps": [], "file": "src/widgets/UnsupportedWidget.tsx" },
+    "ImageWidget": { "dataType": "binary", "optionalDeps": ["expo-image-picker"], "file": "src/widgets/ImageWidget.tsx" },
+    "SignatureWidget": { "dataType": "binary", "optionalDeps": ["react-native-svg"], "file": "src/widgets/SignatureWidget.tsx" },
+    "AudioWidget": { "dataType": "binary", "optionalDeps": ["expo-av"], "file": "src/widgets/AudioWidget.tsx" },
+    "FileWidget": { "dataType": "binary", "optionalDeps": ["expo-document-picker"], "file": "src/widgets/FileWidget.tsx" },
+    "VideoWidget": { "dataType": "binary", "optionalDeps": ["expo-camera", "expo-av"], "file": "src/widgets/VideoWidget.tsx" },
+    "GeoPointWidget": { "dataType": "geopoint", "optionalDeps": ["@nuup/xform-native-geo"], "file": "src/widgets/GeoPointWidget.tsx" },
+    "GeoShapeWidget": { "dataType": "geoshape", "optionalDeps": ["@nuup/xform-native-geo"], "file": "src/widgets/GeoShapeWidget.tsx" },
+    "GeoTraceWidget": { "dataType": "geotrace", "optionalDeps": ["@nuup/xform-native-geo"], "file": "src/widgets/GeoTraceWidget.tsx" },
+    "BarcodeWidget": { "dataType": "binary", "optionalDeps": ["expo-camera"], "file": "src/widgets/BarcodeWidget.tsx" }
+  }
+}

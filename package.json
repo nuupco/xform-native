@@ -1,9 +1,12 @@
 {
   "name": "@nuup/xform-native",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "React Native XForm renderer built on @nuup/ts-rosa",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
+  "bin": {
+    "xform-native": "./bin/cli.js"
+  },
   "exports": {
     ".": {
       "nuup-xform-native-source": "./src/index.tsx",

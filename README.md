@@ -1,0 +1,172 @@
+# @nuup/xform-native
+
+[![npm version](https://img.shields.io/npm/v/@nuup/xform-native)](https://www.npmjs.com/package/@nuup/xform-native)
+[![tests](https://img.shields.io/badge/tests-266%2B-brightgreen)]()
+[![license](https://img.shields.io/npm/l/@nuup/xform-native)](https://github.com/nuupco/xform-native/blob/main/LICENSE)
+
+React Native XForm renderer built on [`@nuup/ts-rosa`](https://github.com/nuupco/ts-rosa). Turn XForm/XML definitions into interactive mobile forms with 23 built-in widgets, optional peer-dependency gating, and a reactive screen-per-question navigator.
+
+## Installation
+
+```bash
+npm install @nuup/xform-native @nuup/ts-rosa
+```
+
+> `@nuup/ts-rosa` is the XForm engine (parser + session). You need it to create a `FormSession` from XML.
+
+## Quick Start
+
+```tsx
+import { Form, FormSessionStore } from '@nuup/xform-native';
+import { parseDocument, createFormSession } from '@nuup/ts-rosa';
+import { DOMParser } from '@xmldom/xmldom';
+
+const xml = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml">
+  <h:head><model><instance><data><name/></data></instance></model></h:head>
+  <h:body><input ref="/data/name"><label>Name</label></input></h:body>
+</h:html>`;
+
+const doc = new DOMParser().parseFromString(xml, 'text/xml');
+const def = parseDocument(doc as unknown as Document);
+const session = createFormSession(def);
+const store = new FormSessionStore(session);
+
+export default function App() {
+  return <Form store={store} />;
+}
+```
+
+## Widget Catalog
+
+| Widget | DataType | Optional Deps | Description |
+|--------|----------|---------------|-------------|
+| `StringWidget` | `string` | — | Single-line text input |
+| `IntWidget` | `int` | — | Integer numeric input |
+| `DecimalWidget` | `decimal` | — | Decimal numeric input |
+| `LongWidget` | `long` | — | Long text / multiline input |
+| `BooleanWidget` | `boolean` | — | Yes/no toggle or checkbox |
+| `DateWidget` | `date` | — | Date picker |
+| `TimeWidget` | `time` | — | Time picker |
+| `DateTimeWidget` | `dateTime` | — | Date + time picker |
+| `SelectOneWidget` | `selectOne` | — | Single-choice select |
+| `SelectMultiWidget` | `selectMulti` | — | Multi-choice select |
+| `NoteWidget` | `string` | — | Read-only informational text |
+| `RangeWidget` | `int` / `decimal` | — | Slider for numeric ranges |
+| `UncastWidget` | `uncast` | — | Fallback for uncast values |
+| `UnsupportedWidget` | `unsupported` | — | Placeholder for unsupported types |
+| `ImageWidget` | `binary` | `expo-image-picker` | Photo capture / library pick |
+| `SignatureWidget` | `binary` | `react-native-svg` | Signature pad capture |
+| `AudioWidget` | `binary` | `expo-av` | Audio recording / playback |
+| `FileWidget` | `binary` | `expo-document-picker` | Generic file picker |
+| `VideoWidget` | `binary` | `expo-camera`, `expo-av` | Video capture / playback |
+| `GeoPointWidget` | `geopoint` | `@nuup/xform-native-geo` | Map-based point capture |
+| `GeoShapeWidget` | `geoshape` | `@nuup/xform-native-geo` | Polygon drawing on map |
+| `GeoTraceWidget` | `geotrace` | `@nuup/xform-native-geo` | Polyline drawing on map |
+| `BarcodeWidget` | `binary` | `expo-camera` | Camera barcode scanner |
+
+## Optional Peer Dependencies
+
+Media, geo, and barcode widgets are gated behind optional peer dependencies. If a dependency is missing at runtime, the widget gracefully falls back to `UnsupportedWidget`.
+
+| Package | Widgets | Install |
+|---------|---------|---------|
+| `expo-image-picker` | ImageWidget | `npm install expo-image-picker` |
+| `expo-av` | AudioWidget, VideoWidget | `npm install expo-av` |
+| `expo-camera` | VideoWidget, BarcodeWidget | `npm install expo-camera` |
+| `react-native-svg` | SignatureWidget | `npm install react-native-svg` |
+| `expo-document-picker` | FileWidget | `npm install expo-document-picker` |
+| `@maplibre/maplibre-react-native` | GeoPointWidget, GeoShapeWidget, GeoTraceWidget | `npm install @maplibre/maplibre-react-native` |
+
+## CLI
+
+A minimal CLI is included for widget discovery:
+
+```bash
+npx @nuup/xform-native list        # list all widgets
+npx @nuup/xform-native add StringWidget   # show copy instructions
+```
+
+## API Reference
+
+### `Form`
+
+Screen-per-question navigator. Subscribes to a `FormSessionStore` and renders the active question with validation surfaces.
+
+```tsx
+import { Form } from '@nuup/xform-native';
+<Form store={store} />
+```
+
+### `FormSessionStore`
+
+Reactive wrapper around a `FormAdapter`. Implements the `useSyncExternalStore` contract.
+
+```tsx
+import { FormSessionStore } from '@nuup/xform-native';
+const store = new FormSessionStore(session);
+store.stepForward();
+store.stepBackward();
+store.answerQuestion(ref, value);
+```
+
+### `useFormSession`
+
+Hook that re-renders when the store version bumps.
+
+```tsx
+import { useFormSession } from '@nuup/xform-native';
+const snapshot = useFormSession(store); // { version: number }
+```
+
+### `createAdapter`
+
+Builds a `FormAdapter` from a `FormSession`.
+
+```tsx
+import { createAdapter } from '@nuup/xform-native';
+const adapter = createAdapter(session);
+```
+
+### `isWidgetAvailable`
+
+Runtime check for widget availability based on data type and optional peer deps.
+
+```tsx
+import { isWidgetAvailable } from '@nuup/xform-native';
+isWidgetAvailable('binary', { mediatype: 'image/*' });
+```
+
+### `pickWidget`
+
+Dispatches `(dataType, controlType, appearance)` → `{ Widget, variant }`.
+
+```tsx
+import { pickWidget } from '@nuup/xform-native';
+const { Widget, variant } = pickWidget('string', 'input', null);
+```
+
+### `tokens`
+
+Default design tokens (colors, spacing, typography).
+
+```tsx
+import { tokens } from '@nuup/xform-native';
+tokens.color.primary; // '#0D47A1'
+```
+
+## Contributing
+
+```bash
+git clone https://github.com/nuupco/xform-native.git
+cd xform-native
+npm install
+npm test
+npm run build
+```
+
+Please open issues and pull requests on [GitHub](https://github.com/nuupco/xform-native).
+
+## License
+
+MIT
