@@ -17,10 +17,10 @@ import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { tokens } from '../tokens/tokens';
 
-let _ImagePicker: typeof import('expo-image-picker') | null = null;
+let _ImagePicker: any | null = null;
 let _pickerLoaded: boolean | undefined;
 
-function getImagePicker(): typeof import('expo-image-picker') | null {
+function getImagePicker(): any | null {
   if (_pickerLoaded === undefined) {
     try {
       _ImagePicker = require('expo-image-picker');
@@ -38,7 +38,7 @@ export interface ImageWidgetProps {
   appearance?: string | null;
 }
 
-export function ImageWidget({ ref, store, appearance }: ImageWidgetProps) {
+export function ImageWidget({ ref, store, appearance: _appearance }: ImageWidgetProps) {
   const picker = getImagePicker();
   const resolved = store.adapter.resolveValue(ref);
   const uri: string | null =

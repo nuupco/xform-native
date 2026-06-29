@@ -64,9 +64,13 @@ export type { RangeWidgetProps } from './widgets/RangeWidget';
 
 // P2: media widgets (stubs in PR-1, full impl in PR-2..PR-4)
 export { ImageWidget } from './widgets/ImageWidget';
+export type { ImageWidgetProps } from './widgets/ImageWidget';
 export { AudioWidget } from './widgets/AudioWidget';
+export type { AudioWidgetProps } from './widgets/AudioWidget';
 export { SignatureWidget } from './widgets/SignatureWidget';
+export type { SignatureWidgetProps } from './widgets/SignatureWidget';
 export { FileWidget } from './widgets/FileWidget';
+export type { FileWidgetProps } from './widgets/FileWidget';
 
 // PR-4: Form component
 export { Form } from './form/Form';

@@ -18,10 +18,10 @@ import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { tokens } from '../tokens/tokens';
 
-let _SvgModule: typeof import('react-native-svg') | null = null;
+let _SvgModule: any | null = null;
 let _svgLoaded: boolean | undefined;
 
-function getSvg(): typeof import('react-native-svg') | null {
+function getSvg(): any | null {
   if (_svgLoaded === undefined) {
     try {
       _SvgModule = require('react-native-svg');

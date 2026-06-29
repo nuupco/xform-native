@@ -52,7 +52,17 @@
   },
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "expo-image-picker": "*",
+    "expo-av": "*",
+    "react-native-svg": "*",
+    "expo-document-picker": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo-image-picker": { "optional": true },
+    "expo-av": { "optional": true },
+    "react-native-svg": { "optional": true },
+    "expo-document-picker": { "optional": true }
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.0",

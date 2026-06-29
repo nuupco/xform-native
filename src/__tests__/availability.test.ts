@@ -61,7 +61,13 @@ describe('isWidgetAvailable', () => {
     });
 
     it('binary with mediatype audio/* returns false when only expo-image-picker mock is present', () => {
-      expect(isWidgetAvailable('binary', { mediatype: 'audio/*' })).toBe(false);
+      jest.isolateModules(() => {
+        jest.doMock('expo-av', () => { throw new Error(); });
+        jest.doMock('react-native-svg', () => { throw new Error(); });
+        jest.doMock('expo-document-picker', () => { throw new Error(); });
+        const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');
+        expect(localIsAvailable('binary', { mediatype: 'audio/*' })).toBe(false);
+      });
     });
 
     it('binary never throws regardless of opts', () => {
@@ -91,6 +97,9 @@ describe('isWidgetAvailable', () => {
     it('binary with mediatype audio/* returns false when only expo-image-picker is present', () => {
       jest.isolateModules(() => {
         jest.doMock('expo-image-picker', () => ({}), { virtual: true });
+        jest.doMock('expo-av', () => { throw new Error(); });
+        jest.doMock('react-native-svg', () => { throw new Error(); });
+        jest.doMock('expo-document-picker', () => { throw new Error(); });
         const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');
         expect(localIsAvailable('binary', { mediatype: 'audio/*' })).toBe(false);
       });
