@@ -37,6 +37,7 @@ export type AdaptedEvent =
       hint: string | null;
       index: number;
       rangeBounds: { start?: number; end?: number; step?: number } | null;
+      mediatype: string | null;
     }
   | { kind: 'group'; ref: NodeRef; label: string | null; hint: string | null; index: number }
   | { kind: 'repeat'; ref: NodeRef; label: string | null; multiplicity: number; index: number }

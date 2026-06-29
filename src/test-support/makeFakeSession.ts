@@ -223,6 +223,8 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
       getDataType(): DataType | null;
       getHintText(): string | null;
       getRangeBounds(): { start?: number; end?: number; step?: number } | null;
+      getAppearance(): string | null;
+      getMediatype(): string | null;
     } | null {
       const pos = idx !== undefined ? formIndices.indexOf(idx) : cursor;
       const ev = events[pos >= 0 ? pos : cursor];
@@ -238,6 +240,8 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
           getDataType: () => q.dataType,
           getHintText: () => q.hint,
           getRangeBounds: () => null,
+          getAppearance: () => q.appearance,
+          getMediatype: () => null,
         };
       }
       return {
@@ -246,6 +250,8 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
         getDataType: () => null,
         getHintText: () => null,
         getRangeBounds: () => null,
+        getAppearance: () => null,
+        getMediatype: () => null,
       };
     },
   };

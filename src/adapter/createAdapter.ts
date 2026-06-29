@@ -52,11 +52,12 @@ export function createAdapter(session: FormSession): FormAdapter {
         ref,
         dataType: q?.getDataType() ?? 'string',
         controlType: (q?.getControlType() ?? 'input') as ControlType,
-        appearance: null, // FormElement.appearance not exposed via navigator; null in P1
+        appearance: q?.getAppearance?.() ?? null,
         label: q?.getLabelInnerText() ?? null,
         hint: q?.getHintText?.() ?? null,
         index: stepCount,
         rangeBounds: q?.getRangeBounds?.() ?? null,
+        mediatype: q?.getMediatype?.() ?? null,
       };
     }
 

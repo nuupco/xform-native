@@ -29,7 +29,7 @@ type BofEvent = ExtractKind<AdaptedEvent, 'bof'>;
 type EofEvent = ExtractKind<AdaptedEvent, 'eof'>;
 
 // Each should not be `never`
-const _q: QuestionEvent = { kind: 'question', ref: {} as NodeRef, dataType: 'string', controlType: 'input', appearance: null, label: null, hint: null, index: 0, rangeBounds: null };
+const _q: QuestionEvent = { kind: 'question', ref: {} as NodeRef, dataType: 'string', controlType: 'input', appearance: null, label: null, hint: null, index: 0, rangeBounds: null, mediatype: null };
 const _g: GroupEvent = { kind: 'group', ref: {} as NodeRef, label: null, hint: null, index: 0 };
 const _r: RepeatEvent = { kind: 'repeat', ref: {} as NodeRef, label: null, multiplicity: 0, index: 0 };
 const _pnr: PromptNewRepeatEvent = { kind: 'prompt-new-repeat', ref: {} as NodeRef, label: null, index: 0 };
@@ -76,6 +76,7 @@ describe('AdaptedEvent firewall', () => {
       hint: null,
       index: 0,
       rangeBounds: null,
+      mediatype: null,
     };
     expect('code' in ev).toBe(false);
   });

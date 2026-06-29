@@ -65,7 +65,8 @@ describe('createAdapter — getCurrentEvent', () => {
     expect(ev.label).toBe('Your name');
     // hint is now surfaced via getHintText() from the fake navigator
     expect(ev.hint).toBe('Enter your name');
-    expect(ev.appearance).toBeNull();
+    // appearance is now surfaced via getAppearance() from the fake navigator
+    expect(ev.appearance).toBeNull(); // null because script has appearance: null
     expect(typeof ev.index).toBe('number');
     expect(ev.ref).toBeDefined();
   });
