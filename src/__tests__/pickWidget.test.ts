@@ -63,6 +63,11 @@ describe('pickWidget — NoteWidget detection', () => {
     const { Widget } = pickWidget('string', 'input', 'note');
     expect(Widget).toBe(NoteWidget);
   });
+
+  it('dispatches readonly string input → NoteWidget', () => {
+    const { Widget } = pickWidget('string', 'input', null, true);
+    expect(Widget).toBe(NoteWidget);
+  });
 });
 
 describe('pickWidget — uncast/unsupported/unknown → UncastWidget', () => {

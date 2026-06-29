@@ -47,56 +47,91 @@ export function pickWidget(
   dataType: DataType,
   controlType: ControlType,
   appearance: string | null | undefined,
+  readonly?: boolean
 ): PickWidgetResult {
   // 1. range controlType → RangeWidget (PR-3b)
   if (controlType === 'range') {
-    return { Widget: RangeWidget, variant: resolveVariant(dataType, controlType, appearance) };
+    return {
+      Widget: RangeWidget,
+      variant: resolveVariant(dataType, controlType, appearance),
+    };
   }
 
   // 3. Note detection — must run BEFORE the dataType switch
   if (
     dataType === 'string' &&
     controlType === 'input' &&
-    appearance != null &&
-    appearance.toLowerCase().trim().split(/\s+/).includes('note')
+    (readonly ||
+      (appearance != null &&
+        appearance.toLowerCase().trim().split(/\s+/).includes('note')))
   ) {
     return { Widget: NoteWidget, variant: 'default' };
   }
 
   switch (dataType) {
     case 'string':
-      return { Widget: StringWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: StringWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'int':
-      return { Widget: IntWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: IntWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'decimal':
-      return { Widget: DecimalWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: DecimalWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'long':
-      return { Widget: LongWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: LongWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'boolean':
-      return { Widget: BooleanWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: BooleanWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'uncast':
     case 'unsupported':
       return { Widget: UncastWidget, variant: 'default' };
 
     case 'selectOne':
-      return { Widget: SelectOneWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: SelectOneWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'selectMulti':
-      return { Widget: SelectMultiWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: SelectMultiWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'date':
-      return { Widget: DateWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: DateWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'time':
-      return { Widget: TimeWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: TimeWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     case 'dateTime':
-      return { Widget: DateTimeWidget, variant: resolveVariant(dataType, controlType, appearance) };
+      return {
+        Widget: DateTimeWidget,
+        variant: resolveVariant(dataType, controlType, appearance),
+      };
 
     default:
       // Unknown dataType — UncastWidget per ADR-5 rule 4

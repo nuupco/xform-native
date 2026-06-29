@@ -60,3 +60,7 @@ export { DateTimeWidget } from './widgets/DateTimeWidget';
 export type { DateTimeWidgetProps } from './widgets/DateTimeWidget';
 export { RangeWidget } from './widgets/RangeWidget';
 export type { RangeWidgetProps } from './widgets/RangeWidget';
+
+// PR-4: Form component
+export { Form } from './form/Form';
+export type { FormProps } from './form/Form';

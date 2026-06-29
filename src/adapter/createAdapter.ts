@@ -131,7 +131,7 @@ export function createAdapter(session: FormSession): FormAdapter {
       const fi = visitedCache[index];
       if (fi === undefined) {
         throw new RangeError(
-          `jumpToIndex(${index}): position not yet visited (cache size: ${visitedCache.length})`,
+          `jumpToIndex(${index}): position not yet visited (cache size: ${visitedCache.length})`
         );
       }
       navigator.jumpToIndex(fi);
@@ -139,28 +139,55 @@ export function createAdapter(session: FormSession): FormAdapter {
     },
 
     getNodeState(ref: NodeRef): NodeState {
-      const state = evaluator.getNodeState(ref as Parameters<typeof evaluator.getNodeState>[0]);
+      const state = evaluator.getNodeState(
+        ref as Parameters<typeof evaluator.getNodeState>[0]
+      );
       if (state === undefined) {
-        return { relevant: true, enabled: true, required: false, readonly: false, constraintMsg: null, calculatedValue: null };
+        return {
+          relevant: true,
+          enabled: true,
+          required: false,
+          readonly: false,
+          constraintMsg: null,
+          calculatedValue: null,
+        };
       }
       return state;
     },
 
     isEffectivelyRelevant(ref: NodeRef): boolean {
-      return evaluator.isEffectivelyRelevant(ref as Parameters<typeof evaluator.isEffectivelyRelevant>[0]);
+      return evaluator.isEffectivelyRelevant(
+        ref as Parameters<typeof evaluator.isEffectivelyRelevant>[0]
+      );
     },
 
     getChoices(ref: NodeRef): readonly SelectChoice[] {
-      return evaluator.getChoices(ref as Parameters<typeof evaluator.getChoices>[0]);
+      return evaluator.getChoices(
+        ref as Parameters<typeof evaluator.getChoices>[0]
+      );
     },
 
     answerQuestion(ref: NodeRef, value: unknown): AnswerResult {
-      return evaluator.answerQuestion(ref as Parameters<typeof evaluator.answerQuestion>[0], value as never);
+      return evaluator.answerQuestion(
+        ref as Parameters<typeof evaluator.answerQuestion>[0],
+        value as never
+      );
     },
 
     resolveValue(ref: NodeRef): unknown {
       const node = resolveReference(tree, ref);
-      return node?.value ?? null;
+      const value = node?.value ?? null;
+      // Unwrap AnswerValue objects returned by the real engine so widgets
+      // receive raw primitives (string | number | boolean | Date | string[]).
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        'kind' in value &&
+        'value' in value
+      ) {
+        return (value as { value: unknown }).value;
+      }
+      return value;
     },
   };
 }

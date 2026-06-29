@@ -21,6 +21,9 @@ export class FormSessionStore {
   /** Expose adapter for test access (getRef from getCurrentEvent) */
   readonly adapter: FormAdapter;
 
+  /** Last answerQuestion result (for Form-level validation feedback). */
+  lastAnswerResult: { ref: NodeRef; result: AnswerResult } | null = null;
+
   private _snapshot: FormSessionSnapshot;
   private readonly _subscribers = new Set<() => void>();
 
@@ -50,6 +53,7 @@ export class FormSessionStore {
 
   answerQuestion(ref: NodeRef, value: unknown): AnswerResult {
     const result = this.adapter.answerQuestion(ref, value);
+    this.lastAnswerResult = { ref, result };
     this._bump();
     return result;
   }
