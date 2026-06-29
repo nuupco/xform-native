@@ -83,6 +83,11 @@ export const APPEARANCE_TABLE: Readonly<
   dateTime: {
     __default: 'default',
   },
+  binary: {
+    __default: 'default',
+    draw: 'signature',
+    signature: 'signature',
+  },
   // controlType override for range
   'controlType:range': {
     __default: 'default',

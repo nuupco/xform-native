@@ -89,6 +89,24 @@ describe('resolveVariant — boolean', () => {
   });
 });
 
+describe('resolveVariant — binary', () => {
+  it('returns default for absent appearance', () => {
+    expect(resolveVariant('binary', 'input', null)).toBe('default');
+  });
+
+  it('returns signature for appearance=draw', () => {
+    expect(resolveVariant('binary', 'input', 'draw')).toBe('signature');
+  });
+
+  it('returns signature for appearance=signature', () => {
+    expect(resolveVariant('binary', 'input', 'signature')).toBe('signature');
+  });
+
+  it('returns default for unknown appearance', () => {
+    expect(resolveVariant('binary', 'input', 'completely-unknown')).toBe('default');
+  });
+});
+
 describe('resolveVariant — unknown dataType (never throws)', () => {
   it('returns default for unknown dataType', () => {
     // TypeScript would complain about 'geopoint' here since it is not in the

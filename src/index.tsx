@@ -5,6 +5,7 @@
 // PR-1
 export { tokens } from './tokens/tokens';
 export { isWidgetAvailable } from './availability/registry';
+export type { IsWidgetAvailableOpts } from './availability/registry';
 
 // PR-2: adapter types (opaque, firewall-safe)
 export type { NodeRef, AdaptedEvent, FormAdapter } from './adapter/FormAdapter';
@@ -60,6 +61,12 @@ export { DateTimeWidget } from './widgets/DateTimeWidget';
 export type { DateTimeWidgetProps } from './widgets/DateTimeWidget';
 export { RangeWidget } from './widgets/RangeWidget';
 export type { RangeWidgetProps } from './widgets/RangeWidget';
+
+// P2: media widgets (stubs in PR-1, full impl in PR-2..PR-4)
+export { ImageWidget } from './widgets/ImageWidget';
+export { AudioWidget } from './widgets/AudioWidget';
+export { SignatureWidget } from './widgets/SignatureWidget';
+export { FileWidget } from './widgets/FileWidget';
 
 // PR-4: Form component
 export { Form } from './form/Form';

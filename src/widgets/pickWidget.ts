@@ -22,6 +22,11 @@ import { DateWidget } from './DateWidget';
 import { TimeWidget } from './TimeWidget';
 import { DateTimeWidget } from './DateTimeWidget';
 import { RangeWidget } from './RangeWidget';
+import { ImageWidget } from './ImageWidget';
+import { AudioWidget } from './AudioWidget';
+import { SignatureWidget } from './SignatureWidget';
+import { FileWidget } from './FileWidget';
+import { UnsupportedWidget } from './UnsupportedWidget';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WidgetComponent = React.ComponentType<any>;
@@ -47,7 +52,8 @@ export function pickWidget(
   dataType: DataType,
   controlType: ControlType,
   appearance: string | null | undefined,
-  readonly?: boolean
+  readonly?: boolean,
+  mediatype?: string | null
 ): PickWidgetResult {
   // 1. range controlType → RangeWidget (PR-3b)
   if (controlType === 'range') {
@@ -55,6 +61,24 @@ export function pickWidget(
       Widget: RangeWidget,
       variant: resolveVariant(dataType, controlType, appearance),
     };
+  }
+
+  // 2. Binary routing — must run BEFORE the dataType switch (M17-M19)
+  if (dataType === 'binary') {
+    const tokens = appearance != null ? appearance.toLowerCase().trim().split(/\s+/) : [];
+    if (tokens.includes('draw') || tokens.includes('signature')) {
+      return { Widget: SignatureWidget, variant: 'signature' };
+    }
+    if (mediatype === 'image/*') {
+      return { Widget: ImageWidget, variant: 'default' };
+    }
+    if (mediatype === 'audio/*') {
+      return { Widget: AudioWidget, variant: 'default' };
+    }
+    if (mediatype === 'video/*') {
+      return { Widget: UnsupportedWidget, variant: 'default' };
+    }
+    return { Widget: FileWidget, variant: 'default' };
   }
 
   // 3. Note detection — must run BEFORE the dataType switch

@@ -48,4 +48,50 @@ describe('isWidgetAvailable', () => {
     // without error. We assert the function is callable as a proxy for that.
     expect(typeof isWidgetAvailable).toBe('function');
   });
+
+  describe('binary availability (M01-M02)', () => {
+    it('binary returns false when no media deps are present', () => {
+      expect(isWidgetAvailable('binary')).toBe(false);
+    });
+
+    it('binary with mediatype image/* returns false when expo-image-picker is absent', () => {
+      expect(isWidgetAvailable('binary', { mediatype: 'image/*' })).toBe(false);
+    });
+
+    it('binary with mediatype audio/* returns false when expo-av is absent', () => {
+      expect(isWidgetAvailable('binary', { mediatype: 'audio/*' })).toBe(false);
+    });
+
+    it('binary never throws regardless of opts', () => {
+      expect(() => isWidgetAvailable('binary')).not.toThrow();
+      expect(() => isWidgetAvailable('binary', { mediatype: 'image/*' })).not.toThrow();
+      expect(() => isWidgetAvailable('binary', { mediatype: 'audio/*' })).not.toThrow();
+      expect(() => isWidgetAvailable('binary', { mediatype: 'video/*' })).not.toThrow();
+      expect(() => isWidgetAvailable('binary', { mediatype: 'application/pdf' })).not.toThrow();
+    });
+
+    it('binary with mediatype image/* returns true when expo-image-picker is present', () => {
+      jest.isolateModules(() => {
+        jest.doMock('expo-image-picker', () => ({}), { virtual: true });
+        const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');
+        expect(localIsAvailable('binary', { mediatype: 'image/*' })).toBe(true);
+      });
+    });
+
+    it('binary returns true when any media dep is present', () => {
+      jest.isolateModules(() => {
+        jest.doMock('expo-image-picker', () => ({}), { virtual: true });
+        const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');
+        expect(localIsAvailable('binary')).toBe(true);
+      });
+    });
+
+    it('binary with mediatype audio/* returns false when only expo-image-picker is present', () => {
+      jest.isolateModules(() => {
+        jest.doMock('expo-image-picker', () => ({}), { virtual: true });
+        const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');
+        expect(localIsAvailable('binary', { mediatype: 'audio/*' })).toBe(false);
+      });
+    });
+  });
 });

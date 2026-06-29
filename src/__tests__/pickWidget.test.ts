@@ -14,6 +14,12 @@ import { LongWidget } from '../widgets/LongWidget';
 import { BooleanWidget } from '../widgets/BooleanWidget';
 import { NoteWidget } from '../widgets/NoteWidget';
 import { UncastWidget } from '../widgets/UncastWidget';
+import { ImageWidget } from '../widgets/ImageWidget';
+import { AudioWidget } from '../widgets/AudioWidget';
+import { SignatureWidget } from '../widgets/SignatureWidget';
+import { FileWidget } from '../widgets/FileWidget';
+import { UnsupportedWidget } from '../widgets/UnsupportedWidget';
+
 describe('pickWidget — PR-3a types', () => {
   it('dispatches string → StringWidget default', () => {
     const { Widget, variant } = pickWidget('string', 'input', null);
@@ -89,3 +95,50 @@ describe('pickWidget — uncast/unsupported/unknown → UncastWidget', () => {
 });
 
 // PR-3b dispatch — now tested in pickWidget-pr3b.test.ts
+
+describe('pickWidget — binary routing (M17-M19)', () => {
+  it('dispatches binary + draw appearance → SignatureWidget', () => {
+    const { Widget } = pickWidget('binary', 'input', 'draw', false, null);
+    expect(Widget).toBe(SignatureWidget);
+  });
+
+  it('dispatches binary + signature appearance → SignatureWidget', () => {
+    const { Widget } = pickWidget('binary', 'input', 'signature', false, null);
+    expect(Widget).toBe(SignatureWidget);
+  });
+
+  it('dispatches binary + mediatype image/* → ImageWidget', () => {
+    const { Widget } = pickWidget('binary', 'input', null, false, 'image/*');
+    expect(Widget).toBe(ImageWidget);
+  });
+
+  it('dispatches binary + mediatype audio/* → AudioWidget', () => {
+    const { Widget } = pickWidget('binary', 'input', null, false, 'audio/*');
+    expect(Widget).toBe(AudioWidget);
+  });
+
+  it('dispatches binary + mediatype video/* → UnsupportedWidget', () => {
+    const { Widget } = pickWidget('binary', 'input', null, false, 'video/*');
+    expect(Widget).toBe(UnsupportedWidget);
+  });
+
+  it('dispatches binary + unknown mediatype → FileWidget', () => {
+    const { Widget } = pickWidget('binary', 'input', null, false, 'application/pdf');
+    expect(Widget).toBe(FileWidget);
+  });
+
+  it('dispatches binary + no mediatype → FileWidget', () => {
+    const { Widget } = pickWidget('binary', 'input', null, false, null);
+    expect(Widget).toBe(FileWidget);
+  });
+
+  it('appearance draw wins over mediatype image/*', () => {
+    const { Widget } = pickWidget('binary', 'input', 'draw', false, 'image/*');
+    expect(Widget).toBe(SignatureWidget);
+  });
+
+  it('appearance signature wins over mediatype audio/*', () => {
+    const { Widget } = pickWidget('binary', 'input', 'signature', false, 'audio/*');
+    expect(Widget).toBe(SignatureWidget);
+  });
+});

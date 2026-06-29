@@ -110,7 +110,8 @@ export function Form({ store }: FormProps) {
           ev.dataType,
           ev.controlType,
           ev.appearance,
-          nodeState.readonly
+          nodeState.readonly,
+          ev.mediatype
         );
         const rangeProps =
           ev.rangeBounds != null
