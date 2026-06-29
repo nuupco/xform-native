@@ -13,6 +13,7 @@
   "dependencies": {
     "@nuup/ts-rosa": "file:../../ts-rosa",
     "@nuup/xform-native": "file:../",
+    "@nuup/xform-native-geo": "file:../packages/xform-native-geo",
     "@react-navigation/native": "^6.1.0",
     "@react-navigation/native-stack": "^6.9.0",
     "@xmldom/xmldom": "^0.9.0",

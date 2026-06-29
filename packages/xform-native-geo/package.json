@@ -1,0 +1,22 @@
+{
+  "name": "@nuup/xform-native-geo",
+  "version": "1.0.0",
+  "description": "Geo widget peer dependency for @nuup/xform-native — MapLibre + expo-location",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "@maplibre/maplibre-react-native": "*",
+    "expo-location": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "peerDependenciesMeta": {
+    "@maplibre/maplibre-react-native": { "optional": false },
+    "expo-location": { "optional": false }
+  },
+  "keywords": ["xform", "geo", "maplibre", "odk"],
+  "license": "MIT"
+}

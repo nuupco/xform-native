@@ -2,6 +2,9 @@
   "name": "@nuup/xform-native",
   "version": "1.0.0",
   "description": "React Native XForm renderer built on @nuup/ts-rosa",
+  "workspaces": [
+    "packages/*"
+  ],
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "bin": {
