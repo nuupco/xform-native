@@ -22,6 +22,16 @@ const RecordingOptionsPresets = {
   HIGH_QUALITY: {},
 };
 
+const React = require('react');
+const { View } = require('react-native');
+
+const Video = jest.fn().mockImplementation((props) => {
+  return React.createElement(View, {
+    testID: props.testID,
+    style: props.style,
+  });
+});
+
 const Audio = {
   Recording,
   Sound,
@@ -30,6 +40,7 @@ const Audio = {
 
 module.exports = {
   Audio,
+  Video,
   __mockRecording: mockRecording,
   __mockSound: mockSound,
 };

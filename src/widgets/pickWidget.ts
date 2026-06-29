@@ -24,9 +24,9 @@ import { DateTimeWidget } from './DateTimeWidget';
 import { RangeWidget } from './RangeWidget';
 import { ImageWidget } from './ImageWidget';
 import { AudioWidget } from './AudioWidget';
+import { VideoWidget } from './VideoWidget';
 import { SignatureWidget } from './SignatureWidget';
 import { FileWidget } from './FileWidget';
-import { UnsupportedWidget } from './UnsupportedWidget';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WidgetComponent = React.ComponentType<any>;
@@ -76,7 +76,7 @@ export function pickWidget(
       return { Widget: AudioWidget, variant: 'default' };
     }
     if (mediatype === 'video/*') {
-      return { Widget: UnsupportedWidget, variant: 'default' };
+      return { Widget: VideoWidget, variant: 'default' };
     }
     return { Widget: FileWidget, variant: 'default' };
   }

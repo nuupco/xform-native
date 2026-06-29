@@ -16,9 +16,9 @@ import { NoteWidget } from '../widgets/NoteWidget';
 import { UncastWidget } from '../widgets/UncastWidget';
 import { ImageWidget } from '../widgets/ImageWidget';
 import { AudioWidget } from '../widgets/AudioWidget';
+import { VideoWidget } from '../widgets/VideoWidget';
 import { SignatureWidget } from '../widgets/SignatureWidget';
 import { FileWidget } from '../widgets/FileWidget';
-import { UnsupportedWidget } from '../widgets/UnsupportedWidget';
 
 describe('pickWidget — PR-3a types', () => {
   it('dispatches string → StringWidget default', () => {
@@ -117,9 +117,9 @@ describe('pickWidget — binary routing (M17-M19)', () => {
     expect(Widget).toBe(AudioWidget);
   });
 
-  it('dispatches binary + mediatype video/* → UnsupportedWidget', () => {
+  it('dispatches binary + mediatype video/* → VideoWidget', () => {
     const { Widget } = pickWidget('binary', 'input', null, false, 'video/*');
-    expect(Widget).toBe(UnsupportedWidget);
+    expect(Widget).toBe(VideoWidget);
   });
 
   it('dispatches binary + unknown mediatype → FileWidget', () => {

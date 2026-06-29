@@ -67,6 +67,8 @@ export { ImageWidget } from './widgets/ImageWidget';
 export type { ImageWidgetProps } from './widgets/ImageWidget';
 export { AudioWidget } from './widgets/AudioWidget';
 export type { AudioWidgetProps } from './widgets/AudioWidget';
+export { VideoWidget } from './widgets/VideoWidget';
+export type { VideoWidgetProps } from './widgets/VideoWidget';
 export { SignatureWidget } from './widgets/SignatureWidget';
 export type { SignatureWidgetProps } from './widgets/SignatureWidget';
 export { FileWidget } from './widgets/FileWidget';

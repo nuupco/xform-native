@@ -64,7 +64,7 @@ const availabilityRegistry = new Map<
         return tryRequire('expo-av');
       }
       if (opts?.mediatype === 'video/*') {
-        return false; // deferred to P3
+        return tryRequire('expo-camera');
       }
       if (opts?.mediatype != null) {
         // Unknown mediatype — check for any generic file picker dep (PR-4)
@@ -75,7 +75,8 @@ const availabilityRegistry = new Map<
         tryRequire('expo-image-picker') ||
         tryRequire('expo-av') ||
         tryRequire('react-native-svg') ||
-        tryRequire('expo-document-picker')
+        tryRequire('expo-document-picker') ||
+        tryRequire('expo-camera')
       );
     },
   ],

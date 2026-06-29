@@ -56,13 +56,15 @@
     "expo-image-picker": "*",
     "expo-av": "*",
     "react-native-svg": "*",
-    "expo-document-picker": "*"
+    "expo-document-picker": "*",
+    "expo-camera": "*"
   },
   "peerDependenciesMeta": {
     "expo-image-picker": { "optional": true },
     "expo-av": { "optional": true },
     "react-native-svg": { "optional": true },
-    "expo-document-picker": { "optional": true }
+    "expo-document-picker": { "optional": true },
+    "expo-camera": { "optional": true }
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.0",
