@@ -4,32 +4,77 @@ export interface IsWidgetAvailableOpts {
   mediatype?: string;
 }
 
-/**
- * Lazy require guard for optional native deps (ADR-6, REQ-20).
- * Lives behind a function — never executes at module import time.
- * P1: no native dep paths execute this; the seam exists for P2+.
- */
-const tryRequire = (m: string): boolean => {
+// ---------------------------------------------------------------------------
+// Static availability checks — one per optional peer dep.
+// Metro can statically analyze try/catch with string literals but NOT
+// require(variable). Each dep gets its own explicit guard function.
+// ---------------------------------------------------------------------------
+
+function hasExpoImagePicker(): boolean {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require(m);
+    require('expo-image-picker');
     return true;
   } catch {
     return false;
   }
-};
+}
 
-/**
- * Static availability map: DataType → (opts?) => boolean.
- *
- * P1 types (all non-native): always return true.
- * Native-dep types (geopoint, binary, geoshape, geotrace): use tryRequire guard.
- * In P1 the optional-dep module names are placeholders — no real native module
- * exists yet; the seam is wired so P2+ can replace the string without API change.
- *
- * NOTE: 'note' and 'range' are NOT DataTypes in ts-rosa (SPEC GAP #1).
- * Their underlying DataTypes ('string', 'int'/'decimal') are covered by P1 entries.
- */
+function hasExpoAv(): boolean {
+  try {
+    require('expo-av');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasExpoCamera(): boolean {
+  try {
+    require('expo-camera');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasExpoDocumentPicker(): boolean {
+  try {
+    require('expo-document-picker');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasReactNativeSvg(): boolean {
+  try {
+    require('react-native-svg');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasGeo(): boolean {
+  try {
+    require('@nuup/xform-native-geo');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const hasAnyMediaDep = (): boolean =>
+  hasExpoImagePicker() ||
+  hasExpoAv() ||
+  hasReactNativeSvg() ||
+  hasExpoDocumentPicker() ||
+  hasExpoCamera();
+
+// ---------------------------------------------------------------------------
+// Availability registry
+// ---------------------------------------------------------------------------
+
 const availabilityRegistry = new Map<
   DataType,
   (opts?: IsWidgetAvailableOpts) => boolean
@@ -48,47 +93,27 @@ const availabilityRegistry = new Map<
   ['uncast', () => true],
   ['unsupported', () => true],
 
-  // Native-dep types — tryRequire seam (P2+)
-  ['geopoint', () => tryRequire('@nuup/xform-native-geo')],
-  ['geoshape', () => tryRequire('@nuup/xform-native-geo')],
-  ['geotrace', () => tryRequire('@nuup/xform-native-geo')],
+  // Native-dep types
+  ['geopoint', () => hasGeo()],
+  ['geoshape', () => hasGeo()],
+  ['geotrace', () => hasGeo()],
 
-  // binary: gated by specific optional peer deps (M01-M02)
+  // binary: gated by specific optional peer deps
   [
     'binary',
     (opts) => {
-      if (opts?.mediatype === 'image/*') {
-        return tryRequire('expo-image-picker');
-      }
-      if (opts?.mediatype === 'audio/*') {
-        return tryRequire('expo-av');
-      }
-      if (opts?.mediatype === 'video/*') {
-        return tryRequire('expo-camera');
-      }
-      if (opts?.mediatype != null) {
-        // Unknown mediatype — check for any generic file picker dep (PR-4)
-        return tryRequire('expo-document-picker');
-      }
-      // No mediatype — true if ANY media dep is present
-      return (
-        tryRequire('expo-image-picker') ||
-        tryRequire('expo-av') ||
-        tryRequire('react-native-svg') ||
-        tryRequire('expo-document-picker') ||
-        tryRequire('expo-camera')
-      );
+      if (opts?.mediatype === 'image/*') return hasExpoImagePicker();
+      if (opts?.mediatype === 'audio/*') return hasExpoAv();
+      if (opts?.mediatype === 'video/*') return hasExpoCamera();
+      if (opts?.mediatype != null) return hasExpoDocumentPicker();
+      return hasAnyMediaDep();
     },
   ],
 ]);
 
-/**
- * Returns true if a widget is available for the given DataType.
- * Never throws — missing registry entry returns false (REQ-20).
- */
 export function isWidgetAvailable(
   dataType: DataType,
-  opts?: IsWidgetAvailableOpts
+  opts?: IsWidgetAvailableOpts,
 ): boolean {
   const check = availabilityRegistry.get(dataType);
   if (check === undefined) return false;

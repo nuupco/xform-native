@@ -2,21 +2,33 @@ const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
 const projectRoot = __dirname;
-const workspaceRoot = path.resolve(projectRoot, '../..');
+const workspaceRoot = path.resolve(projectRoot, '..');
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the parent workspace so Metro picks up ts-rosa and xform-native source
-config.watchFolders = [
-  ...(config.watchFolders || []),
-  path.resolve(projectRoot, '..'),
-  path.resolve(workspaceRoot, 'ts-rosa'),
+// Block parent node_modules to avoid duplicate React/RN
+config.resolver.blockList = [
+  ...Array.from(config.resolver.blockList ?? []),
+  new RegExp(path.resolve(workspaceRoot, 'node_modules', 'react').replace(/\\/g, '\\\\')),
+  new RegExp(path.resolve(workspaceRoot, 'node_modules', 'react-native').replace(/\\/g, '\\\\')),
 ];
 
-// Resolve @nuup/xform-native to source for live reload
+// Resolve from example and parent node_modules
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),
+];
+
+// Map library imports to source for live reload
+config.resolver.extraNodeModules = {
+  '@nuup/xform-native': path.resolve(workspaceRoot),
+  '@nuup/ts-rosa': path.resolve(workspaceRoot, '..', 'ts-rosa'),
+};
+
+// Watch parent for changes (xform-native source + packages)
+config.watchFolders = [
+  path.resolve(workspaceRoot),
+  path.resolve(workspaceRoot, '..', 'ts-rosa'),
 ];
 
 module.exports = config;
