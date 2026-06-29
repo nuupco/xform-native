@@ -6,19 +6,32 @@
  *   store.answerQuestion receives the token string directly.
  *
  * Variants (ADR-3 selectOne):
- *   default  → radio-style list (Pressable per option)
- *   minimal  → bottom-sheet dropdown (BottomSheet primitive)
- *   likert / autocomplete / columns / columns-pack / quick → fall back to default (P1)
+ *   default      → radio-style list (Pressable per option)
+ *   minimal      → bottom-sheet dropdown (BottomSheet primitive)
+ *   likert       → horizontal row of labeled radio Pressables
+ *   autocomplete → TextInput with filtered FlatList dropdown
+ *   columns      → multi-column FlatList with numColumns={2}
+ *   columns-pack → compact multi-column FlatList
+ *   quick        → horizontal ScrollView of chip/tag Pressables
  */
 
-import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  FlatList,
+  ScrollView,
+  TextInput,
+} from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
 import { BottomSheet } from './primitives/BottomSheet';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
+
 
 export interface SelectOneWidgetProps {
   ref: NodeRef;
@@ -36,6 +49,7 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
   const isRequired = nodeState?.required ?? false;
 
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
   function handleSelect(value: string) {
     if (isReadonly) return;
@@ -43,16 +57,18 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
     setSheetOpen(false);
   }
 
+  // Shared: render required indicator
+  const requiredIndicator = isRequired ? (
+    <Text testID="required-indicator" style={styles.required}>
+      *
+    </Text>
+  ) : null;
+
   if (variant === 'minimal') {
-    // Bottom-sheet dropdown variant
     const selected = choices.find((c) => c.value === currentValue);
     return (
       <View style={styles.container}>
-        {isRequired && (
-          <Text testID="required-indicator" style={styles.required}>
-            *
-          </Text>
-        )}
+        {requiredIndicator}
         <Pressable
           testID="select-one-dropdown-trigger"
           style={styles.dropdownTrigger}
@@ -79,14 +95,170 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
     );
   }
 
-  // default (radio-style) — also handles likert, autocomplete, columns fallback
+  if (variant === 'likert') {
+    return (
+      <View style={styles.container}>
+        {requiredIndicator}
+        <View testID="select-one-likert-container" style={styles.likertRow}>
+          {choices.map((choice) => {
+            const isSelected = choice.value === currentValue;
+            return (
+              <Pressable
+                key={choice.value}
+                testID={`select-one-likert-option-${choice.value}`}
+                style={styles.likertCell}
+                onPress={() => handleSelect(choice.value)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
+              >
+                <Text style={styles.likertLabel}>{choice.label ?? choice.value}</Text>
+                <View style={[styles.likertRadio, isSelected && styles.likertRadioSelected]} />
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
+  if (variant === 'autocomplete') {
+    const filtered = useMemo(() => {
+      if (!query.trim()) return choices;
+      const q = query.toLowerCase();
+      return choices.filter(
+        (c) =>
+          (c.label ?? c.value).toLowerCase().includes(q) ||
+          c.value.toLowerCase().includes(q),
+      );
+    }, [choices, query]);
+
+    return (
+      <View style={styles.container}>
+        {requiredIndicator}
+        <TextInput
+          testID="select-one-autocomplete-input"
+          style={styles.autocompleteInput}
+          value={query}
+          onChangeText={setQuery}
+          editable={!isReadonly}
+          placeholder="Search…"
+        />
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.value}
+          renderItem={({ item }) => {
+            const isSelected = item.value === currentValue;
+            return (
+              <Pressable
+                testID={`select-one-autocomplete-option-${item.value}`}
+                style={[styles.autocompleteOption, isSelected && styles.autocompleteOptionSelected]}
+                onPress={() => handleSelect(item.value)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
+              >
+                <Text style={styles.autocompleteOptionLabel}>{item.label ?? item.value}</Text>
+              </Pressable>
+            );
+          }}
+        />
+      </View>
+    );
+  }
+
+  if (variant === 'columns') {
+    return (
+      <View style={styles.container}>
+        {requiredIndicator}
+        <FlatList
+          testID="select-one-columns-list"
+          data={choices}
+          keyExtractor={(item) => item.value}
+          numColumns={2}
+          renderItem={({ item }) => {
+            const isSelected = item.value === currentValue;
+            return (
+              <Pressable
+                testID={`select-one-columns-option-${item.value}`}
+                style={[styles.columnsOption, isSelected && styles.columnsOptionSelected]}
+                onPress={() => handleSelect(item.value)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
+              >
+                <View style={[styles.radio, isSelected && styles.radioSelected]} />
+                <Text style={styles.columnsOptionLabel}>{item.label ?? item.value}</Text>
+              </Pressable>
+            );
+          }}
+        />
+      </View>
+    );
+  }
+
+  if (variant === 'columns-pack') {
+    return (
+      <View style={styles.container}>
+        {requiredIndicator}
+        <FlatList
+          testID="select-one-columns-pack-list"
+          data={choices}
+          keyExtractor={(item) => item.value}
+          numColumns={2}
+          renderItem={({ item }) => {
+            const isSelected = item.value === currentValue;
+            return (
+              <Pressable
+                testID={`select-one-columns-pack-option-${item.value}`}
+                style={[styles.columnsPackOption, isSelected && styles.columnsPackOptionSelected]}
+                onPress={() => handleSelect(item.value)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
+              >
+                <View style={[styles.radioSmall, isSelected && styles.radioSelected]} />
+                <Text style={styles.columnsPackOptionLabel}>{item.label ?? item.value}</Text>
+              </Pressable>
+            );
+          }}
+        />
+      </View>
+    );
+  }
+
+  if (variant === 'quick') {
+    return (
+      <View style={styles.container}>
+        {requiredIndicator}
+        <ScrollView
+          testID="select-one-quick-container"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickRow}
+        >
+          {choices.map((choice) => {
+            const isSelected = choice.value === currentValue;
+            return (
+              <Pressable
+                key={choice.value}
+                testID={`select-one-quick-option-${choice.value}`}
+                style={[styles.quickChip, isSelected && styles.quickChipSelected]}
+                onPress={() => handleSelect(choice.value)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
+              >
+                <Text style={[styles.quickChipLabel, isSelected && styles.quickChipLabelSelected]}>
+                  {choice.label ?? choice.value}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // default (radio-style) — fallback for unrecognized variants
   return (
     <View style={styles.container}>
-      {isRequired && (
-        <Text testID="required-indicator" style={styles.required}>
-          *
-        </Text>
-      )}
+      {requiredIndicator}
       {choices.map((choice) => {
         const isSelected = choice.value === currentValue;
         return (
@@ -152,5 +324,129 @@ const styles = StyleSheet.create({
   dropdownTriggerText: {
     fontSize: tokens.font.md,
     color: tokens.color.text,
+  },
+  // likert
+  likertRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    marginVertical: tokens.spacing.sm,
+  },
+  likertCell: {
+    alignItems: 'center',
+    padding: tokens.spacing.sm,
+    minWidth: 64,
+  },
+  likertLabel: {
+    fontSize: tokens.font.sm,
+    color: tokens.color.text,
+    textAlign: 'center',
+    marginBottom: tokens.spacing.xs,
+  },
+  likertRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: tokens.color.text,
+  },
+  likertRadioSelected: {
+    borderColor: tokens.color.primary,
+    backgroundColor: tokens.color.primary,
+  },
+  // autocomplete
+  autocompleteInput: {
+    borderWidth: 1,
+    borderColor: tokens.color.text,
+    borderRadius: tokens.radius.sm,
+    padding: tokens.spacing.sm,
+    fontSize: tokens.font.md,
+    color: tokens.color.text,
+    backgroundColor: tokens.color.background,
+    marginBottom: tokens.spacing.xs,
+  },
+  autocompleteOption: {
+    paddingVertical: tokens.spacing.xs,
+    paddingHorizontal: tokens.spacing.sm,
+    marginVertical: 2,
+    borderRadius: tokens.radius.sm,
+  },
+  autocompleteOptionSelected: {
+    backgroundColor: tokens.color.surface,
+  },
+  autocompleteOptionLabel: {
+    fontSize: tokens.font.md,
+    color: tokens.color.text,
+  },
+  // columns
+  columnsOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.sm,
+    margin: 4,
+    borderRadius: tokens.radius.sm,
+    minWidth: '40%',
+  },
+  columnsOptionSelected: {
+    backgroundColor: tokens.color.surface,
+  },
+  columnsOptionLabel: {
+    fontSize: tokens.font.md,
+    color: tokens.color.text,
+    marginLeft: tokens.spacing.sm,
+  },
+  // columns-pack
+  columnsPackOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: tokens.spacing.xs,
+    paddingHorizontal: tokens.spacing.xs,
+    margin: 2,
+    borderRadius: tokens.radius.sm,
+    minWidth: '40%',
+  },
+  columnsPackOptionSelected: {
+    backgroundColor: tokens.color.surface,
+  },
+  columnsPackOptionLabel: {
+    fontSize: tokens.font.sm,
+    color: tokens.color.text,
+    marginLeft: tokens.spacing.xs,
+  },
+  radioSmall: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: tokens.color.text,
+  },
+  // quick
+  quickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: tokens.spacing.xs,
+  },
+  quickChip: {
+    paddingVertical: tokens.spacing.xs,
+    paddingHorizontal: tokens.spacing.md,
+    marginHorizontal: tokens.spacing.xs,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.color.text,
+    backgroundColor: tokens.color.background,
+  },
+  quickChipSelected: {
+    backgroundColor: tokens.color.primary,
+    borderColor: tokens.color.primary,
+  },
+  quickChipLabel: {
+    fontSize: tokens.font.md,
+    color: tokens.color.text,
+  },
+  quickChipLabelSelected: {
+    color: tokens.color.background,
   },
 });
