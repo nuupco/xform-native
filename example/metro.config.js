@@ -1,22 +1,22 @@
+const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
 
-const root = path.resolve(__dirname, '..');
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, '../..');
 
-/**
- * Metro config for the example app.
- * Resolves `@nuup/xform-native` to the local package source (file:../ link)
- * so changes to the library are reflected immediately without a build step.
- *
- * @type {import('@react-native/metro-config').MetroConfig}
- */
-const config = {
-  watchFolders: [root],
-  resolver: {
-    extraNodeModules: {
-      '@nuup/xform-native': path.resolve(root, 'src'),
-    },
-  },
-};
+const config = getDefaultConfig(projectRoot);
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+// Watch the parent workspace so Metro picks up ts-rosa and xform-native source
+config.watchFolders = [
+  ...(config.watchFolders || []),
+  path.resolve(projectRoot, '..'),
+  path.resolve(workspaceRoot, 'ts-rosa'),
+];
+
+// Resolve @nuup/xform-native to source for live reload
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
+];
+
+module.exports = config;

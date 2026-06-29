@@ -1,60 +1,45 @@
 import React from 'react';
-import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
-import { Form, FormSessionStore } from '@nuup/xform-native';
-import { parseDocument, createFormSession } from '@nuup/ts-rosa';
-import { DOMParser } from '@xmldom/xmldom';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-const DEMO_XML = `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
-  <h:head>
-    <h:title>Demo Form</h:title>
-    <model>
-      <instance>
-        <data id="demo">
-          <name/>
-          <age/>
-          <color/>
-          <birthdate/>
-          <photo/>
-        </data>
-      </instance>
-      <bind nodeset="/data/name" type="string" required="true()"/>
-      <bind nodeset="/data/age" type="int"/>
-      <bind nodeset="/data/color" type="string"/>
-      <bind nodeset="/data/birthdate" type="date"/>
-      <bind nodeset="/data/photo" type="binary"/>
-    </model>
-  </h:head>
-  <h:body>
-    <input ref="/data/name"><label>Name</label></input>
-    <input ref="/data/age"><label>Age</label></input>
-    <select1 ref="/data/color"><label>Favorite color</label><item><label>Red</label><value>red</value></item><item><label>Green</label><value>green</value></item><item><label>Blue</label><value>blue</value></item></select1>
-    <input ref="/data/birthdate"><label>Birth date</label></input>
-    <upload ref="/data/photo" mediatype="image/*"><label>Photo</label></upload>
-  </h:body>
-</h:html>`;
+import { LoginScreen } from './screens/LoginScreen';
+import { HomeScreen } from './screens/HomeScreen';
+import { FormListScreen } from './screens/FormListScreen';
+import { FormViewerScreen } from './screens/FormViewerScreen';
+import { DraftsScreen } from './screens/DraftsScreen';
+import { FinalizedScreen } from './screens/FinalizedScreen';
+import { SentScreen } from './screens/SentScreen';
+import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { flush } from './services/submissionQueue';
+import type { RootStackParamList } from './navigation/types';
 
-function parseXml(xml: string) {
-  const doc = new DOMParser().parseFromString(xml, 'text/xml');
-  return parseDocument(doc as unknown as Document);
-}
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const def = parseXml(DEMO_XML);
-const session = createFormSession(def);
-const store = new FormSessionStore(session);
+// ── App ───────────────────────────────────────────────────────────────────────
 
-export default function App(): React.JSX.Element {
+export default function App() {
+  // Auto-flush submission queue whenever the device comes back online.
+  useNetworkStatus(() => {
+    void flush();
+  });
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <Form store={store} />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="Login"
+          screenOptions={{ headerShown: false }}
+        >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="List" component={FormListScreen} />
+          <Stack.Screen name="Drafts" component={DraftsScreen} />
+          <Stack.Screen name="Viewer" component={FormViewerScreen} />
+          <Stack.Screen name="Finalized" component={FinalizedScreen} />
+          <Stack.Screen name="Sent" component={SentScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FAFAFA',
-  },
-});
