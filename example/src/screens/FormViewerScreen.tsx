@@ -20,10 +20,7 @@ import { fetchXFormXml } from '../services/apiClient';
 import { saveDraft, deleteDraft } from '../services/draftStore';
 import { enqueue } from '../services/submissionQueue';
 import { saveXForm, loadXForm } from '../services/xformCache';
-import {
-  parseXFormMeta,
-  injectInstanceIntoXForm,
-} from '../services/xmlUtils';
+import { parseXFormMeta, injectInstanceIntoXForm } from '../services/xmlUtils';
 import type { SubmissionResult, FormAttachment } from '../services/xmlUtils';
 import type { Manifest } from '../services/submissionQueue';
 import type { RootStackParamList } from '../navigation/types';
@@ -66,16 +63,20 @@ export function FormViewerScreen() {
   );
 
   const applyForm = useCallback((xml: string) => {
+    console.log('[FormViewer] XForm XML loaded, length:', xml.length);
     try {
       const doc = new DOMParser().parseFromString(xml, 'text/xml');
       const def = parseDocument(doc as unknown as Document);
+      console.log('[FormViewer] createFormSession called, def.title:', def.title);
       const session = createFormSession(def);
       sessionRef.current = session;
+      console.log('[FormViewer] Creating FormSessionStore');
       const newStore = new FormSessionStore(session);
       setStore(newStore);
       setAtEof(newStore.adapter.getCurrentEvent().kind === 'eof');
       setXformXml(xml);
     } catch (e) {
+      console.log('[FormViewer] Error parsing form:', e instanceof Error ? e.message : String(e));
       setError(e instanceof Error ? e.message : 'Failed to parse form');
     }
   }, []);
@@ -124,6 +125,7 @@ export function FormViewerScreen() {
   // Subscribe to store changes to detect EOF
   useEffect(() => {
     if (!store) return;
+    console.log('[FormViewer] <Form> component mounted');
     const check = () => {
       setAtEof(store.adapter.getCurrentEvent().kind === 'eof');
     };

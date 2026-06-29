@@ -32,9 +32,14 @@ export function Form({ store }: FormProps) {
     message: string;
   } | null>(null);
 
+  useEffect(() => {
+    console.log('[Form] Component mount, snapshot version:', snapshot.version);
+  }, []);
+
   // Auto-skip non-relevant nodes (REQ-10)
   useEffect(() => {
     const ev = store.adapter.getCurrentEvent();
+    console.log('[Form] getCurrentEvent returned kind:', ev.kind);
     if (
       ev.kind === 'question' ||
       ev.kind === 'group' ||
@@ -99,6 +104,8 @@ export function Form({ store }: FormProps) {
 
   function renderContent() {
     const ev = event;
+    console.log('[Form] Switching on event kind:', ev.kind);
+    console.log('[Form] Rendering content for kind:', ev.kind);
     switch (ev.kind) {
       case 'bof':
         return <BofSurface onStart={handleNext} />;
@@ -206,9 +213,12 @@ const styles = StyleSheet.create({
     marginTop: tokens.spacing.md,
   },
   navButton: {
-    padding: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
     backgroundColor: tokens.color.surface,
     borderRadius: tokens.radius.sm,
+    minWidth: 80,
+    alignItems: 'center',
   },
   required: {
     color: tokens.color.error,

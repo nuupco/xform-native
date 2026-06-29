@@ -83,13 +83,17 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: tokens.spacing.md,
-    padding: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
     backgroundColor: tokens.color.primary,
     borderRadius: tokens.radius.md,
+    minWidth: 120,
+    alignItems: 'center',
   },
   buttonText: {
-    color: tokens.color.background,
+    color: '#FFFFFF',
     fontSize: tokens.font.md,
+    fontWeight: '600',
   },
   error: {
     color: tokens.color.error,

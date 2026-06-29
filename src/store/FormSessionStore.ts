@@ -28,6 +28,7 @@ export class FormSessionStore {
   private readonly _subscribers = new Set<() => void>();
 
   constructor(session: FormSession) {
+    console.log('[Store] FormSessionStore constructor received session');
     this.adapter = createAdapter(session);
     this._snapshot = Object.freeze({ version: 0 });
   }
@@ -44,6 +45,7 @@ export class FormSessionStore {
   }
 
   getSnapshot(): FormSessionSnapshot {
+    console.log('[Store] getSnapshot called, version:', this._snapshot.version);
     return this._snapshot;
   }
 
@@ -59,11 +61,13 @@ export class FormSessionStore {
   }
 
   stepForward(): void {
+    console.log('[Store] stepForward called');
     this.adapter.stepForward();
     this._bump();
   }
 
   stepBackward(): void {
+    console.log('[Store] stepBackward called');
     this.adapter.stepBackward();
     this._bump();
   }

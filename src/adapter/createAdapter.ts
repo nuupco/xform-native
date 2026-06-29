@@ -29,17 +29,24 @@ export function createAdapter(session: FormSession): FormAdapter {
   // ---------------------------------------------------------------------------
   function adaptCurrentEvent(): AdaptedEvent {
     const ev = navigator.getEvent();
+    let adapted: AdaptedEvent;
 
     if (ev.kind === 'beginning-of-form' || isBof(ev.index)) {
-      return { kind: 'bof' };
+      adapted = { kind: 'bof' };
+      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
+      return adapted;
     }
 
     if (ev.kind === 'end-of-form' || isEof(ev.index)) {
-      return { kind: 'eof' };
+      adapted = { kind: 'eof' };
+      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
+      return adapted;
     }
 
     if (!isAt(ev.index)) {
-      return { kind: 'eof' };
+      adapted = { kind: 'eof' };
+      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
+      return adapted;
     }
 
     const fi = ev.index;
@@ -47,7 +54,7 @@ export function createAdapter(session: FormSession): FormAdapter {
 
     if (ev.kind === 'question') {
       const q = navigator.getQuestionAtIndex(fi);
-      return {
+      adapted = {
         kind: 'question',
         ref,
         dataType: q?.getDataType() ?? 'string',
@@ -59,17 +66,21 @@ export function createAdapter(session: FormSession): FormAdapter {
         rangeBounds: q?.getRangeBounds?.() ?? null,
         mediatype: q?.getMediatype?.() ?? null,
       };
+      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
+      return adapted;
     }
 
     if (ev.kind === 'group') {
       const q = navigator.getQuestionAtIndex(fi);
-      return {
+      adapted = {
         kind: 'group',
         ref,
         label: q?.getLabelInnerText() ?? null,
         hint: null,
         index: stepCount,
       };
+      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
+      return adapted;
     }
 
     if (ev.kind === 'repeat') {
@@ -77,26 +88,31 @@ export function createAdapter(session: FormSession): FormAdapter {
       // multiplicity comes from the last path level
       const lastLevel = fi.path[fi.path.length - 1];
       const multiplicity = lastLevel?.multiplicity ?? 0;
-      return {
+      adapted = {
         kind: 'repeat',
         ref,
         label: q?.getLabelInnerText() ?? null,
         multiplicity,
         index: stepCount,
       };
+      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
+      return adapted;
     }
 
     if (ev.kind === 'prompt-new-repeat') {
       const q = navigator.getQuestionAtIndex(fi);
-      return {
+      adapted = {
         kind: 'prompt-new-repeat',
         ref,
         label: q?.getLabelInnerText() ?? null,
         index: stepCount,
       };
+      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
+      return adapted;
     }
 
-    return { kind: 'eof' };
+    adapted = { kind: 'eof' };
+    return adapted;
   }
 
   // ---------------------------------------------------------------------------
@@ -119,14 +135,18 @@ export function createAdapter(session: FormSession): FormAdapter {
     },
 
     stepForward(): void {
+      console.log('[Adapter] stepForward called, stepCount before:', stepCount);
       navigator.stepToNextEvent();
       stepCount++;
       recordCurrentIndex();
+      console.log('[Adapter] stepForward done, stepCount after:', stepCount);
     },
 
     stepBackward(): void {
+      console.log('[Adapter] stepBackward called, stepCount before:', stepCount);
       navigator.stepToPreviousEvent();
       stepCount = Math.max(0, stepCount - 1);
+      console.log('[Adapter] stepBackward done, stepCount after:', stepCount);
     },
 
     jumpToIndex(index: number): void {
