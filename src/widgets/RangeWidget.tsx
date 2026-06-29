@@ -18,15 +18,17 @@
  *
  * Variants (ADR-3 controlType:range):
  *   default   → horizontal stepper (−  value  +)
- *   no-ticks  → same as default in P1
- *   picker    → same as default in P1
- *   vertical  → same as default in P1
+ *   no-ticks  → stepper without value text display
+ *   picker    → BottomSheet picker with scrollable list of values
+ *   vertical  → vertical stepper layout
  */
 
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { useState } from 'react';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
+import { BottomSheet } from './primitives/BottomSheet';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -51,9 +53,10 @@ export function RangeWidget({
   step = 1,
 }: RangeWidgetProps) {
   useFormSession(store);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const nodeState = store.adapter.getNodeState(ref);
   const rawValue = store.adapter.resolveValue(ref);
-  resolveVariant('int', 'range', appearance); // variant resolved but all map to stepper in P1
+  const variant = resolveVariant('int', 'range', appearance);
   const isReadonly = nodeState?.readonly ?? false;
   const isRequired = nodeState?.required ?? false;
 
@@ -75,6 +78,63 @@ export function RangeWidget({
     store.answerQuestion(ref, next);
   }
 
+  function handlePickValue(value: number) {
+    if (isReadonly) return;
+    store.answerQuestion(ref, value);
+    setPickerOpen(false);
+  }
+
+  // Generate picker options from start to end by step
+  const pickerOptions: number[] = [];
+  for (let v = start; v <= end; v += step) {
+    pickerOptions.push(v);
+  }
+
+  const isVertical = variant === 'vertical';
+  const isNoTicks = variant === 'no-ticks';
+  const isPicker = variant === 'picker';
+
+  if (isPicker) {
+    return (
+      <View style={styles.container}>
+        {isRequired && (
+          <Text testID="required-indicator" style={styles.required}>
+            *
+          </Text>
+        )}
+        <Pressable
+          testID="range-picker-trigger"
+          style={[styles.pickerTrigger, isReadonly && styles.disabled]}
+          onPress={() => setPickerOpen(true)}
+          disabled={isReadonly}
+        >
+          <Text style={styles.pickerTriggerText}>
+            {String(currentValue)}
+          </Text>
+        </Pressable>
+
+        <BottomSheet
+          visible={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          testID="range-picker-sheet"
+        >
+          <ScrollView>
+            {pickerOptions.map((opt) => (
+              <Pressable
+                key={opt}
+                testID={`range-picker-option-${opt}`}
+                style={styles.pickerOption}
+                onPress={() => handlePickValue(opt)}
+              >
+                <Text style={styles.pickerOptionText}>{String(opt)}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </BottomSheet>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {isRequired && (
@@ -82,7 +142,13 @@ export function RangeWidget({
           *
         </Text>
       )}
-      <View style={styles.stepper}>
+      <View
+        testID="range-stepper"
+        style={[
+          styles.stepper,
+          isVertical && styles.stepperVertical,
+        ]}
+      >
         <Pressable
           testID="range-decrement"
           style={[styles.stepButton, isReadonly && styles.disabled]}
@@ -93,9 +159,11 @@ export function RangeWidget({
           <Text style={styles.stepButtonText}>−</Text>
         </Pressable>
 
-        <View testID="range-value-display" style={styles.valueContainer}>
-          <Text style={styles.valueText}>{String(currentValue)}</Text>
-        </View>
+        {!isNoTicks && (
+          <View testID="range-value-display" style={styles.valueContainer}>
+            <Text style={styles.valueText}>{String(currentValue)}</Text>
+          </View>
+        )}
 
         <Pressable
           testID="range-increment"
@@ -124,6 +192,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
   },
+  stepperVertical: {
+    flexDirection: 'column',
+  },
   stepButton: {
     width: 40,
     height: 40,
@@ -151,5 +222,30 @@ const styles = StyleSheet.create({
   valueText: {
     fontSize: tokens.font.md,
     color: tokens.color.text,
+  },
+  pickerTrigger: {
+    borderWidth: 1,
+    borderColor: tokens.color.text,
+    borderRadius: tokens.radius.sm,
+    padding: tokens.spacing.sm,
+    backgroundColor: tokens.color.background,
+    alignSelf: 'flex-start',
+    minWidth: 80,
+  },
+  pickerTriggerText: {
+    fontSize: tokens.font.md,
+    color: tokens.color.text,
+    textAlign: 'center',
+  },
+  pickerOption: {
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.color.surface,
+  },
+  pickerOptionText: {
+    fontSize: tokens.font.md,
+    color: tokens.color.text,
+    textAlign: 'center',
   },
 });
