@@ -19,6 +19,9 @@ import { AudioWidget } from '../widgets/AudioWidget';
 import { VideoWidget } from '../widgets/VideoWidget';
 import { SignatureWidget } from '../widgets/SignatureWidget';
 import { FileWidget } from '../widgets/FileWidget';
+import { GeoShapeWidget } from '../widgets/GeoShapeWidget';
+import { GeoTraceWidget } from '../widgets/GeoTraceWidget';
+import { BarcodeWidget } from '../widgets/BarcodeWidget';
 
 describe('pickWidget — PR-3a types', () => {
   it('dispatches string → StringWidget default', () => {
@@ -140,5 +143,25 @@ describe('pickWidget — binary routing (M17-M19)', () => {
   it('appearance signature wins over mediatype audio/*', () => {
     const { Widget } = pickWidget('binary', 'input', 'signature', false, 'audio/*');
     expect(Widget).toBe(SignatureWidget);
+  });
+});
+
+describe('pickWidget — P5 geo + barcode routing', () => {
+  it('dispatches geoshape → GeoShapeWidget', () => {
+    const { Widget, variant } = pickWidget('geoshape', 'input', null);
+    expect(Widget).toBe(GeoShapeWidget);
+    expect(variant).toBe('default');
+  });
+
+  it('dispatches geotrace → GeoTraceWidget', () => {
+    const { Widget, variant } = pickWidget('geotrace', 'input', null);
+    expect(Widget).toBe(GeoTraceWidget);
+    expect(variant).toBe('default');
+  });
+
+  it('dispatches binary + barcode appearance → BarcodeWidget', () => {
+    const { Widget, variant } = pickWidget('binary', 'input', 'barcode', false, null);
+    expect(Widget).toBe(BarcodeWidget);
+    expect(variant).toBe('default');
   });
 });

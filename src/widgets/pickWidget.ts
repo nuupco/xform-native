@@ -28,6 +28,9 @@ import { VideoWidget } from './VideoWidget';
 import { SignatureWidget } from './SignatureWidget';
 import { FileWidget } from './FileWidget';
 import { GeoPointWidget } from './GeoPointWidget';
+import { GeoShapeWidget } from './GeoShapeWidget';
+import { GeoTraceWidget } from './GeoTraceWidget';
+import { BarcodeWidget } from './BarcodeWidget';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WidgetComponent = React.ComponentType<any>;
@@ -69,6 +72,9 @@ export function pickWidget(
     const tokens = appearance != null ? appearance.toLowerCase().trim().split(/\s+/) : [];
     if (tokens.includes('draw') || tokens.includes('signature')) {
       return { Widget: SignatureWidget, variant: 'signature' };
+    }
+    if (tokens.includes('barcode')) {
+      return { Widget: BarcodeWidget, variant: 'default' };
     }
     if (mediatype === 'image/*') {
       return { Widget: ImageWidget, variant: 'default' };
@@ -161,6 +167,18 @@ export function pickWidget(
     case 'geopoint':
       return {
         Widget: GeoPointWidget,
+        variant: 'default',
+      };
+
+    case 'geoshape':
+      return {
+        Widget: GeoShapeWidget,
+        variant: 'default',
+      };
+
+    case 'geotrace':
+      return {
+        Widget: GeoTraceWidget,
         variant: 'default',
       };
 

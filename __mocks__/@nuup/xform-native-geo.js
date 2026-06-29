@@ -51,6 +51,24 @@ const RasterLayer = jest.fn().mockImplementation((props) => {
   });
 });
 
+// Mock ShapeSource
+const ShapeSource = jest.fn().mockImplementation((props) => {
+  return React.createElement(View, {
+    testID: 'maplibre-shape-source',
+    children: props.children,
+  });
+});
+
+// Mock FillLayer
+const FillLayer = jest.fn().mockImplementation(() => {
+  return React.createElement(View, { testID: 'maplibre-fill-layer' });
+});
+
+// Mock LineLayer
+const LineLayer = jest.fn().mockImplementation(() => {
+  return React.createElement(View, { testID: 'maplibre-line-layer' });
+});
+
 // Mock UserLocation
 const UserLocation = jest.fn().mockImplementation(() => {
   return React.createElement(View, { testID: 'maplibre-user-location' });
@@ -70,6 +88,9 @@ const MapLibre = {
   MarkerView,
   RasterSource,
   RasterLayer,
+  ShapeSource,
+  FillLayer,
+  LineLayer,
   UserLocation,
   LocationManager,
 };

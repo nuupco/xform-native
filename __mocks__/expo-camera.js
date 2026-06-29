@@ -1,6 +1,7 @@
 // Manual mock for expo-camera (optional peer dep)
 
 const React = require('react');
+const { View } = require('react-native');
 
 let resolveRecord = null;
 
@@ -17,12 +18,23 @@ const mockStopRecording = jest.fn().mockImplementation(() => {
   }
 });
 
+let barcodeCallback = null;
+
 const CameraView = React.forwardRef((props, ref) => {
   React.useImperativeHandle(ref, () => ({
     recordAsync: mockRecordAsync,
     stopRecording: mockStopRecording,
   }));
-  return null;
+
+  // Capture barcode scanner callback for test triggering
+  if (props.onBarcodeScanned) {
+    barcodeCallback = props.onBarcodeScanned;
+  }
+
+  return React.createElement(View, {
+    testID: props.testID ?? 'camera-view',
+    style: props.style,
+  });
 });
 
 const useCameraPermissions = jest.fn().mockReturnValue([
@@ -35,4 +47,9 @@ module.exports = {
   useCameraPermissions,
   __mockRecordAsync: mockRecordAsync,
   __mockStopRecording: mockStopRecording,
+  __triggerBarcode: (data) => {
+    if (barcodeCallback) {
+      barcodeCallback({ data });
+    }
+  },
 };

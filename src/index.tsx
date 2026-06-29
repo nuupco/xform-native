@@ -77,12 +77,20 @@ export type { FileWidgetProps } from './widgets/FileWidget';
 // PR-4: GeoPointWidget + offline tile cache
 export { GeoPointWidget } from './widgets/GeoPointWidget';
 export type { GeoPointWidgetProps } from './widgets/GeoPointWidget';
+export { GeoShapeWidget } from './widgets/GeoShapeWidget';
+export type { GeoShapeWidgetProps } from './widgets/GeoShapeWidget';
+export { GeoTraceWidget } from './widgets/GeoTraceWidget';
+export type { GeoTraceWidgetProps } from './widgets/GeoTraceWidget';
 export {
   preWarmSatelliteTiles,
   clearSatelliteTileCache,
   getCacheStatus,
 } from './widgets/offline/SatelliteTileCache';
 export type { BBox, CacheStatus } from './widgets/offline/SatelliteTileCache';
+
+// P5: BarcodeWidget
+export { BarcodeWidget } from './widgets/BarcodeWidget';
+export type { BarcodeWidgetProps } from './widgets/BarcodeWidget';
 
 // PR-4: Form component
 export { Form } from './form/Form';
