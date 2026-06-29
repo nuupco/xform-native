@@ -9,6 +9,6 @@
  * restricted to visited positions; throws RangeError on out-of-range.
  */
 import type { FormSession } from '@nuup/ts-rosa';
-import type { FormAdapter } from './FormAdapter';
+import type { FormAdapter } from './FormAdapter.js';
 export declare function createAdapter(session: FormSession): FormAdapter;
 //# sourceMappingURL=createAdapter.d.ts.map

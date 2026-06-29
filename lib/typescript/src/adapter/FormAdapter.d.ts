@@ -27,6 +27,12 @@ export type AdaptedEvent = {
     label: string | null;
     hint: string | null;
     index: number;
+    rangeBounds: {
+        start?: number;
+        end?: number;
+        step?: number;
+    } | null;
+    mediatype: string | null;
 } | {
     kind: 'group';
     ref: NodeRef;

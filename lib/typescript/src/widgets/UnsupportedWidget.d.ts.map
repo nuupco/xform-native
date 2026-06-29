@@ -1,0 +1,1 @@
+{"version":3,"file":"UnsupportedWidget.d.ts","sourceRoot":"","sources":["../../../../src/widgets/UnsupportedWidget.tsx"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAIH,OAAO,KAAK,EAAE,QAAQ,EAAE,MAAM,eAAe,CAAC;AAE9C,MAAM,WAAW,sBAAsB;IACrC,QAAQ,EAAE,QAAQ,GAAG,MAAM,CAAC;CAC7B;AAED,wBAAgB,iBAAiB,CAAC,EAAE,QAAQ,EAAE,EAAE,sBAAsB,+BAMrE"}
