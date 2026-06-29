@@ -1,7 +1,38 @@
+# Dependencies
 node_modules/
+
+# Build output (react-native-builder-bob)
+lib/
 build/
 dist/
 *.tsbuildinfo
-.env
-.DS_Store
+
+# Coverage
 coverage/
+
+# Environment
+.env
+.env.*
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# SDD metadata
+.atl/
+
+# Bun (example app uses bun, main project uses npm)
+bun.lock
