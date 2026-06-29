@@ -54,8 +54,9 @@ export function createAdapter(session: FormSession): FormAdapter {
         controlType: (q?.getControlType() ?? 'input') as ControlType,
         appearance: null, // FormElement.appearance not exposed via navigator; null in P1
         label: q?.getLabelInnerText() ?? null,
-        hint: null, // FormElement.hintText not exposed via navigator; null in P1
+        hint: q?.getHintText?.() ?? null,
         index: stepCount,
+        rangeBounds: q?.getRangeBounds?.() ?? null,
       };
     }
 

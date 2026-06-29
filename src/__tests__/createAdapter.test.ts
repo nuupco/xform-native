@@ -63,8 +63,8 @@ describe('createAdapter — getCurrentEvent', () => {
     expect(ev.dataType).toBe('string');
     expect(ev.controlType).toBe('input');
     expect(ev.label).toBe('Your name');
-    // hint is null in P1 — the real navigator does not expose hintText yet
-    expect(ev.hint).toBeNull();
+    // hint is now surfaced via getHintText() from the fake navigator
+    expect(ev.hint).toBe('Enter your name');
     expect(ev.appearance).toBeNull();
     expect(typeof ev.index).toBe('number');
     expect(ev.ref).toBeDefined();

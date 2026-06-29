@@ -112,6 +112,14 @@ export function Form({ store }: FormProps) {
           ev.appearance,
           nodeState.readonly
         );
+        const rangeProps =
+          ev.rangeBounds != null
+            ? {
+                start: ev.rangeBounds.start,
+                end: ev.rangeBounds.end,
+                step: ev.rangeBounds.step,
+              }
+            : {};
         return (
           <View>
             <LabelHint label={ev.label} hint={ev.hint} />
@@ -120,7 +128,12 @@ export function Form({ store }: FormProps) {
                 *
               </Text>
             )}
-            <Widget ref={ev.ref} store={store} appearance={ev.appearance} />
+            <Widget
+              ref={ev.ref}
+              store={store}
+              appearance={ev.appearance}
+              {...rangeProps}
+            />
             {advanceBlocked?.type === 'constraint' && (
               <ConstraintSurface message={advanceBlocked.message} />
             )}

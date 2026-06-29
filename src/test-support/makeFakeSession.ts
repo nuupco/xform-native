@@ -215,12 +215,14 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
       return navigator.getEvent();
     },
 
-    getQuestionAtIndex(
+      getQuestionAtIndex(
       idx?: FormIndex,
     ): {
       getLabelInnerText(): string | null;
       getControlType(): string;
       getDataType(): DataType | null;
+      getHintText(): string | null;
+      getRangeBounds(): { start?: number; end?: number; step?: number } | null;
     } | null {
       const pos = idx !== undefined ? formIndices.indexOf(idx) : cursor;
       const ev = events[pos >= 0 ? pos : cursor];
@@ -234,12 +236,16 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
           getLabelInnerText: () => q.label,
           getControlType: () => q.controlType,
           getDataType: () => q.dataType,
+          getHintText: () => q.hint,
+          getRangeBounds: () => null,
         };
       }
       return {
         getLabelInnerText: () => label as string | null,
         getControlType: () => 'input',
         getDataType: () => null,
+        getHintText: () => null,
+        getRangeBounds: () => null,
       };
     },
   };
