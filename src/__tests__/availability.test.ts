@@ -25,9 +25,13 @@ describe('isWidgetAvailable', () => {
   });
 
   it('absent optional dep (geopoint) returns false without throwing', () => {
-    // geopoint maps to a tryRequire guard; in test env the optional dep is absent
-    expect(() => isWidgetAvailable('geopoint')).not.toThrow();
-    expect(isWidgetAvailable('geopoint')).toBe(false);
+    // geopoint maps to a tryRequire guard; isolate to avoid cached mock from other tests
+    jest.isolateModules(() => {
+      jest.doMock('@nuup/xform-native-geo', () => { throw new Error('not found'); });
+      const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');
+      expect(() => localIsAvailable('geopoint')).not.toThrow();
+      expect(localIsAvailable('geopoint')).toBe(false);
+    });
   });
 
   it('calling with any input never throws', () => {

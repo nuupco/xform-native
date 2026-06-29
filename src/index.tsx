@@ -74,6 +74,16 @@ export type { SignatureWidgetProps } from './widgets/SignatureWidget';
 export { FileWidget } from './widgets/FileWidget';
 export type { FileWidgetProps } from './widgets/FileWidget';
 
+// PR-4: GeoPointWidget + offline tile cache
+export { GeoPointWidget } from './widgets/GeoPointWidget';
+export type { GeoPointWidgetProps } from './widgets/GeoPointWidget';
+export {
+  preWarmSatelliteTiles,
+  clearSatelliteTileCache,
+  getCacheStatus,
+} from './widgets/offline/SatelliteTileCache';
+export type { BBox, CacheStatus } from './widgets/offline/SatelliteTileCache';
+
 // PR-4: Form component
 export { Form } from './form/Form';
 export type { FormProps } from './form/Form';

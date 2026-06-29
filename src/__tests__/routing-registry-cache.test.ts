@@ -3,7 +3,6 @@
  */
 import { pickWidget } from '../widgets/pickWidget';
 import { GeoPointWidget } from '../widgets/GeoPointWidget';
-import { isWidgetAvailable } from '../availability/registry';
 import {
   preWarmSatelliteTiles,
   clearSatelliteTileCache,
@@ -20,8 +19,12 @@ describe('pickWidget — geopoint routing (T-GEO01)', () => {
 
 describe('isWidgetAvailable — geopoint gating (T-GEO02)', () => {
   it('geopoint returns false when optional dep is absent', () => {
-    expect(() => isWidgetAvailable('geopoint')).not.toThrow();
-    expect(isWidgetAvailable('geopoint')).toBe(false);
+    jest.isolateModules(() => {
+      jest.doMock('@nuup/xform-native-geo', () => { throw new Error('not found'); });
+      const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');
+      expect(() => localIsAvailable('geopoint')).not.toThrow();
+      expect(localIsAvailable('geopoint')).toBe(false);
+    });
   });
 
   it('geopoint returns true when @nuup/xform-native-geo is present', () => {
