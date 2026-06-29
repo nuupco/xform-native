@@ -50,15 +50,17 @@ describe('isWidgetAvailable', () => {
   });
 
   describe('binary availability (M01-M02)', () => {
-    it('binary returns false when no media deps are present', () => {
-      expect(isWidgetAvailable('binary')).toBe(false);
+    // Note: global __mocks__/expo-image-picker.js makes the require succeed
+    // in this test file. The absent-dep scenarios are tested via jest.isolateModules below.
+    it('binary returns true when mock expo-image-picker is available', () => {
+      expect(isWidgetAvailable('binary')).toBe(true);
     });
 
-    it('binary with mediatype image/* returns false when expo-image-picker is absent', () => {
-      expect(isWidgetAvailable('binary', { mediatype: 'image/*' })).toBe(false);
+    it('binary with mediatype image/* returns true when mock is available', () => {
+      expect(isWidgetAvailable('binary', { mediatype: 'image/*' })).toBe(true);
     });
 
-    it('binary with mediatype audio/* returns false when expo-av is absent', () => {
+    it('binary with mediatype audio/* returns false when only expo-image-picker mock is present', () => {
       expect(isWidgetAvailable('binary', { mediatype: 'audio/*' })).toBe(false);
     });
 
