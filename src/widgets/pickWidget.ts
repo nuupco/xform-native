@@ -27,6 +27,7 @@ import { AudioWidget } from './AudioWidget';
 import { VideoWidget } from './VideoWidget';
 import { SignatureWidget } from './SignatureWidget';
 import { FileWidget } from './FileWidget';
+import { GeoPointWidget } from './GeoPointWidget';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WidgetComponent = React.ComponentType<any>;
@@ -155,6 +156,12 @@ export function pickWidget(
       return {
         Widget: DateTimeWidget,
         variant: resolveVariant(dataType, controlType, appearance),
+      };
+
+    case 'geopoint':
+      return {
+        Widget: GeoPointWidget,
+        variant: 'default',
       };
 
     default:

@@ -89,7 +89,7 @@ describe('pickWidget — uncast/unsupported/unknown → UncastWidget', () => {
 
   it('dispatches unknown dataType → UncastWidget', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { Widget } = pickWidget('geopoint' as any, 'input', null);
+    const { Widget } = pickWidget('unknownType' as any, 'input', null);
     expect(Widget).toBe(UncastWidget);
   });
 });
