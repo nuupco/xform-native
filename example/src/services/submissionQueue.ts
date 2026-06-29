@@ -8,7 +8,7 @@
  *   manifest.json  — Manifest metadata
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { generateUuidV4, injectInstanceId, buildSubmission } from './xmlUtils';
 import type { SubmissionResult } from './xmlUtils';
 import { submitToKobo } from './apiClient';

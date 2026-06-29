@@ -5,7 +5,7 @@
  *   Only metadata is stored — NO XML body or attachment data.
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import type { Manifest } from './submissionQueue';
 
 // ── Types ──────────────────────────────────────────────────────────────────────

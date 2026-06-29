@@ -7,7 +7,7 @@
  *   manifest.json  — Manifest metadata (kind: 'draft')
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import {
   generateUuidV4,
   injectInstanceId,

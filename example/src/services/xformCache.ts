@@ -6,7 +6,7 @@
  *   {uid}.xml — raw XForm XML string
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 function cacheDir(): string {
   return `${FileSystem.documentDirectory}xform-cache/`;
