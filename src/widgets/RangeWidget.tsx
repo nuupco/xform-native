@@ -58,7 +58,6 @@ export function RangeWidget({
   const rawValue = store.adapter.resolveValue(ref);
   const variant = resolveVariant('int', 'range', appearance);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   // Normalize current value to a number, default to start if null
   const currentValue: number =
@@ -97,11 +96,6 @@ export function RangeWidget({
   if (isPicker) {
     return (
       <View style={styles.container}>
-        {isRequired && (
-          <Text testID="required-indicator" style={styles.required}>
-            *
-          </Text>
-        )}
         <Pressable
           testID="range-picker-trigger"
           style={[styles.pickerTrigger, isReadonly && styles.disabled]}
@@ -137,11 +131,6 @@ export function RangeWidget({
 
   return (
     <View style={styles.container}>
-      {isRequired && (
-        <Text testID="required-indicator" style={styles.required}>
-          *
-        </Text>
-      )}
       <View
         testID="range-stepper"
         style={[
@@ -183,10 +172,6 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: tokens.spacing.xs,
   },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
-  },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,20 +199,23 @@ const styles = StyleSheet.create({
     color: tokens.color.text,
     fontWeight: 'bold',
   },
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   valueContainer: {
     minWidth: 60,
     alignItems: 'center',
-    paddingHorizontal: tokens.spacing.sm,
+    justifyContent: 'center',
   },
   valueText: {
     fontSize: tokens.font.md,
     color: tokens.color.text,
   },
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   pickerTrigger: {
     borderWidth: 1,
     borderColor: tokens.color.text,
     borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
+    height: 44,
+    justifyContent: 'center',
     backgroundColor: tokens.color.background,
     alignSelf: 'flex-start',
     minWidth: 80,

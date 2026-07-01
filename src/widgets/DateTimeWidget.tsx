@@ -11,7 +11,7 @@
  * Display: YYYY-MM-DDTHH:MM (UTC).
  */
 
-import { View, TextInput, Text, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import type { NodeRef } from '../adapter/FormAdapter';
@@ -49,7 +49,6 @@ export function DateTimeWidget({ ref, store, appearance: _appearance }: DateTime
   const nodeState = store.adapter.getNodeState(ref);
   const value = store.adapter.resolveValue(ref);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   let displayValue = '';
   if (value instanceof Date) {
@@ -68,11 +67,6 @@ export function DateTimeWidget({ ref, store, appearance: _appearance }: DateTime
 
   return (
     <View style={styles.container}>
-      {isRequired && (
-        <Text testID="required-indicator" style={styles.required}>
-          *
-        </Text>
-      )}
       <TextInput
         testID="datetime-input"
         style={[styles.input, isReadonly && styles.readonly]}
@@ -104,9 +98,5 @@ const styles = StyleSheet.create({
   readonly: {
     backgroundColor: tokens.color.surface,
     color: tokens.color.text,
-  },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
   },
 });

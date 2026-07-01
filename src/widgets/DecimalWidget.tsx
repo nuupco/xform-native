@@ -4,7 +4,7 @@
  * Parses input via parseFloat.
  */
 
-import { View, TextInput, Text, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
@@ -25,7 +25,6 @@ export function DecimalWidget({ ref, store, appearance }: DecimalWidgetProps) {
   const value = store.adapter.resolveValue(ref);
   const variant = resolveVariant('decimal', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   function handleChange(text: string) {
     if (isReadonly) return;
@@ -43,7 +42,6 @@ export function DecimalWidget({ ref, store, appearance }: DecimalWidgetProps) {
 
   return (
     <View style={styles.container}>
-      {isRequired && <Text testID="required-indicator" style={styles.required}>*</Text>}
       <TextInput
         testID="decimal-input"
         style={[styles.input, isReadonly && styles.readonly]}
@@ -73,9 +71,5 @@ const styles = StyleSheet.create({
   },
   readonly: {
     backgroundColor: tokens.color.surface,
-  },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
   },
 });

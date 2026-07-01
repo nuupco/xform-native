@@ -46,7 +46,6 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
   const currentValue = store.adapter.resolveValue(ref);
   const variant = resolveVariant('selectOne', 'select1', appearance);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -57,18 +56,10 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
     setSheetOpen(false);
   }
 
-  // Shared: render required indicator
-  const requiredIndicator = isRequired ? (
-    <Text testID="required-indicator" style={styles.required}>
-      *
-    </Text>
-  ) : null;
-
   if (variant === 'minimal') {
     const selected = choices.find((c) => c.value === currentValue);
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <Pressable
           testID="select-one-dropdown-trigger"
           style={styles.dropdownTrigger}
@@ -98,7 +89,6 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
   if (variant === 'likert') {
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <View testID="select-one-likert-container" style={styles.likertRow}>
           {choices.map((choice) => {
             const isSelected = choice.value === currentValue;
@@ -134,7 +124,6 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
 
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <TextInput
           testID="select-one-autocomplete-input"
           style={styles.autocompleteInput}
@@ -168,7 +157,6 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
   if (variant === 'columns') {
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <FlatList
           testID="select-one-columns-list"
           data={choices}
@@ -197,7 +185,6 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
   if (variant === 'columns-pack') {
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <FlatList
           testID="select-one-columns-pack-list"
           data={choices}
@@ -226,7 +213,6 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
   if (variant === 'quick') {
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <ScrollView
           testID="select-one-quick-container"
           horizontal
@@ -258,7 +244,6 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
   // default (radio-style) — fallback for unrecognized variants
   return (
     <View style={styles.container}>
-      {requiredIndicator}
       {choices.map((choice) => {
         const isSelected = choice.value === currentValue;
         return (
@@ -283,15 +268,11 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: tokens.spacing.xs,
   },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
-  },
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.sm,
+    minHeight: 40,
     marginVertical: 2,
     borderRadius: tokens.radius.sm,
   },
@@ -332,9 +313,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginVertical: tokens.spacing.sm,
   },
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   likertCell: {
     alignItems: 'center',
-    padding: tokens.spacing.sm,
+    justifyContent: 'center',
+    minHeight: 48,
     minWidth: 64,
   },
   likertLabel: {
@@ -379,12 +362,12 @@ const styles = StyleSheet.create({
     color: tokens.color.text,
   },
   // columns
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   columnsOption: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.sm,
-    paddingHorizontal: tokens.spacing.sm,
+    minHeight: 44,
     margin: 4,
     borderRadius: tokens.radius.sm,
     minWidth: '40%',
@@ -398,12 +381,12 @@ const styles = StyleSheet.create({
     marginLeft: tokens.spacing.sm,
   },
   // columns-pack
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   columnsPackOption: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.xs,
+    minHeight: 32,
     margin: 2,
     borderRadius: tokens.radius.sm,
     minWidth: '40%',
@@ -424,10 +407,11 @@ const styles = StyleSheet.create({
     borderColor: tokens.color.text,
   },
   // quick
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   quickRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.xs,
+    minHeight: 44,
   },
   quickChip: {
     paddingVertical: tokens.spacing.xs,

@@ -150,7 +150,7 @@ describe('SelectOneWidget', () => {
     expect(screen.getByTestId('select-one-dropdown-trigger')).toBeTruthy();
   });
 
-  it('shows required indicator', async () => {
+  it('does not render its own required indicator (Form.tsx owns it)', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/color',
       dataType: 'selectOne',
@@ -159,7 +159,7 @@ describe('SelectOneWidget', () => {
       required: true,
     });
     await render(<SelectOneWidget ref={ref} store={store} />);
-    expect(screen.getByTestId('required-indicator')).toBeTruthy();
+    expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
 });
 

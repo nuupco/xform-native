@@ -6,8 +6,8 @@
  * ADR-5: dispatches to widget via pickWidget.
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import { View, Pressable, Text, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { AnswerResult } from '@nuup/ts-rosa';
 import { useFormSession } from '../store/useFormSession';
 import { pickWidget } from '../widgets/pickWidget';
@@ -32,24 +32,42 @@ export function Form({ store }: FormProps) {
     message: string;
   } | null>(null);
 
+  // Direction of the most recent explicit navigation gesture (ADR-D1, REQ-3).
+  // Set synchronously in handleNext/handleBack before the corresponding
+  // store step, so it is already current when the auto-skip effect below
+  // fires on the resulting version bump. A skip step never flips this ref —
+  // a skip cascade always continues in the direction of the original gesture.
+  const directionRef = useRef<'forward' | 'backward'>('forward');
+
   useEffect(() => {
-    console.log('[Form] Component mount, snapshot version:', snapshot.version);
+    console.log('[xform] Form mounted, snapshot version:', snapshot.version);
   }, []);
 
-  // Auto-skip non-relevant nodes (REQ-10)
+  // Auto-skip effect (REQ-10 relevance-skip + REQ-3 label-skip).
+  // Precedence per render pass (ADR-D2), at most one step per run:
+  //   1. relevance-skip (navigable kinds, direction-aware)
+  //   2. label-skip (groups only, label === null/'', direction-aware)
+  //   3. no-op (settled — render current event)
   useEffect(() => {
     const ev = store.adapter.getCurrentEvent();
-    console.log('[Form] getCurrentEvent returned kind:', ev.kind);
-    if (
+    const dir = directionRef.current;
+    const step = () => (dir === 'backward' ? store.stepBackward() : store.stepForward());
+
+    const navigable =
       ev.kind === 'question' ||
       ev.kind === 'group' ||
       ev.kind === 'repeat' ||
-      ev.kind === 'prompt-new-repeat'
-    ) {
-      if (!store.adapter.isEffectivelyRelevant(ev.ref)) {
-        store.stepForward();
-      }
+      ev.kind === 'prompt-new-repeat';
+
+    if (navigable && !store.adapter.isEffectivelyRelevant(ev.ref)) {
+      step();
+      return;
     }
+    if (ev.kind === 'group' && (ev.label === null || ev.label === '')) {
+      step();
+      return;
+    }
+    // settled: render current event
   }, [snapshot.version, store]);
 
   // Clear validation block when the event changes
@@ -65,6 +83,7 @@ export function Form({ store }: FormProps) {
   }
 
   const handleNext = useCallback(() => {
+    directionRef.current = 'forward';
     const ev = store.adapter.getCurrentEvent();
     if (ev.kind === 'question') {
       const value = store.adapter.resolveValue(ev.ref);
@@ -99,13 +118,17 @@ export function Form({ store }: FormProps) {
   }, [store]);
 
   const handleBack = useCallback(() => {
+    directionRef.current = 'backward';
     store.stepBackward();
   }, [store]);
 
   function renderContent() {
     const ev = event;
-    console.log('[Form] Switching on event kind:', ev.kind);
-    console.log('[Form] Rendering content for kind:', ev.kind);
+    console.log(
+      '[xform] render event kind=%s%s',
+      ev.kind,
+      ev.kind === 'bof' || ev.kind === 'eof' ? '' : ` index=${ev.index}`
+    );
     switch (ev.kind) {
       case 'bof':
         return <BofSurface onStart={handleNext} />;
@@ -120,6 +143,18 @@ export function Form({ store }: FormProps) {
           nodeState.readonly,
           ev.mediatype
         );
+        console.log(
+          '[xform] question ref=%s dataType=%s control=%s appearance=%s mediatype=%s readonly=%s required=%s label=%o widget=%s',
+          ev.ref,
+          ev.dataType,
+          ev.controlType,
+          ev.appearance,
+          ev.mediatype,
+          nodeState.readonly,
+          nodeState.required,
+          ev.label,
+          Widget?.displayName || Widget?.name || 'UNKNOWN'
+        );
         const rangeProps =
           ev.rangeBounds != null
             ? {
@@ -129,7 +164,7 @@ export function Form({ store }: FormProps) {
               }
             : {};
         return (
-          <View>
+          <View collapsable={false}>
             <LabelHint label={ev.label} hint={ev.hint} />
             {nodeState.required && (
               <Text testID="required-indicator" style={styles.required}>
@@ -151,24 +186,24 @@ export function Form({ store }: FormProps) {
       }
       case 'group':
         return (
-          <View>
+          <View collapsable={false}>
             <LabelHint label={ev.label} hint={ev.hint} />
           </View>
         );
       case 'repeat':
         return (
-          <View>
+          <View collapsable={false}>
             <LabelHint label={ev.label} hint={null} />
             <Text testID="repeat-multiplicity">Entries: {ev.multiplicity}</Text>
           </View>
         );
       case 'prompt-new-repeat':
         return (
-          <View>
+          <View collapsable={false}>
             <LabelHint label={ev.label} hint={null} />
-            <Pressable onPress={handleNext} testID="prompt-continue">
+            <TouchableOpacity onPress={handleNext} testID="prompt-continue" activeOpacity={0.7}>
               <Text>Continue</Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         );
       default:
@@ -179,24 +214,24 @@ export function Form({ store }: FormProps) {
   const showNav = event.kind !== 'bof' && event.kind !== 'eof';
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} collapsable={false}>
       {renderContent()}
       {showNav && (
-        <View style={styles.navRow}>
-          <Pressable
+        <View style={styles.navRow} collapsable={false}>
+          <TouchableOpacity
             onPress={handleBack}
             testID="nav-back"
             style={styles.navButton}
           >
             <Text>Back</Text>
-          </Pressable>
-          <Pressable
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={handleNext}
             testID="nav-next"
             style={styles.navButton}
           >
             <Text>Next</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       )}
     </View>

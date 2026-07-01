@@ -4,7 +4,7 @@
  * Variants (ADR-3): default | multiline | numbers | url
  */
 
-import { View, TextInput, Text, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
@@ -24,7 +24,6 @@ export function StringWidget({ ref, store, appearance }: StringWidgetProps) {
   const displayValue = value != null ? String(value) : '';
   const variant = resolveVariant('string', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   function handleChange(text: string) {
     if (isReadonly) return;
@@ -33,7 +32,6 @@ export function StringWidget({ ref, store, appearance }: StringWidgetProps) {
 
   return (
     <View style={styles.container}>
-      {isRequired && <Text testID="required-indicator" style={styles.required}>*</Text>}
       <TextInput
         testID="string-input"
         style={[styles.input, isReadonly && styles.readonly]}
@@ -64,9 +62,5 @@ const styles = StyleSheet.create({
   readonly: {
     backgroundColor: tokens.color.surface,
     color: tokens.color.text,
-  },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
   },
 });

@@ -12,6 +12,7 @@ import { DateWidget } from '../widgets/DateWidget';
 import { TimeWidget } from '../widgets/TimeWidget';
 import { DateTimeWidget } from '../widgets/DateTimeWidget';
 import { RangeWidget } from '../widgets/RangeWidget';
+import { UncastWidget } from '../widgets/UncastWidget';
 
 describe('pickWidget — PR-3b wired types', () => {
   it('dispatches selectOne → SelectOneWidget', () => {
@@ -66,5 +67,20 @@ describe('pickWidget — PR-3b wired types', () => {
     const { Widget, variant } = pickWidget('int', 'range', 'picker');
     expect(Widget).toBe(RangeWidget);
     expect(variant).toBe('picker');
+  });
+});
+
+describe('pickWidget — select routing is controlType-only (REQ-2 regression guard)', () => {
+  it('does not route dataType selectOne via the dataType switch (no dead selectOne case)', () => {
+    // controlType is intentionally NOT select1/select — if a dead
+    // `case 'selectOne':` branch existed in the dataType switch, this would
+    // wrongly return SelectOneWidget instead of falling through to UncastWidget.
+    const { Widget } = pickWidget('selectOne', 'input', null);
+    expect(Widget).toBe(UncastWidget);
+  });
+
+  it('does not route dataType selectMulti via the dataType switch (no dead selectMulti case)', () => {
+    const { Widget } = pickWidget('selectMulti', 'input', null);
+    expect(Widget).toBe(UncastWidget);
   });
 });

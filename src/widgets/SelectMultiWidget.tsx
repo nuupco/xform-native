@@ -43,7 +43,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
   const rawValue = store.adapter.resolveValue(ref);
   const variant = resolveVariant('selectMulti', 'select', appearance);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -72,13 +71,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
     store.answerQuestion(ref, next);
   }
 
-  // Shared: render required indicator
-  const requiredIndicator = isRequired ? (
-    <Text testID="required-indicator" style={styles.required}>
-      *
-    </Text>
-  ) : null;
-
   if (variant === 'minimal') {
     const selectedLabels = choices
       .filter((c) => selections.includes(c.value))
@@ -86,7 +78,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
       .join(', ');
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <Pressable
           testID="select-multi-dropdown-trigger"
           style={styles.dropdownTrigger}
@@ -124,7 +115,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
   if (variant === 'likert') {
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <View testID="select-multi-likert-container" style={styles.likertRow}>
           {choices.map((choice) => {
             const isSelected = selections.includes(choice.value);
@@ -162,7 +152,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
 
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <TextInput
           testID="select-multi-autocomplete-input"
           style={styles.autocompleteInput}
@@ -199,7 +188,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
   if (variant === 'columns') {
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <FlatList
           testID="select-multi-columns-list"
           data={choices}
@@ -230,7 +218,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
   if (variant === 'columns-pack') {
     return (
       <View style={styles.container}>
-        {requiredIndicator}
         <FlatList
           testID="select-multi-columns-pack-list"
           data={choices}
@@ -261,11 +248,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
   // default (checkbox list) — fallback for unrecognized variants
   return (
     <View style={styles.container}>
-      {isRequired && (
-        <Text testID="required-indicator" style={styles.required}>
-          *
-        </Text>
-      )}
       {choices.map((choice) => {
         const isSelected = selections.includes(choice.value);
         return (
@@ -292,15 +274,11 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: tokens.spacing.xs,
   },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
-  },
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.sm,
+    minHeight: 40,
     marginVertical: 2,
     borderRadius: tokens.radius.sm,
   },
@@ -348,9 +326,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginVertical: tokens.spacing.sm,
   },
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   likertCell: {
     alignItems: 'center',
-    padding: tokens.spacing.sm,
+    justifyContent: 'center',
+    minHeight: 48,
     minWidth: 64,
   },
   likertLabel: {
@@ -388,11 +368,11 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.color.background,
     marginBottom: tokens.spacing.xs,
   },
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   autocompleteOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.sm,
+    minHeight: 40,
     marginVertical: 2,
     borderRadius: tokens.radius.sm,
   },
@@ -405,12 +385,12 @@ const styles = StyleSheet.create({
     marginLeft: tokens.spacing.sm,
   },
   // columns
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   columnsOption: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.sm,
-    paddingHorizontal: tokens.spacing.sm,
+    minHeight: 44,
     margin: 4,
     borderRadius: tokens.radius.sm,
     minWidth: '40%',
@@ -424,12 +404,12 @@ const styles = StyleSheet.create({
     marginLeft: tokens.spacing.sm,
   },
   // columns-pack
+  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
   columnsPackOption: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.xs,
+    minHeight: 32,
     margin: 2,
     borderRadius: tokens.radius.sm,
     minWidth: '40%',

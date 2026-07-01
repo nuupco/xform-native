@@ -11,7 +11,7 @@
  * Display: HH:MM (UTC hours/minutes from the Date value).
  */
 
-import { View, TextInput, Text, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import type { NodeRef } from '../adapter/FormAdapter';
@@ -47,7 +47,6 @@ export function TimeWidget({ ref, store, appearance: _appearance }: TimeWidgetPr
   const nodeState = store.adapter.getNodeState(ref);
   const value = store.adapter.resolveValue(ref);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   let displayValue = '';
   if (value instanceof Date) {
@@ -66,11 +65,6 @@ export function TimeWidget({ ref, store, appearance: _appearance }: TimeWidgetPr
 
   return (
     <View style={styles.container}>
-      {isRequired && (
-        <Text testID="required-indicator" style={styles.required}>
-          *
-        </Text>
-      )}
       <TextInput
         testID="time-input"
         style={[styles.input, isReadonly && styles.readonly]}
@@ -102,9 +96,5 @@ const styles = StyleSheet.create({
   readonly: {
     backgroundColor: tokens.color.surface,
     color: tokens.color.text,
-  },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
   },
 });

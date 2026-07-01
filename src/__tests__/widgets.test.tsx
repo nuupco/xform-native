@@ -112,14 +112,14 @@ describe('StringWidget', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('shows required indicator when required', async () => {
+  it('does not render its own required indicator (Form.tsx owns it)', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/name',
       dataType: 'string',
       required: true,
     });
     await render(<StringWidget ref={ref} store={store} />);
-    expect(screen.getByTestId('required-indicator')).toBeTruthy();
+    expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
 
   it('renders multiline variant when appearance=multiline', async () => {
@@ -160,10 +160,10 @@ describe('IntWidget', () => {
     expect(screen.getByTestId('int-input').props.editable).toBe(false);
   });
 
-  it('shows required indicator when required', async () => {
+  it('does not render its own required indicator (Form.tsx owns it)', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/age', dataType: 'int', required: true });
     await render(<IntWidget ref={ref} store={store} />);
-    expect(screen.getByTestId('required-indicator')).toBeTruthy();
+    expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
 });
 
@@ -276,14 +276,14 @@ describe('BooleanWidget', () => {
     expect(screen.getByTestId('boolean-switch').props.disabled).toBe(true);
   });
 
-  it('shows required indicator when required', async () => {
+  it('does not render its own required indicator (Form.tsx owns it)', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/flag',
       dataType: 'boolean',
       required: true,
     });
     await render(<BooleanWidget ref={ref} store={store} />);
-    expect(screen.getByTestId('required-indicator')).toBeTruthy();
+    expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
 
   it('renders checkbox variant when appearance=checkbox', async () => {

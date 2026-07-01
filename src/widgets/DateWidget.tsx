@@ -14,7 +14,7 @@
  *   year       → YYYY entry, stored as Date with month=1, day=1
  */
 
-import { View, TextInput, Text, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
@@ -87,7 +87,6 @@ export function DateWidget({ ref, store, appearance }: DateWidgetProps) {
   const value = store.adapter.resolveValue(ref);
   const variant = resolveVariant('date', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   // Determine display string and commit parser based on variant
   let displayValue = '';
@@ -126,11 +125,6 @@ export function DateWidget({ ref, store, appearance }: DateWidgetProps) {
 
   return (
     <View style={styles.container}>
-      {isRequired && (
-        <Text testID="required-indicator" style={styles.required}>
-          *
-        </Text>
-      )}
       <TextInput
         testID="date-input"
         style={[styles.input, isReadonly && styles.readonly]}
@@ -162,9 +156,5 @@ const styles = StyleSheet.create({
   readonly: {
     backgroundColor: tokens.color.surface,
     color: tokens.color.text,
-  },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
   },
 });

@@ -99,6 +99,22 @@ export function pickWidget(
     return { Widget: NoteWidget, variant: 'default' };
   }
 
+  // 4. Select controls route by controlType, not dataType. Select bindings
+  // carry dataType 'string' (JavaRosa), so the dataType switch would wrongly
+  // fall through to StringWidget. controlType is the source of truth here.
+  if (controlType === 'select1') {
+    return {
+      Widget: SelectOneWidget,
+      variant: resolveVariant(dataType, controlType, appearance),
+    };
+  }
+  if (controlType === 'select') {
+    return {
+      Widget: SelectMultiWidget,
+      variant: resolveVariant(dataType, controlType, appearance),
+    };
+  }
+
   switch (dataType) {
     case 'string':
       return {
@@ -134,17 +150,12 @@ export function pickWidget(
     case 'unsupported':
       return { Widget: UncastWidget, variant: 'default' };
 
-    case 'selectOne':
-      return {
-        Widget: SelectOneWidget,
-        variant: resolveVariant(dataType, controlType, appearance),
-      };
-
-    case 'selectMulti':
-      return {
-        Widget: SelectMultiWidget,
-        variant: resolveVariant(dataType, controlType, appearance),
-      };
+    // 'selectOne' / 'selectMulti' dataType values are intentionally NOT
+    // handled here. ts-rosa always pairs those dataTypes with controlType
+    // 'select1' / 'select', which is already routed above (step 4, by
+    // controlType). A dataType switch branch for them would be unreachable
+    // in practice; omitting it keeps this switch honest about what actually
+    // falls through to it. Do not re-add these cases.
 
     case 'date':
       return {

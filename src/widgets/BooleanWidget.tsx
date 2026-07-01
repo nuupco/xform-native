@@ -26,7 +26,6 @@ export function BooleanWidget({ ref, store, appearance }: BooleanWidgetProps) {
   const boolValue = value === true || value === 'true' || value === '1';
   const variant = resolveVariant('boolean', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
-  const isRequired = nodeState?.required ?? false;
 
   function handleChange(newValue: boolean) {
     if (isReadonly) return;
@@ -35,7 +34,6 @@ export function BooleanWidget({ ref, store, appearance }: BooleanWidgetProps) {
 
   return (
     <View style={styles.container}>
-      {isRequired && <Text testID="required-indicator" style={styles.required}>*</Text>}
       {variant === 'checkbox' ? (
         <Pressable
           testID="boolean-checkbox"
@@ -85,9 +83,5 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
-  },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
   },
 });
