@@ -12,6 +12,7 @@
   },
   "exports": {
     ".": {
+      "react-native": "./src/index.tsx",
       "nuup-xform-native-source": "./src/index.tsx",
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
