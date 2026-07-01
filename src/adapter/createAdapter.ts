@@ -33,19 +33,16 @@ export function createAdapter(session: FormSession): FormAdapter {
 
     if (ev.kind === 'beginning-of-form' || isBof(ev.index)) {
       adapted = { kind: 'bof' };
-      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
       return adapted;
     }
 
     if (ev.kind === 'end-of-form' || isEof(ev.index)) {
       adapted = { kind: 'eof' };
-      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
       return adapted;
     }
 
     if (!isAt(ev.index)) {
       adapted = { kind: 'eof' };
-      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
       return adapted;
     }
 
@@ -66,7 +63,6 @@ export function createAdapter(session: FormSession): FormAdapter {
         rangeBounds: q?.getRangeBounds?.() ?? null,
         mediatype: q?.getMediatype?.() ?? null,
       };
-      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
       return adapted;
     }
 
@@ -79,7 +75,6 @@ export function createAdapter(session: FormSession): FormAdapter {
         hint: null,
         index: stepCount,
       };
-      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
       return adapted;
     }
 
@@ -95,7 +90,6 @@ export function createAdapter(session: FormSession): FormAdapter {
         multiplicity,
         index: stepCount,
       };
-      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
       return adapted;
     }
 
@@ -107,7 +101,6 @@ export function createAdapter(session: FormSession): FormAdapter {
         label: q?.getLabelInnerText() ?? null,
         index: stepCount,
       };
-      console.log('[Adapter] adaptCurrentEvent raw:', ev.kind, '→ adapted:', (adapted as any).kind);
       return adapted;
     }
 
@@ -135,18 +128,14 @@ export function createAdapter(session: FormSession): FormAdapter {
     },
 
     stepForward(): void {
-      console.log('[Adapter] stepForward called, stepCount before:', stepCount);
       navigator.stepToNextEvent();
       stepCount++;
       recordCurrentIndex();
-      console.log('[Adapter] stepForward done, stepCount after:', stepCount);
     },
 
     stepBackward(): void {
-      console.log('[Adapter] stepBackward called, stepCount before:', stepCount);
       navigator.stepToPreviousEvent();
       stepCount = Math.max(0, stepCount - 1);
-      console.log('[Adapter] stepBackward done, stepCount after:', stepCount);
     },
 
     jumpToIndex(index: number): void {
