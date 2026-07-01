@@ -1,39 +1,46 @@
 /**
  * @nuup/xform-native-geo — Geo peer dependency for @nuup/xform-native.
  *
- * Re-exports MapLibre and expo-location so xform-native geo widgets
- * (GeoPointWidget, GeoShapeWidget, GeoTraceWidget) can call:
- *
+ * Lazy-loads MapLibre and expo-location. Widgets destructure normally:
  *   const geo = require('@nuup/xform-native-geo');
  *   const { MapLibre } = geo;
- *   const location = await geo.Location.getCurrentPositionAsync();
- *
- * Install with:
- *   npm install @nuup/xform-native-geo
- *
- * This automatically pulls in peer deps:
- *   @maplibre/maplibre-react-native
- *   expo-location
  */
 
-// Re-export MapLibre GL components used by geo widgets
-export {
-  default as MapLibre,
-  MapView,
-  Camera,
-  PointAnnotation,
-  ShapeSource,
-  FillLayer,
-  LineLayer,
-  CircleLayer,
-  type MapViewProps,
-  type CameraProps,
-  type PointAnnotationProps,
-  type ShapeSourceProps,
-  type FillLayerProps,
-  type LineLayerProps,
-  type CircleLayerProps,
-} from '@maplibre/maplibre-react-native';
+let _maplibre: any = undefined;
+let _location: any = undefined;
 
-// Re-export expo-location
-export * as Location from 'expo-location';
+function loadMapLibre(): any {
+  if (_maplibre === undefined) {
+    try {
+      _maplibre = require('@maplibre/maplibre-react-native');
+    } catch {
+      _maplibre = null;
+    }
+  }
+  if (!_maplibre) throw new Error('@maplibre/maplibre-react-native not installed');
+  return _maplibre;
+}
+
+function loadLocation(): any {
+  if (_location === undefined) {
+    try {
+      _location = require('expo-location');
+    } catch {
+      _location = null;
+    }
+  }
+  if (!_location) throw new Error('expo-location not installed');
+  return _location;
+}
+
+Object.defineProperty(module.exports, 'MapLibre', {
+  get: loadMapLibre,
+  enumerable: true,
+  configurable: true,
+});
+
+Object.defineProperty(module.exports, 'Location', {
+  get: loadLocation,
+  enumerable: true,
+  configurable: true,
+});
