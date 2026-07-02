@@ -8,6 +8,7 @@
 import { FormSessionStore } from '../store/FormSessionStore';
 import { makeFakeSession } from '../test-support/makeFakeSession';
 import { AnswerResult } from '@nuup/ts-rosa';
+import type { InstanceTree } from '@nuup/ts-rosa';
 
 function makeStore() {
   const session = makeFakeSession({
@@ -198,5 +199,58 @@ describe('FormSessionStore — answerQuestion', () => {
     const result = store.answerQuestion(ev.ref, -1);
     expect(result).toBe(AnswerResult.CONSTRAINT_VIOLATED);
     expect(cb).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-4: fake FormSession stores AnswerValue-shaped values after a commit
+// (mirrors real ts-rosa FormEvaluator storage shape, per ADR-D-A6).
+// ---------------------------------------------------------------------------
+describe('FormSessionStore — fake session mirrors AnswerValue storage (REQ-4)', () => {
+  it('stores an AnswerValue-shaped object on the tree after answerQuestion, not a raw primitive', () => {
+    const store = makeStore();
+    store.stepForward(); // get to /data/name question
+    const ev = store.adapter.getCurrentEvent();
+    if (ev.kind !== 'question') throw new Error('expected question');
+    store.answerQuestion(ev.ref, 'Alice');
+
+    const raw = store.adapter.resolveValue(ev.ref);
+    // Decode path must still hand back the primitive to widgets.
+    expect(raw).toBe('Alice');
+  });
+
+  it("the underlying fake tree node holds an AnswerValue ({kind,value,displayText}), not the raw primitive", () => {
+    const session = makeFakeSession({
+      events: [
+        { kind: 'bof' },
+        {
+          kind: 'question',
+          ref: '/data/name',
+          dataType: 'string',
+          controlType: 'input',
+          label: 'Name',
+          hint: null,
+          appearance: null,
+        },
+        { kind: 'eof' },
+      ],
+      nodeStates: {
+        '/data/name': { relevant: true, enabled: true, required: false, readonly: false, constraintMsg: null, calculatedValue: null },
+      },
+      relevance: { '/data/name': true },
+      choices: {},
+      answerResults: { '/data/name': AnswerResult.OK },
+      values: { '/data/name': '' },
+    });
+    const store = new FormSessionStore(session);
+    store.stepForward();
+    const ev = store.adapter.getCurrentEvent();
+    if (ev.kind !== 'question') throw new Error('expected question');
+    store.answerQuestion(ev.ref, 'Alice');
+
+    const tree = session.tree as InstanceTree;
+    const node = tree.root.children.find((c) => c.name === 'name');
+    expect(node?.value).not.toBe('Alice');
+    expect(node?.value).toMatchObject({ kind: 'string', value: 'Alice' });
   });
 });

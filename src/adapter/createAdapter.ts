@@ -15,6 +15,7 @@ import { isAt, isBof, isEof } from '@nuup/ts-rosa';
 import { resolveReference } from '@nuup/ts-rosa';
 import type { NodeState, SelectChoice, AnswerResult } from '@nuup/ts-rosa';
 import type { FormAdapter, AdaptedEvent, NodeRef } from './FormAdapter';
+import { encodeAnswer } from './encodeAnswer';
 
 export function createAdapter(session: FormSession): FormAdapter {
   const { navigator, evaluator, tree } = session;
@@ -179,9 +180,12 @@ export function createAdapter(session: FormSession): FormAdapter {
     },
 
     answerQuestion(ref: NodeRef, value: unknown): AnswerResult {
+      const node = resolveReference(tree, ref);
+      const dataType = node?.dataType ?? 'string';
+      const encoded = encodeAnswer(dataType, value);
       return evaluator.answerQuestion(
         ref as Parameters<typeof evaluator.answerQuestion>[0],
-        value as never
+        encoded
       );
     },
 

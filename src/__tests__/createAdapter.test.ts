@@ -13,6 +13,8 @@
 import { createAdapter } from '../adapter/createAdapter';
 import { makeFakeSession } from '../test-support/makeFakeSession';
 import { AnswerResult } from '@nuup/ts-rosa';
+import { DOMParser } from '@xmldom/xmldom';
+import { parseDocument, createFormSession } from '@nuup/ts-rosa';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -178,8 +180,118 @@ describe('createAdapter — delegation', () => {
     const ev = adapter.getCurrentEvent();
     if (ev.kind !== 'question') throw new Error('expected question');
     const val = adapter.resolveValue(ev.ref);
-    // Initial value in fake session is ''
-    expect(val).toBe('');
+    // Initial value in fake session is '', which now (REQ-1.3/ADR-D-A3)
+    // auto-encodes to null on tree build — resolveValue's decode path
+    // (REQ-2.2) surfaces null as the empty representation for an
+    // unanswered node.
+    expect(val).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQ-1 / REQ-2: encode/decode boundary (real ts-rosa engine)
+// ---------------------------------------------------------------------------
+function parseXml(xml: string) {
+  const doc = new DOMParser().parseFromString(
+    xml,
+    'text/xml'
+  ) as unknown as Document;
+  return parseDocument(doc);
+}
+
+const ENCODE_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Encode Boundary</h:title>
+    <model>
+      <instance>
+        <data id="encode">
+          <name/>
+          <age/>
+          <greeting/>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+      <bind nodeset="/data/greeting" type="string" calculate="/data/name" readonly="true()"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/name"><label>Name</label></input>
+    <input ref="/data/age"><label>Age</label></input>
+    <input ref="/data/greeting"><label>Greeting</label></input>
+  </h:body>
+</h:html>`;
+
+function makeRealAdapter() {
+  const def = parseXml(ENCODE_XML);
+  const session = createFormSession(def);
+  return { adapter: createAdapter(session), tree: session.tree };
+}
+
+function refFor(adapter: ReturnType<typeof createAdapter>, times: number) {
+  for (let i = 0; i < times; i++) adapter.stepForward();
+  const ev = adapter.getCurrentEvent();
+  if (ev.kind !== 'question') throw new Error('expected question');
+  return ev.ref;
+}
+
+describe('createAdapter — answerQuestion encode boundary (REQ-1)', () => {
+  it('stores an AnswerValue (not a raw string) on the tree node for text', () => {
+    const { adapter, tree } = makeRealAdapter();
+    const ref = refFor(adapter, 1); // name
+    adapter.answerQuestion(ref, 'hello');
+    const node = tree.root.children.find((c) => c.name === 'name');
+    expect(node?.value).not.toBe('hello');
+    expect(node?.value).toMatchObject({ kind: 'string', value: 'hello' });
+  });
+
+  it("encodes empty string '' to null (not a wrapped empty string)", () => {
+    const { adapter, tree } = makeRealAdapter();
+    const ref = refFor(adapter, 1); // name
+    adapter.answerQuestion(ref, '');
+    const node = tree.root.children.find((c) => c.name === 'name');
+    expect(node?.value).toBeNull();
+  });
+
+  it('stores an AnswerValue with numeric kind for int', () => {
+    const { adapter, tree } = makeRealAdapter();
+    refFor(adapter, 1); // name
+    const ageRef = refFor(adapter, 1); // age
+    adapter.answerQuestion(ageRef, 42);
+    const node = tree.root.children.find((c) => c.name === 'age');
+    expect(node?.value).toMatchObject({ kind: 'int', value: 42 });
+  });
+
+  it('never passes a bare primitive or "as never" into evaluator.answerQuestion', () => {
+    const { adapter } = makeRealAdapter();
+    const ref = refFor(adapter, 1); // name
+    // If encoding were bypassed, a calculate cascade reading node.value.value
+    // would throw. Answering + triggering the cascade must not throw.
+    expect(() => adapter.answerQuestion(ref, 'Alice')).not.toThrow();
+  });
+});
+
+describe('createAdapter — resolveValue decode boundary (REQ-2)', () => {
+  it('round-trips text through answerQuestion -> resolveValue', () => {
+    const { adapter } = makeRealAdapter();
+    const ref = refFor(adapter, 1); // name
+    adapter.answerQuestion(ref, 'hello');
+    expect(adapter.resolveValue(ref)).toBe('hello');
+  });
+
+  it('round-trips numeric through answerQuestion -> resolveValue', () => {
+    const { adapter } = makeRealAdapter();
+    refFor(adapter, 1); // name
+    const ageRef = refFor(adapter, 1); // age
+    adapter.answerQuestion(ageRef, 42);
+    expect(adapter.resolveValue(ageRef)).toBe(42);
+  });
+
+  it('returns a falsy/empty representation for an unanswered node', () => {
+    const { adapter } = makeRealAdapter();
+    const ref = refFor(adapter, 1); // name
+    expect(() => adapter.resolveValue(ref)).not.toThrow();
   });
 });
 

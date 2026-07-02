@@ -16,6 +16,7 @@ import type { FormIndex, AtFormIndex, FormIndexLevel } from '@nuup/ts-rosa';
 import { atIndex, beginningOfForm, endOfForm } from '@nuup/ts-rosa';
 import type { FormEntryEvent } from '@nuup/ts-rosa';
 import type { InstanceTree, InstanceNode } from '@nuup/ts-rosa';
+import { encodeAnswer } from '../adapter/encodeAnswer';
 
 // ---------------------------------------------------------------------------
 // Script event types — plain data, not ts-rosa FormEntryEvent
@@ -108,20 +109,36 @@ function parseXPath(xpath: string): TreeReference {
 // Fake InstanceNode + InstanceTree built from script values
 // ---------------------------------------------------------------------------
 
-function makeLeafNode(name: string, value: unknown): InstanceNode {
+/**
+ * True when a value already has the AnswerValue shape ({kind, value,
+ * displayText}) — tests may pass these directly instead of raw primitives.
+ */
+function isAnswerValueShaped(v: unknown): boolean {
+  return (
+    v !== null &&
+    typeof v === 'object' &&
+    'kind' in (v as object) &&
+    'value' in (v as object)
+  );
+}
+
+function makeLeafNode(name: string, value: unknown, dataType: DataType): InstanceNode {
   const node: InstanceNode = {
     name,
     multiplicity: 0,
     value: value as null,
     children: [],
     attributes: new Map(),
-    dataType: 'string',
+    dataType,
     parent: null,
   };
   return node;
 }
 
-function buildFakeTree(values: Record<string, unknown>): InstanceTree {
+function buildFakeTree(
+  values: Record<string, unknown>,
+  dataTypeByXPath: Record<string, DataType>,
+): InstanceTree {
   const root: InstanceNode = {
     name: 'data',
     multiplicity: 0,
@@ -136,7 +153,12 @@ function buildFakeTree(values: Record<string, unknown>): InstanceTree {
     const segments = xpath.split('/').filter(Boolean);
     // For simplicity, build single-level children under root
     const leafName = segments[segments.length - 1] ?? xpath;
-    const child = makeLeafNode(leafName, val);
+    const dataType = dataTypeByXPath[xpath] ?? 'string';
+    // Auto-encode raw primitives to AnswerValue shape (ADR-D-A6), so the
+    // fake models the real ts-rosa engine's tree storage. Tests may also
+    // pass an already-AnswerValue-shaped object directly.
+    const encoded = isAnswerValueShaped(val) ? val : encodeAnswer(dataType, val);
+    const child = makeLeafNode(leafName, encoded, dataType);
     child.parent = root;
     root.children.push(child);
   }
@@ -273,16 +295,36 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
       return choices[key] ?? [];
     },
 
-    answerQuestion(ref: TreeReference, _value: unknown): AnswerResult {
+    answerQuestion(ref: TreeReference, value: unknown): AnswerResult {
       const key = refKey(ref);
+      // Write the (already-encoded, per REQ-4/ADR-D-A6) value back into the
+      // fake tree so resolveValue/decode-path assertions exercise the same
+      // contract as the real ts-rosa FormEvaluator's storage. The adapter
+      // always calls this with an AnswerValue | null (encoded upstream by
+      // createAdapter.answerQuestion), never a raw primitive.
+      const node = findNodeByKey(tree, key);
+      if (node !== null) {
+        node.value = value as null;
+      }
       // Return scripted result, default to AnswerResult.OK (value 0)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return answerResults[key] ?? ('OK' as AnswerResult);
     },
   };
 
+  // Build the xpath -> DataType map from question script events, so the
+  // fake tree's nodes carry a real dataType (ADR-D-A6) — required for
+  // createAdapter.answerQuestion's internal DataType derivation to work
+  // under the fake exactly as it does against the real engine.
+  const dataTypeByXPath: Record<string, DataType> = {};
+  for (const ev of events) {
+    if (ev.kind === 'question') {
+      dataTypeByXPath[ev.ref] = ev.dataType;
+    }
+  }
+
   // Build a fake tree that resolveReference can walk
-  const tree = buildFakeTree(values);
+  const tree = buildFakeTree(values, dataTypeByXPath);
 
   // Override resolveReference to return values directly
   // We patch the tree so the real resolveReference can find nodes.
@@ -304,4 +346,16 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
 function refKey(ref: TreeReference): string {
   if (!ref.levels || ref.levels.length === 0) return '/';
   return '/' + ref.levels.map((l: { name: string }) => l.name).join('/');
+}
+
+/**
+ * Find the fake tree's leaf node matching a ref key ('/data/name' style).
+ * The fake tree is single-level (buildFakeTree only builds direct children
+ * of root, keyed by the leaf segment) — mirrors that structure here.
+ */
+function findNodeByKey(tree: InstanceTree, key: string): InstanceNode | null {
+  const segments = key.split('/').filter(Boolean);
+  const leafName = segments[segments.length - 1];
+  if (leafName === undefined) return null;
+  return tree.root.children.find((c) => c.name === leafName) ?? null;
 }

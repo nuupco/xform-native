@@ -180,6 +180,13 @@ describe('Form component', () => {
     });
     store.stepForward();
     await render(<Form store={store} />);
+    // Per ADR-D-A5 (REQ-3, validate-only Next): handleNext no longer
+    // unconditionally re-commits. It reads store.lastAnswerResult, which is
+    // set by the widget's own onChange commit — simulate that commit here,
+    // mirroring what the real widget would have already done.
+    const currentEv = store.adapter.getCurrentEvent();
+    if (currentEv.kind !== 'question') throw new Error('expected question');
+    store.answerQuestion(currentEv.ref, 'bad');
     const spyStepForward = jest.spyOn(store, 'stepForward');
     await act(async () => {
       fireEvent.press(screen.getByTestId('nav-next'));
@@ -610,6 +617,62 @@ describe('Form e2e cascade', () => {
     });
     expect(screen.getByTestId('required-message')).toBeTruthy();
     expect(screen.getByText('Name')).toBeTruthy();
+  });
+
+  // REQ-3: handleNext validates without redundant re-commit.
+  it('does not re-call answerQuestion when pressing Next repeatedly on an unchanged, already-valid answer', async () => {
+    const store = makeRealStore(E2E_XML);
+    await render(<Form store={store} />);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('bof-start-button'));
+    });
+    await act(async () => {
+      fireEvent.changeText(screen.getByTestId('string-input'), 'Alice');
+    });
+    const spy = jest.spyOn(store, 'answerQuestion');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    expect(screen.getByText('Age')).toBeTruthy();
+    // The widget's onChangeText already committed via store.answerQuestion once.
+    // handleNext itself must not issue a second, redundant commit call.
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('still blocks navigation via required validation without a spurious commit call', async () => {
+    const store = makeRealStore(E2E_XML);
+    await render(<Form store={store} />);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('bof-start-button'));
+    });
+    const spy = jest.spyOn(store, 'answerQuestion');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    expect(screen.getByTestId('required-message')).toBeTruthy();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('commits a genuinely changed value via answerQuestion before navigating', async () => {
+    const store = makeRealStore(E2E_XML);
+    await render(<Form store={store} />);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('bof-start-button'));
+    });
+    await act(async () => {
+      fireEvent.changeText(screen.getByTestId('string-input'), 'Alice');
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    expect(screen.getByText('Age')).toBeTruthy();
+    await act(async () => {
+      fireEvent.changeText(screen.getByTestId('int-input'), '20');
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    expect(screen.getByText('Category')).toBeTruthy();
   });
 });
 

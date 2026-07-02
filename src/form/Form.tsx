@@ -86,14 +86,16 @@ export function Form({ store }: FormProps) {
     directionRef.current = 'forward';
     const ev = store.adapter.getCurrentEvent();
     if (ev.kind === 'question') {
+      // Validate-only (ADR-D-A5, REQ-3): every widget already commits on
+      // change via store.answerQuestion, and evaluator.answerQuestion never
+      // persists a constraint-violated value. So by the time Next is
+      // pressed, the stored value is always constraint-valid, and
+      // store.lastAnswerResult records the outcome of the last real commit
+      // attempt for this ref. Next must never unconditionally re-commit.
       const value = store.adapter.resolveValue(ev.ref);
       const nodeState = store.adapter.getNodeState(ev.ref);
-      const previousResult = store.lastAnswerResult;
-      const result = store.answerQuestion(ev.ref, value);
-      if (
-        result === AnswerResult.REQUIRED_BUT_EMPTY ||
-        (nodeState.required && isValueEmpty(value))
-      ) {
+      const lastResult = store.lastAnswerResult;
+      if (nodeState.required && isValueEmpty(value)) {
         setAdvanceBlocked({
           type: 'required',
           message: 'This field is required',
@@ -101,11 +103,9 @@ export function Form({ store }: FormProps) {
         return;
       }
       if (
-        result === AnswerResult.CONSTRAINT_VIOLATED ||
-        (previousResult?.ref === ev.ref &&
-          previousResult.result === AnswerResult.CONSTRAINT_VIOLATED)
+        lastResult?.ref === ev.ref &&
+        lastResult.result === AnswerResult.CONSTRAINT_VIOLATED
       ) {
-        const nodeState = store.adapter.getNodeState(ev.ref);
         setAdvanceBlocked({
           type: 'constraint',
           message: nodeState.constraintMsg ?? 'Invalid value',
