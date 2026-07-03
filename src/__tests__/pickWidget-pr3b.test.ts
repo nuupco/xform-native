@@ -12,6 +12,8 @@ import { DateWidget } from '../widgets/DateWidget';
 import { TimeWidget } from '../widgets/TimeWidget';
 import { DateTimeWidget } from '../widgets/DateTimeWidget';
 import { RangeWidget } from '../widgets/RangeWidget';
+import { RankWidget } from '../widgets/RankWidget';
+import { TriggerWidget } from '../widgets/TriggerWidget';
 import { UncastWidget } from '../widgets/UncastWidget';
 
 describe('pickWidget — PR-3b wired types', () => {
@@ -67,6 +69,17 @@ describe('pickWidget — PR-3b wired types', () => {
     const { Widget, variant } = pickWidget('int', 'range', 'picker');
     expect(Widget).toBe(RangeWidget);
     expect(variant).toBe('picker');
+  });
+
+  it('dispatches controlType=rank → RankWidget', () => {
+    const { Widget, variant } = pickWidget('selectMulti', 'rank', null);
+    expect(Widget).toBe(RankWidget);
+    expect(variant).toBe('default');
+  });
+
+  it('still dispatches select and trigger correctly alongside rank (precedence regression)', () => {
+    expect(pickWidget('selectMulti', 'select', null).Widget).toBe(SelectMultiWidget);
+    expect(pickWidget('string', 'trigger', null).Widget).toBe(TriggerWidget);
   });
 });
 

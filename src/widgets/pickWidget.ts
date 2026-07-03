@@ -23,6 +23,7 @@ import { DateWidget } from './DateWidget';
 import { TimeWidget } from './TimeWidget';
 import { DateTimeWidget } from './DateTimeWidget';
 import { RangeWidget } from './RangeWidget';
+import { RankWidget } from './RankWidget';
 import { ImageWidget } from './ImageWidget';
 import { AudioWidget } from './AudioWidget';
 import { VideoWidget } from './VideoWidget';
@@ -116,6 +117,13 @@ export function pickWidget(
     };
   }
 
+  // 4a. Rank controlType binds as dataType 'selectMulti' (same shape as
+  // select), but is a distinct control (reorder, not toggle) — hardcode
+  // variant 'default', do not inherit selectMulti appearance variants.
+  if (controlType === 'rank') {
+    return { Widget: RankWidget, variant: 'default' };
+  }
+
   // 4b. Trigger controlType binds as dataType 'string' (no xsd type), so the
   // dataType switch would wrongly fall through to StringWidget (case
   // 'string' below). controlType is the source of truth here, same
@@ -160,11 +168,12 @@ export function pickWidget(
       return { Widget: UncastWidget, variant: 'default' };
 
     // 'selectOne' / 'selectMulti' dataType values are intentionally NOT
-    // handled here. ts-rosa always pairs those dataTypes with controlType
-    // 'select1' / 'select', which is already routed above (step 4, by
-    // controlType). A dataType switch branch for them would be unreachable
-    // in practice; omitting it keeps this switch honest about what actually
-    // falls through to it. Do not re-add these cases.
+    // handled in this switch. They are routed above by controlType:
+    // 'select1' → SelectOneWidget, 'select' → SelectMultiWidget, and
+    // 'rank' → RankWidget (rank reuses the selectMulti dataType + codec but
+    // is a distinct control). Any select-family binding is caught by those
+    // controlType branches before reaching this switch, so a dataType case
+    // here would be dead code. Do not re-add these cases.
 
     case 'date':
       return {
