@@ -33,15 +33,15 @@ function getCameraModule(): any | null {
 }
 
 export interface BarcodeWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function BarcodeWidget({ ref, store, appearance: _appearance }: BarcodeWidgetProps) {
+export function BarcodeWidget({ nodeRef, store, appearance: _appearance }: BarcodeWidgetProps) {
   const camera = getCameraModule();
-  const resolved = store.adapter.resolveValue(ref);
-  const nodeState = store.adapter.getNodeState(ref);
+  const resolved = store.adapter.resolveValue(nodeRef);
+  const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const [scanning, setScanning] = useState(false);
@@ -66,10 +66,10 @@ export function BarcodeWidget({ ref, store, appearance: _appearance }: BarcodeWi
   const handleBarcodeScanned = useCallback(
     (result: { data: string }) => {
       setValue(result.data);
-      store.answerQuestion(ref, result.data);
+      store.answerQuestion(nodeRef, result.data);
       setScanning(false);
     },
-    [ref, store]
+    [nodeRef, store]
   );
 
   const handleRescan = useCallback(() => {

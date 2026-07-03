@@ -13,16 +13,16 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface LongWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function LongWidget({ ref, store, appearance }: LongWidgetProps) {
+export function LongWidget({ nodeRef, store, appearance }: LongWidgetProps) {
   useFormSession(store);
   const [isFocused, setIsFocused] = useState(false);
-  const nodeState = store.adapter.getNodeState(ref);
-  const value = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const value = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('long', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
@@ -30,7 +30,7 @@ export function LongWidget({ ref, store, appearance }: LongWidgetProps) {
     if (isReadonly) return;
     const parsed = parseFloat(text.replace(/,/g, ''));
     if (!isNaN(parsed)) {
-      store.answerQuestion(ref, parsed);
+      store.answerQuestion(nodeRef, parsed);
     }
   }
 

@@ -33,7 +33,7 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface RangeWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
   /** Range start bound (inclusive). Defaults to 0 when absent. */
@@ -45,7 +45,7 @@ export interface RangeWidgetProps {
 }
 
 export function RangeWidget({
-  ref,
+  nodeRef,
   store,
   appearance,
   start = 0,
@@ -54,8 +54,8 @@ export function RangeWidget({
 }: RangeWidgetProps) {
   useFormSession(store);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const nodeState = store.adapter.getNodeState(ref);
-  const rawValue = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const rawValue = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('int', 'range', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
@@ -67,19 +67,19 @@ export function RangeWidget({
     if (isReadonly) return;
     const next = currentValue - step;
     if (next < start) return; // at lower bound — no-op
-    store.answerQuestion(ref, next);
+    store.answerQuestion(nodeRef, next);
   }
 
   function handleIncrement() {
     if (isReadonly) return;
     const next = currentValue + step;
     if (next > end) return; // at upper bound — no-op
-    store.answerQuestion(ref, next);
+    store.answerQuestion(nodeRef, next);
   }
 
   function handlePickValue(value: number) {
     if (isReadonly) return;
-    store.answerQuestion(ref, value);
+    store.answerQuestion(nodeRef, value);
     setPickerOpen(false);
   }
 

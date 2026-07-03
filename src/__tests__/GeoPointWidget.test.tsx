@@ -68,7 +68,7 @@ describe('GeoPointWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('geo-open-map-button')).toBeTruthy();
   });
@@ -78,7 +78,7 @@ describe('GeoPointWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByText(/19\.4326/)).toBeTruthy();
     expect(screen.getByText(/-99\.1332/)).toBeTruthy();
@@ -89,7 +89,7 @@ describe('GeoPointWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-open-map-button'));
@@ -103,7 +103,7 @@ describe('GeoPointWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-open-map-button'));
@@ -117,7 +117,7 @@ describe('GeoPointWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-open-map-button'));
@@ -146,7 +146,7 @@ describe('GeoPointWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-open-map-button'));
@@ -162,7 +162,7 @@ describe('GeoPointWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-open-map-button'));
@@ -179,12 +179,44 @@ describe('GeoPointWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-open-map-button'));
     });
     expect(mockGeo.Location.getCurrentPositionAsync).toHaveBeenCalled();
+  });
+
+  it('unmounting mid-GPS-capture does not set state after unmount', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    let resolveLocation: (value: any) => void = () => {};
+    mockGeo.Location.getCurrentPositionAsync.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveLocation = resolve;
+      }),
+    );
+    const warnSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { unmount } = await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    await act(async () => {
+      unmount();
+    });
+    await act(async () => {
+      resolveLocation(mockGeo.__mockLocation);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const stateWarning = warnSpy.mock.calls.some((call) =>
+      String(call[0]).includes('unmounted component'),
+    );
+    expect(stateWarning).toBe(false);
+    warnSpy.mockRestore();
   });
 });
 
@@ -224,7 +256,7 @@ describe('GeoPointWidget readonly mode', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByText(/19/)).toBeTruthy();
     expect(screen.queryByTestId('geo-open-map-button')).toBeNull();

@@ -33,17 +33,17 @@ function getImagePicker(): any | null {
 }
 
 export interface ImageWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function ImageWidget({ ref, store, appearance: _appearance }: ImageWidgetProps) {
+export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWidgetProps) {
   const picker = getImagePicker();
-  const resolved = store.adapter.resolveValue(ref);
+  const resolved = store.adapter.resolveValue(nodeRef);
   const uri: string | null =
     typeof resolved === 'string' && resolved.length > 0 ? resolved : null;
-  const nodeState = store.adapter.getNodeState(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const [thumbnailUri, setThumbnailUri] = useState<string | null>(uri);
@@ -57,9 +57,9 @@ export function ImageWidget({ ref, store, appearance: _appearance }: ImageWidget
       if (result.canceled || !result.assets?.[0]) return;
       const newUri = result.assets[0].uri;
       setThumbnailUri(newUri);
-      store.answerQuestion(ref, newUri);
+      store.answerQuestion(nodeRef, newUri);
     },
-    [ref, store],
+    [nodeRef, store],
   );
 
   const handleCamera = useCallback(async () => {

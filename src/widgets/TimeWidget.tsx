@@ -18,7 +18,7 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface TimeWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
@@ -42,10 +42,10 @@ function parseTimeInput(text: string): Date | null {
   return d;
 }
 
-export function TimeWidget({ ref, store, appearance: _appearance }: TimeWidgetProps) {
+export function TimeWidget({ nodeRef, store, appearance: _appearance }: TimeWidgetProps) {
   useFormSession(store);
-  const nodeState = store.adapter.getNodeState(ref);
-  const value = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const value = store.adapter.resolveValue(nodeRef);
   const isReadonly = nodeState?.readonly ?? false;
 
   let displayValue = '';
@@ -59,7 +59,7 @@ export function TimeWidget({ ref, store, appearance: _appearance }: TimeWidgetPr
     if (isReadonly) return;
     const parsed = parseTimeInput(text);
     if (parsed !== null) {
-      store.answerQuestion(ref, parsed);
+      store.answerQuestion(nodeRef, parsed);
     }
   }
 

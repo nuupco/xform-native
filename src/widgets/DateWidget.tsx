@@ -22,7 +22,7 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface DateWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
@@ -81,10 +81,10 @@ function parseYearInput(text: string): Date | null {
   return d;
 }
 
-export function DateWidget({ ref, store, appearance }: DateWidgetProps) {
+export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
   useFormSession(store);
-  const nodeState = store.adapter.getNodeState(ref);
-  const value = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const value = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('date', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
@@ -118,7 +118,7 @@ export function DateWidget({ ref, store, appearance }: DateWidgetProps) {
       parsed = parseDateInput(text);
     }
     if (parsed !== null) {
-      store.answerQuestion(ref, parsed);
+      store.answerQuestion(nodeRef, parsed);
     }
     // If not valid yet, don't commit — user is still typing
   }

@@ -69,7 +69,7 @@ describe('GeoShapeWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoShapeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('geo-shape-open-map-button')).toBeTruthy();
   });
@@ -79,7 +79,7 @@ describe('GeoShapeWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoShapeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
@@ -93,7 +93,7 @@ describe('GeoShapeWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoShapeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
@@ -111,7 +111,7 @@ describe('GeoShapeWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <GeoShapeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
@@ -134,7 +134,7 @@ describe('GeoShapeWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <GeoShapeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
@@ -153,7 +153,7 @@ describe('GeoShapeWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoShapeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
@@ -172,7 +172,7 @@ describe('GeoShapeWidget readonly mode', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <GeoShapeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('geo-shape-readonly')).toBeTruthy();
     expect(screen.queryByTestId('geo-shape-open-map-button')).toBeNull();

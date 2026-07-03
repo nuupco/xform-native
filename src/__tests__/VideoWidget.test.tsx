@@ -64,7 +64,7 @@ describe('VideoWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('video-record-button')).toBeTruthy();
   });
@@ -75,7 +75,7 @@ describe('VideoWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
@@ -91,7 +91,7 @@ describe('VideoWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('video-play-button')).toBeTruthy();
   });
@@ -101,7 +101,7 @@ describe('VideoWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('video-play-button')).toBeTruthy();
     const recordButton = screen.getByTestId('video-record-button');
@@ -113,7 +113,7 @@ describe('VideoWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-play-button'));
@@ -126,7 +126,7 @@ describe('VideoWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
@@ -141,7 +141,7 @@ describe('VideoWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
@@ -153,13 +153,36 @@ describe('VideoWidget', () => {
     expect(screen.getByTestId('video-record-button')).toBeTruthy();
   });
 
+  it('unmounting mid-recording stops recording and does not set state after unmount', async () => {
+    const camera = require('expo-camera');
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const warnSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { unmount } = await render(
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('video-record-button'));
+    });
+    await act(async () => {
+      unmount();
+    });
+    expect(camera.__mockStopRecording).toHaveBeenCalled();
+    const stateWarning = warnSpy.mock.calls.some((call) =>
+      String(call[0]).includes('unmounted component'),
+    );
+    expect(stateWarning).toBe(false);
+    warnSpy.mockRestore();
+  });
+
   it('re-record overwrites previous value', async () => {
     const store = makeStore('file://old.mp4');
     store.stepForward();
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));

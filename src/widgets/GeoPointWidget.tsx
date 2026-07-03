@@ -6,7 +6,7 @@
  *
  * Value shape: { lat: number, lon: number, alt: number, acc: number } | null
  */
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -56,15 +56,15 @@ function isGeoPoint(value: unknown): value is GeoPoint {
 }
 
 export interface GeoPointWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function GeoPointWidget({ ref, store, appearance: _appearance }: GeoPointWidgetProps) {
+export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoPointWidgetProps) {
   const geo = getGeoModule();
-  const resolved = store.adapter.resolveValue(ref);
-  const nodeState = store.adapter.getNodeState(ref);
+  const resolved = store.adapter.resolveValue(nodeRef);
+  const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -78,6 +78,14 @@ export function GeoPointWidget({ ref, store, appearance: _appearance }: GeoPoint
       setCoordinate(resolved);
     }
   }, [resolved]);
+
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const openMap = useCallback(() => {
     setModalVisible(true);
@@ -93,7 +101,7 @@ export function GeoPointWidget({ ref, store, appearance: _appearance }: GeoPoint
       const { status } = await geo.Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
       const location = await geo.Location.getCurrentPositionAsync({});
-      if (location?.coords) {
+      if (location?.coords && mountedRef.current) {
         setCoordinate({
           lat: location.coords.latitude,
           lon: location.coords.longitude,
@@ -122,10 +130,10 @@ export function GeoPointWidget({ ref, store, appearance: _appearance }: GeoPoint
 
   const handleAccept = useCallback(() => {
     if (coordinate) {
-      store.answerQuestion(ref, coordinate);
+      store.answerQuestion(nodeRef, coordinate);
     }
     closeMap();
-  }, [coordinate, ref, store, closeMap]);
+  }, [coordinate, nodeRef, store, closeMap]);
 
   const handleCancel = useCallback(() => {
     // Revert to the stored value on cancel

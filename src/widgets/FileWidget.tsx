@@ -31,14 +31,14 @@ function getDocPicker(): any | null {
 }
 
 export interface FileWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function FileWidget({ ref, store, appearance: _appearance }: FileWidgetProps) {
+export function FileWidget({ nodeRef, store, appearance: _appearance }: FileWidgetProps) {
   const picker = getDocPicker();
-  const nodeState = store.adapter.getNodeState(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const handlePick = useCallback(async () => {
@@ -46,8 +46,8 @@ export function FileWidget({ ref, store, appearance: _appearance }: FileWidgetPr
     const result = await picker.getDocumentAsync({ type: '*/*' });
     if (result.canceled || !result.assets?.[0]) return;
     const uri = result.assets[0].uri;
-    store.answerQuestion(ref, uri);
-  }, [picker, readonly, ref, store]);
+    store.answerQuestion(nodeRef, uri);
+  }, [picker, readonly, nodeRef, store]);
 
   if (!picker) {
     return <UnsupportedWidget dataType="binary" />;

@@ -84,14 +84,14 @@ function makeStoreFor(opts: {
 describe('StringWidget', () => {
   it('renders current value', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/name', dataType: 'string', value: 'Alice' });
-    await render(<StringWidget ref={ref} store={store} />);
+    await render(<StringWidget nodeRef={ref} store={store} />);
     expect(screen.getByDisplayValue('Alice')).toBeTruthy();
   });
 
   it('calls answerQuestion with string value on change', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/name', dataType: 'string', value: '' });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<StringWidget ref={ref} store={store} />);
+    await render(<StringWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByTestId('string-input'), 'Bob');
     expect(spy).toHaveBeenCalledWith(ref, 'Bob');
   });
@@ -104,7 +104,7 @@ describe('StringWidget', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<StringWidget ref={ref} store={store} />);
+    await render(<StringWidget nodeRef={ref} store={store} />);
     const input = screen.getByTestId('string-input');
     expect(input.props.editable).toBe(false);
     // Attempting to change text should not call answerQuestion
@@ -118,13 +118,13 @@ describe('StringWidget', () => {
       dataType: 'string',
       required: true,
     });
-    await render(<StringWidget ref={ref} store={store} />);
+    await render(<StringWidget nodeRef={ref} store={store} />);
     expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
 
   it('renders multiline variant when appearance=multiline', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/name', dataType: 'string', value: '' });
-    await render(<StringWidget ref={ref} store={store} appearance="multiline" />);
+    await render(<StringWidget nodeRef={ref} store={store} appearance="multiline" />);
     const input = screen.getByTestId('string-input');
     expect(input.props.multiline).toBe(true);
   });
@@ -137,14 +137,14 @@ describe('StringWidget', () => {
 describe('IntWidget', () => {
   it('renders current value as string', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/age', dataType: 'int', value: 42 });
-    await render(<IntWidget ref={ref} store={store} />);
+    await render(<IntWidget nodeRef={ref} store={store} />);
     expect(screen.getByDisplayValue('42')).toBeTruthy();
   });
 
   it('calls answerQuestion with parsed integer', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/age', dataType: 'int', value: 0 });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<IntWidget ref={ref} store={store} />);
+    await render(<IntWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByTestId('int-input'), '25');
     expect(spy).toHaveBeenCalledWith(ref, 25);
   });
@@ -156,13 +156,13 @@ describe('IntWidget', () => {
       value: 5,
       readonly: true,
     });
-    await render(<IntWidget ref={ref} store={store} />);
+    await render(<IntWidget nodeRef={ref} store={store} />);
     expect(screen.getByTestId('int-input').props.editable).toBe(false);
   });
 
   it('does not render its own required indicator (Form.tsx owns it)', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/age', dataType: 'int', required: true });
-    await render(<IntWidget ref={ref} store={store} />);
+    await render(<IntWidget nodeRef={ref} store={store} />);
     expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
 });
@@ -178,14 +178,14 @@ describe('DecimalWidget', () => {
       dataType: 'decimal',
       value: 3.14,
     });
-    await render(<DecimalWidget ref={ref} store={store} />);
+    await render(<DecimalWidget nodeRef={ref} store={store} />);
     expect(screen.getByDisplayValue('3.14')).toBeTruthy();
   });
 
   it('calls answerQuestion with parsed float', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/price', dataType: 'decimal', value: 0 });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DecimalWidget ref={ref} store={store} />);
+    await render(<DecimalWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByTestId('decimal-input'), '1.99');
     expect(spy).toHaveBeenCalledWith(ref, 1.99);
   });
@@ -197,7 +197,7 @@ describe('DecimalWidget', () => {
       value: 1.0,
       readonly: true,
     });
-    await render(<DecimalWidget ref={ref} store={store} />);
+    await render(<DecimalWidget nodeRef={ref} store={store} />);
     expect(screen.getByTestId('decimal-input').props.editable).toBe(false);
   });
 });
@@ -213,14 +213,14 @@ describe('LongWidget', () => {
       dataType: 'long',
       value: 9999999,
     });
-    await render(<LongWidget ref={ref} store={store} />);
+    await render(<LongWidget nodeRef={ref} store={store} />);
     expect(screen.getByDisplayValue('9999999')).toBeTruthy();
   });
 
   it('calls answerQuestion with parsed number', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/big', dataType: 'long', value: 0 });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<LongWidget ref={ref} store={store} />);
+    await render(<LongWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByTestId('long-input'), '123456');
     expect(spy).toHaveBeenCalledWith(ref, 123456);
   });
@@ -232,7 +232,7 @@ describe('LongWidget', () => {
       value: 1,
       readonly: true,
     });
-    await render(<LongWidget ref={ref} store={store} />);
+    await render(<LongWidget nodeRef={ref} store={store} />);
     expect(screen.getByTestId('long-input').props.editable).toBe(false);
   });
 });
@@ -248,7 +248,7 @@ describe('BooleanWidget', () => {
       dataType: 'boolean',
       value: true,
     });
-    await render(<BooleanWidget ref={ref} store={store} />);
+    await render(<BooleanWidget nodeRef={ref} store={store} />);
     const sw = screen.getByTestId('boolean-switch');
     expect(sw.props.value).toBe(true);
   });
@@ -260,7 +260,7 @@ describe('BooleanWidget', () => {
       value: false,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<BooleanWidget ref={ref} store={store} />);
+    await render(<BooleanWidget nodeRef={ref} store={store} />);
     fireEvent(screen.getByTestId('boolean-switch'), 'valueChange', true);
     expect(spy).toHaveBeenCalledWith(ref, true);
   });
@@ -272,7 +272,7 @@ describe('BooleanWidget', () => {
       value: false,
       readonly: true,
     });
-    await render(<BooleanWidget ref={ref} store={store} />);
+    await render(<BooleanWidget nodeRef={ref} store={store} />);
     expect(screen.getByTestId('boolean-switch').props.disabled).toBe(true);
   });
 
@@ -282,13 +282,13 @@ describe('BooleanWidget', () => {
       dataType: 'boolean',
       required: true,
     });
-    await render(<BooleanWidget ref={ref} store={store} />);
+    await render(<BooleanWidget nodeRef={ref} store={store} />);
     expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
 
   it('renders checkbox variant when appearance=checkbox', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/flag', dataType: 'boolean', value: false });
-    await render(<BooleanWidget ref={ref} store={store} appearance="checkbox" />);
+    await render(<BooleanWidget nodeRef={ref} store={store} appearance="checkbox" />);
     expect(screen.getByTestId('boolean-checkbox')).toBeTruthy();
   });
 });
@@ -304,21 +304,21 @@ describe('NoteWidget', () => {
       dataType: 'string',
       value: 'Please read this carefully.',
     });
-    await render(<NoteWidget ref={ref} store={store} />);
+    await render(<NoteWidget nodeRef={ref} store={store} />);
     expect(screen.getByText('Please read this carefully.')).toBeTruthy();
   });
 
   it('never calls answerQuestion', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/note', dataType: 'string', value: 'note' });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<NoteWidget ref={ref} store={store} />);
+    await render(<NoteWidget nodeRef={ref} store={store} />);
     // NoteWidget should have no interactive element — just confirm no call happened
     expect(spy).not.toHaveBeenCalled();
   });
 
   it('does not render an editable input', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/note', dataType: 'string', value: 'note' });
-    await render(<NoteWidget ref={ref} store={store} />);
+    await render(<NoteWidget nodeRef={ref} store={store} />);
     // There should be no testID string-input or editable TextInput
     expect(screen.queryByTestId('string-input')).toBeNull();
   });
@@ -335,7 +335,7 @@ describe('UncastWidget', () => {
       dataType: 'uncast',
       value: 'raw-value',
     });
-    await render(<UncastWidget ref={ref} store={store} />);
+    await render(<UncastWidget nodeRef={ref} store={store} />);
     expect(true).toBe(true);
   });
 
@@ -345,7 +345,7 @@ describe('UncastWidget', () => {
       dataType: 'uncast',
       value: 'raw-value',
     });
-    await render(<UncastWidget ref={ref} store={store} />);
+    await render(<UncastWidget nodeRef={ref} store={store} />);
     expect(screen.getByText('raw-value')).toBeTruthy();
   });
 });

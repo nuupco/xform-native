@@ -13,16 +13,16 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface IntWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function IntWidget({ ref, store, appearance }: IntWidgetProps) {
+export function IntWidget({ nodeRef, store, appearance }: IntWidgetProps) {
   useFormSession(store);
   const [isFocused, setIsFocused] = useState(false);
-  const nodeState = store.adapter.getNodeState(ref);
-  const value = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const value = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('int', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
@@ -30,7 +30,7 @@ export function IntWidget({ ref, store, appearance }: IntWidgetProps) {
     if (isReadonly) return;
     const parsed = parseInt(text.replace(/,/g, ''), 10);
     if (!isNaN(parsed)) {
-      store.answerQuestion(ref, parsed);
+      store.answerQuestion(nodeRef, parsed);
     }
   }
 

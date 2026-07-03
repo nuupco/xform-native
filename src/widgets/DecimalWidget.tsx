@@ -13,16 +13,16 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface DecimalWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function DecimalWidget({ ref, store, appearance }: DecimalWidgetProps) {
+export function DecimalWidget({ nodeRef, store, appearance }: DecimalWidgetProps) {
   useFormSession(store);
   const [isFocused, setIsFocused] = useState(false);
-  const nodeState = store.adapter.getNodeState(ref);
-  const value = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const value = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('decimal', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
@@ -30,7 +30,7 @@ export function DecimalWidget({ ref, store, appearance }: DecimalWidgetProps) {
     if (isReadonly) return;
     const parsed = parseFloat(text.replace(/,/g, ''));
     if (!isNaN(parsed)) {
-      store.answerQuestion(ref, parsed);
+      store.answerQuestion(nodeRef, parsed);
     }
   }
 

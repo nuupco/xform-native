@@ -2,7 +2,7 @@
  * NoteWidget — read-only display of note text (REQ-15).
  *
  * Never calls answerQuestion. No editable input element.
- * Renders text from resolveValue(ref).
+ * Renders text from resolveValue(nodeRef).
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -12,14 +12,14 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface NoteWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function NoteWidget({ ref, store }: NoteWidgetProps) {
+export function NoteWidget({ nodeRef, store }: NoteWidgetProps) {
   useFormSession(store);
-  const value = store.adapter.resolveValue(ref);
+  const value = store.adapter.resolveValue(nodeRef);
   const text = value != null ? String(value) : '';
 
   return (

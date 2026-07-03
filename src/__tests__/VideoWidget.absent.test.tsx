@@ -58,7 +58,7 @@ describe('VideoWidget absent dep', () => {
     if (ev.kind !== 'question') throw new Error('expected question');
 
     await render(
-      <VideoWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('unsupported-widget')).toBeTruthy();
   });

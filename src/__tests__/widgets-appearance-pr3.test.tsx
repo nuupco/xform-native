@@ -92,7 +92,7 @@ describe('SelectMultiWidget minimal', () => {
       choices,
       appearance: 'minimal',
     });
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="minimal" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="minimal" />);
     expect(screen.getByTestId('select-multi-dropdown-trigger')).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-dropdown-trigger'));
@@ -112,7 +112,7 @@ describe('SelectMultiWidget minimal', () => {
       appearance: 'minimal',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="minimal" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="minimal" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-dropdown-trigger'));
     });
@@ -132,7 +132,7 @@ describe('SelectMultiWidget minimal', () => {
       value: ['val2'],
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="minimal" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="minimal" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-dropdown-trigger'));
     });
@@ -152,7 +152,7 @@ describe('SelectMultiWidget minimal', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="minimal" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="minimal" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-dropdown-trigger'));
     });
@@ -174,7 +174,7 @@ describe('SelectMultiWidget columns', () => {
       choices,
       appearance: 'columns',
     });
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="columns" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="columns" />);
     expect(screen.getByTestId('select-multi-columns-list')).toBeTruthy();
     expect(screen.getByTestId('select-multi-columns-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-multi-columns-option-val2')).toBeTruthy();
@@ -190,7 +190,7 @@ describe('SelectMultiWidget columns', () => {
       appearance: 'columns',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="columns" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="columns" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-columns-option-val3'));
     });
@@ -207,7 +207,7 @@ describe('SelectMultiWidget columns', () => {
       value: ['val1', 'val3'],
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="columns" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="columns" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-columns-option-val1'));
     });
@@ -228,7 +228,7 @@ describe('SelectMultiWidget columns-pack', () => {
       choices,
       appearance: 'columns-pack',
     });
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="columns-pack" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="columns-pack" />);
     expect(screen.getByTestId('select-multi-columns-pack-list')).toBeTruthy();
     expect(screen.getByTestId('select-multi-columns-pack-option-val1')).toBeTruthy();
   });
@@ -242,7 +242,7 @@ describe('SelectMultiWidget columns-pack', () => {
       appearance: 'columns-pack',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="columns-pack" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="columns-pack" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-columns-pack-option-val2'));
     });
@@ -263,7 +263,7 @@ describe('SelectMultiWidget autocomplete', () => {
       choices,
       appearance: 'autocomplete',
     });
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="autocomplete" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     expect(screen.getByTestId('select-multi-autocomplete-input')).toBeTruthy();
     expect(screen.getByTestId('select-multi-autocomplete-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-multi-autocomplete-option-val2')).toBeTruthy();
@@ -278,7 +278,7 @@ describe('SelectMultiWidget autocomplete', () => {
       choices,
       appearance: 'autocomplete',
     });
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="autocomplete" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('select-multi-autocomplete-input'), 'Two');
     });
@@ -296,7 +296,7 @@ describe('SelectMultiWidget autocomplete', () => {
       appearance: 'autocomplete',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="autocomplete" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('select-multi-autocomplete-input'), 'Two');
     });
@@ -316,7 +316,7 @@ describe('SelectMultiWidget autocomplete', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="autocomplete" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('select-multi-autocomplete-input'), 'Two');
     });
@@ -340,7 +340,7 @@ describe('SelectMultiWidget likert', () => {
       choices,
       appearance: 'likert',
     });
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="likert" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="likert" />);
     expect(screen.getByTestId('select-multi-likert-container')).toBeTruthy();
     expect(screen.getByTestId('select-multi-likert-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-multi-likert-option-val2')).toBeTruthy();
@@ -357,7 +357,7 @@ describe('SelectMultiWidget likert', () => {
       appearance: 'likert',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="likert" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="likert" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-likert-option-val2'));
     });
@@ -374,7 +374,7 @@ describe('SelectMultiWidget likert', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="likert" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="likert" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-multi-likert-option-val1'));
     });
@@ -395,7 +395,7 @@ describe('SelectMultiWidget fallback', () => {
       choices,
       appearance: 'some-unknown-variant',
     });
-    await render(<SelectMultiWidget ref={ref} store={store} appearance="some-unknown-variant" />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="some-unknown-variant" />);
     expect(screen.getByTestId('select-multi-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-multi-option-val2')).toBeTruthy();
     expect(screen.getByTestId('select-multi-option-val3')).toBeTruthy();
@@ -413,7 +413,7 @@ describe('DateWidget month-year', () => {
       dataType: 'date',
       appearance: 'month-year',
     });
-    await render(<DateWidget ref={ref} store={store} appearance="month-year" />);
+    await render(<DateWidget nodeRef={ref} store={store} appearance="month-year" />);
     expect(screen.getByPlaceholderText('MM-YYYY')).toBeTruthy();
   });
 
@@ -424,7 +424,7 @@ describe('DateWidget month-year', () => {
       appearance: 'month-year',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateWidget ref={ref} store={store} appearance="month-year" />);
+    await render(<DateWidget nodeRef={ref} store={store} appearance="month-year" />);
     fireEvent.changeText(screen.getByPlaceholderText('MM-YYYY'), '05-2024');
     expect(spy).toHaveBeenCalledTimes(1);
     const committed = spy.mock.calls[0]![1] as Date;
@@ -440,7 +440,7 @@ describe('DateWidget month-year', () => {
       appearance: 'month-year',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateWidget ref={ref} store={store} appearance="month-year" />);
+    await render(<DateWidget nodeRef={ref} store={store} appearance="month-year" />);
     fireEvent.changeText(screen.getByPlaceholderText('MM-YYYY'), '13-2024');
     expect(spy).not.toHaveBeenCalled();
   });
@@ -457,7 +457,7 @@ describe('DateWidget year', () => {
       dataType: 'date',
       appearance: 'year',
     });
-    await render(<DateWidget ref={ref} store={store} appearance="year" />);
+    await render(<DateWidget nodeRef={ref} store={store} appearance="year" />);
     expect(screen.getByPlaceholderText('YYYY')).toBeTruthy();
   });
 
@@ -468,7 +468,7 @@ describe('DateWidget year', () => {
       appearance: 'year',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateWidget ref={ref} store={store} appearance="year" />);
+    await render(<DateWidget nodeRef={ref} store={store} appearance="year" />);
     fireEvent.changeText(screen.getByPlaceholderText('YYYY'), '2024');
     expect(spy).toHaveBeenCalledTimes(1);
     const committed = spy.mock.calls[0]![1] as Date;
@@ -484,7 +484,7 @@ describe('DateWidget year', () => {
       appearance: 'year',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateWidget ref={ref} store={store} appearance="year" />);
+    await render(<DateWidget nodeRef={ref} store={store} appearance="year" />);
     fireEvent.changeText(screen.getByPlaceholderText('YYYY'), 'ab12');
     expect(spy).not.toHaveBeenCalled();
   });
@@ -502,7 +502,7 @@ describe('DateWidget default', () => {
       value: null,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateWidget ref={ref} store={store} />);
+    await render(<DateWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByPlaceholderText('YYYY-MM-DD'), '2024-05-15');
     expect(spy).toHaveBeenCalledTimes(1);
     const committed = spy.mock.calls[0]![1] as Date;

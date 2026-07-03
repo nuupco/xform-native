@@ -58,7 +58,7 @@ describe('GeoShapeWidget absent dep', () => {
     if (ev.kind !== 'question') throw new Error('expected question');
 
     await render(
-      <GeoShapeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('unsupported-widget')).toBeTruthy();
   });

@@ -18,7 +18,7 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface DateTimeWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
@@ -44,10 +44,10 @@ function parseDateTimeInput(text: string): Date | null {
   return d;
 }
 
-export function DateTimeWidget({ ref, store, appearance: _appearance }: DateTimeWidgetProps) {
+export function DateTimeWidget({ nodeRef, store, appearance: _appearance }: DateTimeWidgetProps) {
   useFormSession(store);
-  const nodeState = store.adapter.getNodeState(ref);
-  const value = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const value = store.adapter.resolveValue(nodeRef);
   const isReadonly = nodeState?.readonly ?? false;
 
   let displayValue = '';
@@ -61,7 +61,7 @@ export function DateTimeWidget({ ref, store, appearance: _appearance }: DateTime
     if (isReadonly) return;
     const parsed = parseDateTimeInput(text);
     if (parsed !== null) {
-      store.answerQuestion(ref, parsed);
+      store.answerQuestion(nodeRef, parsed);
     }
   }
 

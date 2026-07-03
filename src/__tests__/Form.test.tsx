@@ -423,6 +423,179 @@ describe('Form component', () => {
     expect(screen.getByText('Q1')).toBeTruthy();
   });
 
+  it('does not carry over selectMulti state between adjacent same-type questions (stable key)', async () => {
+    const store = makeStore({
+      events: [
+        { kind: 'bof' },
+        {
+          kind: 'question',
+          ref: '/data/sm1',
+          dataType: 'selectMulti',
+          controlType: 'select',
+          label: 'SM1',
+          hint: null,
+          appearance: null,
+        },
+        {
+          kind: 'question',
+          ref: '/data/sm2',
+          dataType: 'selectMulti',
+          controlType: 'select',
+          label: 'SM2',
+          hint: null,
+          appearance: null,
+        },
+        { kind: 'eof' },
+      ],
+      nodeStates: {
+        '/data/sm1': {
+          readonly: false,
+          required: false,
+          relevant: true,
+          enabled: true,
+          constraintMsg: null,
+          calculatedValue: null,
+        },
+        '/data/sm2': {
+          readonly: false,
+          required: false,
+          relevant: true,
+          enabled: true,
+          constraintMsg: null,
+          calculatedValue: null,
+        },
+      },
+      relevance: { '/data/sm1': true, '/data/sm2': true },
+      choices: {
+        '/data/sm1': [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
+        '/data/sm2': [{ value: 'a', label: 'A' }, { value: 'y', label: 'Y' }],
+      },
+      answerResults: {},
+      values: { '/data/sm1': [], '/data/sm2': [] },
+    });
+    store.stepForward(); // bof -> sm1
+    await render(<Form store={store} />);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-multi-option-a'));
+    });
+    expect(
+      screen.getByTestId('select-multi-option-a').props.accessibilityState
+        ?.checked,
+    ).toBe(true);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    expect(screen.getByText('SM2')).toBeTruthy();
+    // SM2 must render its OWN options, fresh (unselected) — not SM1's stale
+    // selection carried over via a reused component instance. SM2 also has an
+    // option with value 'a' (same token as SM1's selected option) to expose
+    // the leak if the widget instance/local state were reused.
+    expect(
+      screen.getByTestId('select-multi-option-a').props.accessibilityState
+        ?.checked,
+    ).toBe(false);
+  });
+
+  it('SelectMulti: no stale selections across questions, and clear-all works on revisit', async () => {
+    const store = makeStore({
+      events: [
+        { kind: 'bof' },
+        {
+          kind: 'question',
+          ref: '/data/sm1',
+          dataType: 'selectMulti',
+          controlType: 'select',
+          label: 'SM1',
+          hint: null,
+          appearance: null,
+        },
+        {
+          kind: 'question',
+          ref: '/data/sm2',
+          dataType: 'selectMulti',
+          controlType: 'select',
+          label: 'SM2',
+          hint: null,
+          appearance: null,
+        },
+        { kind: 'eof' },
+      ],
+      nodeStates: {
+        '/data/sm1': {
+          readonly: false,
+          required: false,
+          relevant: true,
+          enabled: true,
+          constraintMsg: null,
+          calculatedValue: null,
+        },
+        '/data/sm2': {
+          readonly: false,
+          required: false,
+          relevant: true,
+          enabled: true,
+          constraintMsg: null,
+          calculatedValue: null,
+        },
+      },
+      relevance: { '/data/sm1': true, '/data/sm2': true },
+      choices: {
+        '/data/sm1': [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
+        '/data/sm2': [{ value: 'a', label: 'A' }, { value: 'y', label: 'Y' }],
+      },
+      answerResults: {},
+      values: { '/data/sm1': [], '/data/sm2': [] },
+    });
+    store.stepForward(); // bof -> sm1
+    await render(<Form store={store} />);
+
+    // Toggle both options on SM1
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-multi-option-a'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-multi-option-b'));
+    });
+    expect(
+      screen.getByTestId('select-multi-option-a').props.accessibilityState?.checked,
+    ).toBe(true);
+    expect(
+      screen.getByTestId('select-multi-option-b').props.accessibilityState?.checked,
+    ).toBe(true);
+
+    // Navigate to SM2 — must show its OWN (empty) selections, not SM1's.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    expect(screen.getByText('SM2')).toBeTruthy();
+    expect(
+      screen.getByTestId('select-multi-option-a').props.accessibilityState?.checked,
+    ).toBe(false);
+
+    // Navigate back to SM1 — its selections must still be there.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-back'));
+    });
+    expect(screen.getByText('SM1')).toBeTruthy();
+    expect(
+      screen.getByTestId('select-multi-option-a').props.accessibilityState?.checked,
+    ).toBe(true);
+
+    // Clear all selections on SM1 (toggle both off) — must render as cleared.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-multi-option-a'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-multi-option-b'));
+    });
+    expect(
+      screen.getByTestId('select-multi-option-a').props.accessibilityState?.checked,
+    ).toBe(false);
+    expect(
+      screen.getByTestId('select-multi-option-b').props.accessibilityState?.checked,
+    ).toBe(false);
+  });
+
   it('renders group header', async () => {
     const store = makeStore({
       events: [

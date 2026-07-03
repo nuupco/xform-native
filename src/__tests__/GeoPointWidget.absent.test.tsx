@@ -58,7 +58,7 @@ describe('GeoPointWidget absent dep', () => {
     if (ev.kind !== 'question') throw new Error('expected question');
 
     await render(
-      <GeoPointWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('unsupported-widget')).toBeTruthy();
   });

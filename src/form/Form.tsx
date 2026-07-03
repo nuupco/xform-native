@@ -20,6 +20,7 @@ import {
   RequiredSurface,
   LabelHint,
 } from './surfaces';
+import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 
 export interface FormProps {
   store: FormSessionStore;
@@ -171,12 +172,23 @@ export function Form({ store }: FormProps) {
                 *
               </Text>
             )}
-            <Widget
-              ref={ev.ref}
-              store={store}
-              appearance={ev.appearance}
-              {...rangeProps}
-            />
+            <WidgetErrorBoundary
+              key={ev.index}
+              fallback={
+                <View style={styles.errorFallback} testID="widget-error-fallback">
+                  <Text style={styles.errorFallbackText}>
+                    This question could not be displayed.
+                  </Text>
+                </View>
+              }
+            >
+              <Widget
+                nodeRef={ev.ref}
+                store={store}
+                appearance={ev.appearance}
+                {...rangeProps}
+              />
+            </WidgetErrorBoundary>
             {advanceBlocked?.type === 'constraint' && (
               <ConstraintSurface message={advanceBlocked.message} />
             )}
@@ -256,6 +268,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   required: {
+    color: tokens.color.error,
+    fontSize: tokens.font.sm,
+  },
+  errorFallback: {
+    padding: tokens.spacing.md,
+    backgroundColor: tokens.color.surface,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: tokens.color.error,
+  },
+  errorFallbackText: {
     color: tokens.color.error,
     fontSize: tokens.font.sm,
   },

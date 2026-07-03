@@ -58,7 +58,7 @@ describe('GeoTraceWidget absent dep', () => {
     if (ev.kind !== 'question') throw new Error('expected question');
 
     await render(
-      <GeoTraceWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('unsupported-widget')).toBeTruthy();
   });

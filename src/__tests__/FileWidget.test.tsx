@@ -66,7 +66,7 @@ describe('FileWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <FileWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <FileWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('file-pick-button')).toBeTruthy();
   });
@@ -81,7 +81,7 @@ describe('FileWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <FileWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <FileWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('file-pick-button'));
@@ -96,7 +96,7 @@ describe('FileWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <FileWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <FileWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('file-pick-button'));
@@ -109,7 +109,7 @@ describe('FileWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <FileWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <FileWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     const button = screen.getByTestId('file-pick-button');
     expect(button.props.accessibilityState?.disabled).toBe(true);
@@ -124,7 +124,7 @@ describe('FileWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <FileWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <FileWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('file-pick-button'));

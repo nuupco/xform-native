@@ -71,7 +71,7 @@ describe('BarcodeWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <BarcodeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <BarcodeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('barcode-scan-button')).toBeTruthy();
   });
@@ -81,7 +81,7 @@ describe('BarcodeWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <BarcodeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <BarcodeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('barcode-scan-button'));
@@ -95,7 +95,7 @@ describe('BarcodeWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <BarcodeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <BarcodeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('barcode-scan-button'));
@@ -111,7 +111,7 @@ describe('BarcodeWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <BarcodeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <BarcodeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByText('OLD-123')).toBeTruthy();
     expect(screen.getByTestId('barcode-rescan-button')).toBeTruthy();
@@ -123,7 +123,7 @@ describe('BarcodeWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <BarcodeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <BarcodeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('barcode-rescan-button'));
@@ -140,7 +140,7 @@ describe('BarcodeWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <BarcodeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <BarcodeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('barcode-scan-button'));
@@ -159,7 +159,7 @@ describe('BarcodeWidget readonly mode', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <BarcodeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <BarcodeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByText('READ-ONLY-99')).toBeTruthy();
     expect(screen.queryByTestId('barcode-scan-button')).toBeNull();

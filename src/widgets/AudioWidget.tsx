@@ -4,7 +4,7 @@
  * Gated on expo-av (optional peer dep). Falls back to
  * UnsupportedWidget when the dep is absent at runtime.
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -31,17 +31,17 @@ function getAudioModule(): any | null {
 }
 
 export interface AudioWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function AudioWidget({ ref, store, appearance: _appearance }: AudioWidgetProps) {
+export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWidgetProps) {
   const av = getAudioModule();
-  const resolved = store.adapter.resolveValue(ref);
+  const resolved = store.adapter.resolveValue(nodeRef);
   const storedUri: string | null =
     typeof resolved === 'string' && resolved.length > 0 ? resolved : null;
-  const nodeState = store.adapter.getNodeState(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const [isRecording, setIsRecording] = useState(false);
@@ -65,10 +65,10 @@ export function AudioWidget({ ref, store, appearance: _appearance }: AudioWidget
     const uri = recording.getURI();
     recordingRef.current = null;
     if (uri) {
-      store.answerQuestion(ref, uri);
+      store.answerQuestion(nodeRef, uri);
     }
     setIsRecording(false);
-  }, [av, readonly, ref, store]);
+  }, [av, readonly, nodeRef, store]);
 
   const handlePlay = useCallback(async () => {
     if (!av || readonly) return;
@@ -83,6 +83,27 @@ export function AudioWidget({ ref, store, appearance: _appearance }: AudioWidget
     soundRef.current = sound;
     await sound.playAsync();
   }, [av, readonly, storedUri]);
+
+  useEffect(() => {
+    return () => {
+      if (recordingRef.current) {
+        try {
+          recordingRef.current.stopAndUnloadAsync();
+        } catch {
+          // best-effort cleanup on unmount
+        }
+        recordingRef.current = null;
+      }
+      if (soundRef.current) {
+        try {
+          soundRef.current.unloadAsync();
+        } catch {
+          // best-effort cleanup on unmount
+        }
+        soundRef.current = null;
+      }
+    };
+  }, []);
 
   if (!av) {
     return <UnsupportedWidget dataType="binary" />;

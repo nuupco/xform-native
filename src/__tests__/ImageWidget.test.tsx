@@ -67,7 +67,7 @@ describe('ImageWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <ImageWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <ImageWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('image-camera-button')).toBeTruthy();
     expect(screen.getByTestId('image-library-button')).toBeTruthy();
@@ -78,7 +78,7 @@ describe('ImageWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <ImageWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <ImageWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('image-thumbnail')).toBeTruthy();
   });
@@ -93,7 +93,7 @@ describe('ImageWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <ImageWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <ImageWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('image-camera-button'));
@@ -108,7 +108,7 @@ describe('ImageWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <ImageWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <ImageWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('image-library-button'));

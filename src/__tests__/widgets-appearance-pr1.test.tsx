@@ -74,13 +74,13 @@ function makeStoreFor(opts: {
 describe('IntWidget thousands-sep', () => {
   it('formats value with commas when appearance=thousands-sep', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/age', dataType: 'int', value: 1234567 });
-    await render(<IntWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<IntWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     expect(screen.getByDisplayValue('1,234,567')).toBeTruthy();
   });
 
   it('shows raw value on focus and formatted on blur', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/age', dataType: 'int', value: 1234 });
-    await render(<IntWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<IntWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     const input = screen.getByTestId('int-input');
 
     // Initially formatted
@@ -102,14 +102,14 @@ describe('IntWidget thousands-sep', () => {
   it('still commits parsed integer on change', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/age', dataType: 'int', value: 0 });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<IntWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<IntWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     fireEvent.changeText(screen.getByTestId('int-input'), '999');
     expect(spy).toHaveBeenCalledWith(ref, 999);
   });
 
   it('shows unformatted value for default appearance', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/age', dataType: 'int', value: 1234567 });
-    await render(<IntWidget ref={ref} store={store} />);
+    await render(<IntWidget nodeRef={ref} store={store} />);
     expect(screen.getByDisplayValue('1234567')).toBeTruthy();
   });
 });
@@ -121,13 +121,13 @@ describe('IntWidget thousands-sep', () => {
 describe('DecimalWidget thousands-sep', () => {
   it('formats value with commas when appearance=thousands-sep', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/price', dataType: 'decimal', value: 1234.56 });
-    await render(<DecimalWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<DecimalWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     expect(screen.getByDisplayValue('1,234.56')).toBeTruthy();
   });
 
   it('shows raw value on focus and formatted on blur', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/price', dataType: 'decimal', value: 1234.5 });
-    await render(<DecimalWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<DecimalWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     const input = screen.getByTestId('decimal-input');
 
     expect(input.props.value).toBe('1,234.5');
@@ -144,7 +144,7 @@ describe('DecimalWidget thousands-sep', () => {
   it('still commits parsed float on change', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/price', dataType: 'decimal', value: 0 });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DecimalWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<DecimalWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     fireEvent.changeText(screen.getByTestId('decimal-input'), '1.99');
     expect(spy).toHaveBeenCalledWith(ref, 1.99);
   });
@@ -157,13 +157,13 @@ describe('DecimalWidget thousands-sep', () => {
 describe('LongWidget thousands-sep', () => {
   it('formats value with commas when appearance=thousands-sep', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/big', dataType: 'long', value: 9999999 });
-    await render(<LongWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<LongWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     expect(screen.getByDisplayValue('9,999,999')).toBeTruthy();
   });
 
   it('shows raw value on focus and formatted on blur', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/big', dataType: 'long', value: 123456 });
-    await render(<LongWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<LongWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     const input = screen.getByTestId('long-input');
 
     expect(input.props.value).toBe('123,456');
@@ -180,7 +180,7 @@ describe('LongWidget thousands-sep', () => {
   it('still commits parsed number on change', async () => {
     const { store, ref } = makeStoreFor({ ref: '/data/big', dataType: 'long', value: 0 });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<LongWidget ref={ref} store={store} appearance="thousands-sep" />);
+    await render(<LongWidget nodeRef={ref} store={store} appearance="thousands-sep" />);
     fireEvent.changeText(screen.getByTestId('long-input'), '123456');
     expect(spy).toHaveBeenCalledWith(ref, 123456);
   });
@@ -199,7 +199,7 @@ describe('RangeWidget no-ticks', () => {
       value: 5,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} appearance="no-ticks" />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} appearance="no-ticks" />);
 
     expect(screen.queryByTestId('range-value-display')).toBeNull();
     fireEvent.press(screen.getByTestId('range-increment'));
@@ -215,7 +215,7 @@ describe('RangeWidget picker', () => {
       controlType: 'range',
       value: 5,
     });
-    await render(<RangeWidget ref={ref} store={store} start={0} end={5} step={1} appearance="picker" />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={5} step={1} appearance="picker" />);
 
     expect(screen.queryByTestId('range-increment')).toBeNull();
     expect(screen.queryByTestId('range-decrement')).toBeNull();
@@ -230,7 +230,7 @@ describe('RangeWidget picker', () => {
       value: 0,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<RangeWidget ref={ref} store={store} start={0} end={3} step={1} appearance="picker" />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={3} step={1} appearance="picker" />);
 
     await act(async () => {
       fireEvent.press(screen.getByTestId('range-picker-trigger'));
@@ -252,7 +252,7 @@ describe('RangeWidget vertical', () => {
       controlType: 'range',
       value: 5,
     });
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} appearance="vertical" />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} appearance="vertical" />);
 
     expect(screen.getByTestId('range-stepper')).toBeTruthy();
     expect(screen.getByTestId('range-increment')).toBeTruthy();
@@ -267,7 +267,7 @@ describe('RangeWidget vertical', () => {
       value: 5,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} appearance="vertical" />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} appearance="vertical" />);
 
     fireEvent.press(screen.getByTestId('range-increment'));
     expect(spy).toHaveBeenCalledWith(ref, 6);

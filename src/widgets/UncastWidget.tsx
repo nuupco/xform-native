@@ -11,14 +11,14 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface UncastWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function UncastWidget({ ref, store }: UncastWidgetProps) {
+export function UncastWidget({ nodeRef, store }: UncastWidgetProps) {
   useFormSession(store);
-  const value = store.adapter.resolveValue(ref);
+  const value = store.adapter.resolveValue(nodeRef);
   const displayValue = value != null ? String(value) : '';
 
   return (

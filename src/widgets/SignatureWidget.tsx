@@ -40,14 +40,14 @@ interface Stroke {
 }
 
 export interface SignatureWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function SignatureWidget({ ref, store }: SignatureWidgetProps) {
+export function SignatureWidget({ nodeRef, store }: SignatureWidgetProps) {
   const svg = getSvg();
-  const nodeState = store.adapter.getNodeState(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -105,8 +105,8 @@ export function SignatureWidget({ ref, store }: SignatureWidgetProps) {
     // stroke data as a JSON-serialized URI marker.
     const data = JSON.stringify(strokes);
     const uri = `signature:${data}`;
-    store.answerQuestion(ref, uri);
-  }, [ref, store, strokes]);
+    store.answerQuestion(nodeRef, uri);
+  }, [nodeRef, store, strokes]);
 
   if (!svg) {
     return <UnsupportedWidget dataType="binary" />;

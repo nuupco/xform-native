@@ -14,7 +14,7 @@
  *   likert       → horizontal row of labeled checkbox Pressables
  */
 
-import { useRef, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -31,44 +31,53 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface SelectMultiWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetProps) {
+export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWidgetProps) {
   useFormSession(store);
-  const nodeState = store.adapter.getNodeState(ref);
-  const choices = store.adapter.getChoices(ref);
-  const rawValue = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const choices = store.adapter.getChoices(nodeRef);
+  const rawValue = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('selectMulti', 'select', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  // Use a ref to track the current selections synchronously, avoiding stale-closure
-  // issues with useState batching in React 19 when fireEvent fires multiple times.
-  // The ref is initialized from resolveValue and updated on each toggle before commit.
-  const rawArray: string[] = Array.isArray(rawValue) ? (rawValue as string[]) : [];
-  const selectionsRef = useRef<string[]>(rawArray);
-  // Keep ref in sync with store value when it changes externally (store re-render path).
-  if (JSON.stringify(selectionsRef.current) !== JSON.stringify(rawArray) && rawArray.length > 0) {
-    selectionsRef.current = rawArray;
-  }
-  const selections = selectionsRef.current;
+  // Derived directly from the store — resolveValue is the single source of
+  // truth (per store version-bump model). With key={ev.index} on the Widget
+  // element (Form.tsx), each logical question gets its own component
+  // instance, so a ref-based selections cache/sync-guard is no longer needed
+  // to avoid stale-closure issues across DIFFERENT questions. Rapid
+  // same-instance fireEvent batching still reads/writes through the store,
+  // which is authoritative.
+  const selections: string[] = Array.isArray(rawValue) ? (rawValue as string[]) : [];
+
+  // Hoisted above all variant branching (Unconditional Hook Ordering): this
+  // widget re-renders as the SAME instance when only `appearance` changes,
+  // so hook count/order must stay invariant across variants.
+  const filtered = useMemo(() => {
+    if (!query.trim()) return choices;
+    const q = query.toLowerCase();
+    return choices.filter(
+      (c) =>
+        (c.label ?? c.value).toLowerCase().includes(q) ||
+        c.value.toLowerCase().includes(q),
+    );
+  }, [choices, query]);
 
   function handleToggle(value: string) {
     if (isReadonly) return;
-    const current = selectionsRef.current;
     let next: string[];
-    if (current.includes(value)) {
-      next = current.filter((v) => v !== value);
+    if (selections.includes(value)) {
+      next = selections.filter((v) => v !== value);
     } else {
-      next = [...current, value];
+      next = [...selections, value];
     }
-    selectionsRef.current = next;
-    store.answerQuestion(ref, next);
+    store.answerQuestion(nodeRef, next);
   }
 
   if (variant === 'minimal') {
@@ -140,16 +149,6 @@ export function SelectMultiWidget({ ref, store, appearance }: SelectMultiWidgetP
   }
 
   if (variant === 'autocomplete') {
-    const filtered = useMemo(() => {
-      if (!query.trim()) return choices;
-      const q = query.toLowerCase();
-      return choices.filter(
-        (c) =>
-          (c.label ?? c.value).toLowerCase().includes(q) ||
-          c.value.toLowerCase().includes(q),
-      );
-    }, [choices, query]);
-
     return (
       <View style={styles.container}>
         <TextInput

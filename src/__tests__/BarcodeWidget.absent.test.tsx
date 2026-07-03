@@ -58,7 +58,7 @@ describe('BarcodeWidget absent dep', () => {
     if (ev.kind !== 'question') throw new Error('expected question');
 
     await render(
-      <BarcodeWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <BarcodeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('unsupported-widget')).toBeTruthy();
   });

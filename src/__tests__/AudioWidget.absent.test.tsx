@@ -58,7 +58,7 @@ describe('AudioWidget absent dep', () => {
     if (ev.kind !== 'question') throw new Error('expected question');
 
     await render(
-      <AudioWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('unsupported-widget')).toBeTruthy();
   });

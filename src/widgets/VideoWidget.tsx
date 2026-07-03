@@ -47,42 +47,62 @@ function getAvModule(): any | null {
 }
 
 export interface VideoWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function VideoWidget({ ref, store, appearance: _appearance }: VideoWidgetProps) {
+export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWidgetProps) {
   const camera = getCameraModule();
   const av = getAvModule();
-  const resolved = store.adapter.resolveValue(ref);
+  const resolved = store.adapter.resolveValue(nodeRef);
   const storedUri: string | null =
     typeof resolved === 'string' && resolved.length > 0 ? resolved : null;
-  const nodeState = store.adapter.getNodeState(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const cameraRef = useRef<any>(null);
+  const activeCameraRef = useRef<any>(null);
   const isCancelledRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      isCancelledRef.current = true;
+      if (activeCameraRef.current) {
+        try {
+          activeCameraRef.current.stopRecording();
+        } catch {
+          // Ignore if not currently recording
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isRecording || !cameraRef.current) return;
+    activeCameraRef.current = cameraRef.current;
     isCancelledRef.current = false;
     cameraRef.current
       .recordAsync({ maxDuration: 60 })
       .then((result: { uri?: string } | undefined) => {
         if (!isCancelledRef.current && result?.uri) {
-          store.answerQuestion(ref, result.uri);
+          store.answerQuestion(nodeRef, result.uri);
         }
       })
       .catch(() => {
         // Recording failed — ignore
       })
       .finally(() => {
-        setIsRecording(false);
+        if (mountedRef.current) {
+          setIsRecording(false);
+        }
       });
-  }, [isRecording, ref, store]);
+  }, [isRecording, nodeRef, store]);
 
   const handleRecord = useCallback(() => {
     if (!camera || readonly) return;

@@ -14,22 +14,22 @@ import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
 export interface BooleanWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function BooleanWidget({ ref, store, appearance }: BooleanWidgetProps) {
+export function BooleanWidget({ nodeRef, store, appearance }: BooleanWidgetProps) {
   useFormSession(store);
-  const nodeState = store.adapter.getNodeState(ref);
-  const value = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const value = store.adapter.resolveValue(nodeRef);
   const boolValue = value === true || value === 'true' || value === '1';
   const variant = resolveVariant('boolean', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
   function handleChange(newValue: boolean) {
     if (isReadonly) return;
-    store.answerQuestion(ref, newValue);
+    store.answerQuestion(nodeRef, newValue);
   }
 
   return (

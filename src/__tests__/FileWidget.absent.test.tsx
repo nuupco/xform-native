@@ -58,7 +58,7 @@ describe('FileWidget absent dep', () => {
     if (ev.kind !== 'question') throw new Error('expected question');
 
     await render(
-      <FileWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <FileWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('unsupported-widget')).toBeTruthy();
   });

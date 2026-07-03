@@ -90,7 +90,7 @@ describe('SelectOneWidget likert', () => {
       choices,
       appearance: 'likert',
     });
-    await render(<SelectOneWidget ref={ref} store={store} appearance="likert" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="likert" />);
     expect(screen.getByTestId('select-one-likert-container')).toBeTruthy();
     expect(screen.getByTestId('select-one-likert-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-one-likert-option-val2')).toBeTruthy();
@@ -109,7 +109,7 @@ describe('SelectOneWidget likert', () => {
       appearance: 'likert',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} appearance="likert" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="likert" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-one-likert-option-val2'));
     });
@@ -126,7 +126,7 @@ describe('SelectOneWidget likert', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} appearance="likert" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="likert" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-one-likert-option-val1'));
     });
@@ -147,7 +147,7 @@ describe('SelectOneWidget autocomplete', () => {
       choices,
       appearance: 'autocomplete',
     });
-    await render(<SelectOneWidget ref={ref} store={store} appearance="autocomplete" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     expect(screen.getByTestId('select-one-autocomplete-input')).toBeTruthy();
     expect(screen.getByTestId('select-one-autocomplete-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-one-autocomplete-option-val2')).toBeTruthy();
@@ -162,7 +162,7 @@ describe('SelectOneWidget autocomplete', () => {
       choices,
       appearance: 'autocomplete',
     });
-    await render(<SelectOneWidget ref={ref} store={store} appearance="autocomplete" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('select-one-autocomplete-input'), 'Two');
     });
@@ -180,7 +180,7 @@ describe('SelectOneWidget autocomplete', () => {
       appearance: 'autocomplete',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} appearance="autocomplete" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('select-one-autocomplete-input'), 'Two');
     });
@@ -200,7 +200,7 @@ describe('SelectOneWidget autocomplete', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} appearance="autocomplete" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
       fireEvent.changeText(screen.getByTestId('select-one-autocomplete-input'), 'Two');
     });
@@ -224,7 +224,7 @@ describe('SelectOneWidget columns', () => {
       choices,
       appearance: 'columns',
     });
-    await render(<SelectOneWidget ref={ref} store={store} appearance="columns" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="columns" />);
     expect(screen.getByTestId('select-one-columns-list')).toBeTruthy();
     expect(screen.getByTestId('select-one-columns-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-one-columns-option-val2')).toBeTruthy();
@@ -240,7 +240,7 @@ describe('SelectOneWidget columns', () => {
       appearance: 'columns',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} appearance="columns" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="columns" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-one-columns-option-val3'));
     });
@@ -261,7 +261,7 @@ describe('SelectOneWidget columns-pack', () => {
       choices,
       appearance: 'columns-pack',
     });
-    await render(<SelectOneWidget ref={ref} store={store} appearance="columns-pack" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="columns-pack" />);
     expect(screen.getByTestId('select-one-columns-pack-list')).toBeTruthy();
     expect(screen.getByTestId('select-one-columns-pack-option-val1')).toBeTruthy();
   });
@@ -275,7 +275,7 @@ describe('SelectOneWidget columns-pack', () => {
       appearance: 'columns-pack',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} appearance="columns-pack" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="columns-pack" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-one-columns-pack-option-val2'));
     });
@@ -296,7 +296,7 @@ describe('SelectOneWidget quick', () => {
       choices,
       appearance: 'quick',
     });
-    await render(<SelectOneWidget ref={ref} store={store} appearance="quick" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="quick" />);
     expect(screen.getByTestId('select-one-quick-container')).toBeTruthy();
     expect(screen.getByTestId('select-one-quick-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-one-quick-option-val2')).toBeTruthy();
@@ -313,7 +313,7 @@ describe('SelectOneWidget quick', () => {
       appearance: 'quick',
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} appearance="quick" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="quick" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-one-quick-option-val2'));
     });
@@ -330,7 +330,7 @@ describe('SelectOneWidget quick', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} appearance="quick" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="quick" />);
     await act(async () => {
       fireEvent.press(screen.getByTestId('select-one-quick-option-val1'));
     });
@@ -351,7 +351,7 @@ describe('SelectOneWidget fallback', () => {
       choices,
       appearance: 'some-unknown-variant',
     });
-    await render(<SelectOneWidget ref={ref} store={store} appearance="some-unknown-variant" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="some-unknown-variant" />);
     // default variant uses testID select-one-option-{value}
     expect(screen.getByTestId('select-one-option-val1')).toBeTruthy();
     expect(screen.getByTestId('select-one-option-val2')).toBeTruthy();

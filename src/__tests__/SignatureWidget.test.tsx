@@ -64,7 +64,7 @@ describe('SignatureWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <SignatureWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <SignatureWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('signature-widget')).toBeTruthy();
     expect(screen.getByTestId('signature-clear-button')).toBeTruthy();
@@ -77,7 +77,7 @@ describe('SignatureWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <SignatureWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <SignatureWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('signature-export-button'));
@@ -93,7 +93,7 @@ describe('SignatureWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <SignatureWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <SignatureWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     // First export something to create strokes, then clear
     await act(async () => {

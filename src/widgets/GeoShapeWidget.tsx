@@ -61,15 +61,15 @@ function serializeVertices(vertices: Vertex[]): string {
 }
 
 export interface GeoShapeWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function GeoShapeWidget({ ref, store, appearance: _appearance }: GeoShapeWidgetProps) {
+export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoShapeWidgetProps) {
   const geo = getGeoModule();
-  const resolved = store.adapter.resolveValue(ref);
-  const nodeState = store.adapter.getNodeState(ref);
+  const resolved = store.adapter.resolveValue(nodeRef);
+  const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -99,10 +99,10 @@ export function GeoShapeWidget({ ref, store, appearance: _appearance }: GeoShape
 
   const handleAccept = useCallback(() => {
     if (vertices.length > 0) {
-      store.answerQuestion(ref, serializeVertices(vertices));
+      store.answerQuestion(nodeRef, serializeVertices(vertices));
     }
     closeMap();
-  }, [vertices, ref, store, closeMap]);
+  }, [vertices, nodeRef, store, closeMap]);
 
   const handleCancel = useCallback(() => {
     setVertices(parseVertices(resolved));

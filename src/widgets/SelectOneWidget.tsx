@@ -34,25 +34,38 @@ import type { FormSessionStore } from '../store/FormSessionStore';
 
 
 export interface SelectOneWidgetProps {
-  ref: NodeRef;
+  nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
 }
 
-export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps) {
+export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetProps) {
   useFormSession(store);
-  const nodeState = store.adapter.getNodeState(ref);
-  const choices = store.adapter.getChoices(ref);
-  const currentValue = store.adapter.resolveValue(ref);
+  const nodeState = store.adapter.getNodeState(nodeRef);
+  const choices = store.adapter.getChoices(nodeRef);
+  const currentValue = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('selectOne', 'select1', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState('');
 
+  // Hoisted above all variant branching (Unconditional Hook Ordering): this
+  // widget re-renders as the SAME instance when only `appearance` changes,
+  // so hook count/order must stay invariant across variants.
+  const filtered = useMemo(() => {
+    if (!query.trim()) return choices;
+    const q = query.toLowerCase();
+    return choices.filter(
+      (c) =>
+        (c.label ?? c.value).toLowerCase().includes(q) ||
+        c.value.toLowerCase().includes(q),
+    );
+  }, [choices, query]);
+
   function handleSelect(value: string) {
     if (isReadonly) return;
-    store.answerQuestion(ref, value);
+    store.answerQuestion(nodeRef, value);
     setSheetOpen(false);
   }
 
@@ -112,16 +125,6 @@ export function SelectOneWidget({ ref, store, appearance }: SelectOneWidgetProps
   }
 
   if (variant === 'autocomplete') {
-    const filtered = useMemo(() => {
-      if (!query.trim()) return choices;
-      const q = query.toLowerCase();
-      return choices.filter(
-        (c) =>
-          (c.label ?? c.value).toLowerCase().includes(q) ||
-          c.value.toLowerCase().includes(q),
-      );
-    }, [choices, query]);
-
     return (
       <View style={styles.container}>
         <TextInput

@@ -66,7 +66,7 @@ describe('AudioWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <AudioWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('audio-record-button')).toBeTruthy();
   });
@@ -77,7 +77,7 @@ describe('AudioWidget', () => {
     const ev = getRef(store);
     const answerSpy = jest.spyOn(store, 'answerQuestion');
     await render(
-      <AudioWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('audio-record-button'));
@@ -93,7 +93,7 @@ describe('AudioWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <AudioWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('audio-play-button')).toBeTruthy();
   });
@@ -103,7 +103,7 @@ describe('AudioWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <AudioWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     const playButton = screen.getByTestId('audio-play-button');
     expect(playButton.props.accessibilityState?.disabled).toBe(true);
@@ -114,7 +114,7 @@ describe('AudioWidget', () => {
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <AudioWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('audio-play-button'));
@@ -122,12 +122,44 @@ describe('AudioWidget', () => {
     expect(av.__mockSound.playAsync).toHaveBeenCalled();
   });
 
+  it('unmounting mid-recording stops and unloads the recording', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const { unmount } = await render(
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('audio-record-button'));
+    });
+    await act(async () => {
+      unmount();
+    });
+    expect(av.__mockRecording.stopAndUnloadAsync).toHaveBeenCalled();
+  });
+
+  it('unmounting with a loaded sound unloads it', async () => {
+    const store = makeStore('file://existing.m4a');
+    store.stepForward();
+    const ev = getRef(store);
+    const { unmount } = await render(
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('audio-play-button'));
+    });
+    await act(async () => {
+      unmount();
+    });
+    expect(av.__mockSound.unloadAsync).toHaveBeenCalled();
+  });
+
   it('shows Stop while recording and hides Record', async () => {
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
     await render(
-      <AudioWidget ref={ev.ref} store={store} appearance={ev.appearance} />,
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
       fireEvent.press(screen.getByTestId('audio-record-button'));

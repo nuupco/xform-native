@@ -106,7 +106,7 @@ describe('SelectOneWidget', () => {
       controlType: 'select1',
       choices,
     });
-    await render(<SelectOneWidget ref={ref} store={store} />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} />);
     expect(screen.getByText('Option One')).toBeTruthy();
     expect(screen.getByText('Option Two')).toBeTruthy();
     expect(screen.getByText('Option Three')).toBeTruthy();
@@ -120,7 +120,7 @@ describe('SelectOneWidget', () => {
       choices,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} />);
     fireEvent.press(screen.getByTestId('select-one-option-val1'));
     expect(spy).toHaveBeenCalledWith(ref, 'val1');
   });
@@ -134,7 +134,7 @@ describe('SelectOneWidget', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectOneWidget ref={ref} store={store} />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} />);
     fireEvent.press(screen.getByTestId('select-one-option-val1'));
     expect(spy).not.toHaveBeenCalled();
   });
@@ -146,7 +146,7 @@ describe('SelectOneWidget', () => {
       controlType: 'select1',
       choices,
     });
-    await render(<SelectOneWidget ref={ref} store={store} appearance="minimal" />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="minimal" />);
     expect(screen.getByTestId('select-one-dropdown-trigger')).toBeTruthy();
   });
 
@@ -158,7 +158,7 @@ describe('SelectOneWidget', () => {
       choices,
       required: true,
     });
-    await render(<SelectOneWidget ref={ref} store={store} />);
+    await render(<SelectOneWidget nodeRef={ref} store={store} />);
     expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
 });
@@ -181,7 +181,7 @@ describe('SelectMultiWidget', () => {
       controlType: 'select',
       choices,
     });
-    await render(<SelectMultiWidget ref={ref} store={store} />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} />);
     expect(screen.getByText('Apple')).toBeTruthy();
     expect(screen.getByText('Banana')).toBeTruthy();
     expect(screen.getByText('Cherry')).toBeTruthy();
@@ -196,7 +196,7 @@ describe('SelectMultiWidget', () => {
       value: [],
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} />);
 
     // Select 'a' then 'b' — wrap each in act() to flush React updates between presses
     await act(async () => {
@@ -219,7 +219,7 @@ describe('SelectMultiWidget', () => {
       value: ['a', 'b'],
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} />);
 
     // Deselect 'a' — should commit ['b'] only
     await act(async () => {
@@ -237,7 +237,7 @@ describe('SelectMultiWidget', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<SelectMultiWidget ref={ref} store={store} />);
+    await render(<SelectMultiWidget nodeRef={ref} store={store} />);
     fireEvent.press(screen.getByTestId('select-multi-option-a'));
     expect(spy).not.toHaveBeenCalled();
   });
@@ -255,7 +255,7 @@ describe('DateWidget', () => {
       dataType: 'date',
       value: d,
     });
-    await render(<DateWidget ref={ref} store={store} />);
+    await render(<DateWidget nodeRef={ref} store={store} />);
     expect(screen.getByDisplayValue('2024-03-15')).toBeTruthy();
   });
 
@@ -266,7 +266,7 @@ describe('DateWidget', () => {
       value: null,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateWidget ref={ref} store={store} />);
+    await render(<DateWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByTestId('date-input'), '2025-06-01');
     expect(spy).toHaveBeenCalledWith(
       ref,
@@ -286,7 +286,7 @@ describe('DateWidget', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateWidget ref={ref} store={store} />);
+    await render(<DateWidget nodeRef={ref} store={store} />);
     const input = screen.getByTestId('date-input');
     expect(input.props.editable).toBe(false);
     fireEvent.changeText(input, '2025-01-01');
@@ -300,7 +300,7 @@ describe('DateWidget', () => {
       value: null,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateWidget ref={ref} store={store} />);
+    await render(<DateWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByTestId('date-input'), 'not-a-date');
     expect(spy).not.toHaveBeenCalled();
   });
@@ -318,7 +318,7 @@ describe('TimeWidget', () => {
       dataType: 'time',
       value: d,
     });
-    await render(<TimeWidget ref={ref} store={store} />);
+    await render(<TimeWidget nodeRef={ref} store={store} />);
     expect(screen.getByDisplayValue('14:30')).toBeTruthy();
   });
 
@@ -329,7 +329,7 @@ describe('TimeWidget', () => {
       value: null,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<TimeWidget ref={ref} store={store} />);
+    await render(<TimeWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByTestId('time-input'), '09:15');
     expect(spy).toHaveBeenCalledWith(
       ref,
@@ -348,7 +348,7 @@ describe('TimeWidget', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<TimeWidget ref={ref} store={store} />);
+    await render(<TimeWidget nodeRef={ref} store={store} />);
     const input = screen.getByTestId('time-input');
     expect(input.props.editable).toBe(false);
     fireEvent.changeText(input, '10:00');
@@ -368,7 +368,7 @@ describe('DateTimeWidget', () => {
       dataType: 'dateTime',
       value: d,
     });
-    await render(<DateTimeWidget ref={ref} store={store} />);
+    await render(<DateTimeWidget nodeRef={ref} store={store} />);
     expect(screen.getByDisplayValue('2024-05-20T10:30')).toBeTruthy();
   });
 
@@ -379,7 +379,7 @@ describe('DateTimeWidget', () => {
       value: null,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateTimeWidget ref={ref} store={store} />);
+    await render(<DateTimeWidget nodeRef={ref} store={store} />);
     fireEvent.changeText(screen.getByTestId('datetime-input'), '2025-01-15T08:00');
     expect(spy).toHaveBeenCalledWith(
       ref,
@@ -397,7 +397,7 @@ describe('DateTimeWidget', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<DateTimeWidget ref={ref} store={store} />);
+    await render(<DateTimeWidget nodeRef={ref} store={store} />);
     const input = screen.getByTestId('datetime-input');
     expect(input.props.editable).toBe(false);
     fireEvent.changeText(input, '2025-01-01T00:00');
@@ -417,7 +417,7 @@ describe('RangeWidget', () => {
       controlType: 'range',
       value: 5,
     });
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} />);
     expect(screen.getByTestId('range-value-display')).toBeTruthy();
     expect(screen.getByText('5')).toBeTruthy();
   });
@@ -430,7 +430,7 @@ describe('RangeWidget', () => {
       value: 3,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} />);
     fireEvent.press(screen.getByTestId('range-increment'));
     expect(spy).toHaveBeenCalledWith(ref, 4);
   });
@@ -443,7 +443,7 @@ describe('RangeWidget', () => {
       value: 5,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} />);
     fireEvent.press(screen.getByTestId('range-decrement'));
     expect(spy).toHaveBeenCalledWith(ref, 4);
   });
@@ -456,7 +456,7 @@ describe('RangeWidget', () => {
       value: 10,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} />);
     fireEvent.press(screen.getByTestId('range-increment'));
     expect(spy).not.toHaveBeenCalled();
   });
@@ -469,7 +469,7 @@ describe('RangeWidget', () => {
       value: 0,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} />);
     fireEvent.press(screen.getByTestId('range-decrement'));
     expect(spy).not.toHaveBeenCalled();
   });
@@ -483,7 +483,7 @@ describe('RangeWidget', () => {
       readonly: true,
     });
     const spy = jest.spyOn(store, 'answerQuestion');
-    await render(<RangeWidget ref={ref} store={store} start={0} end={10} step={1} />);
+    await render(<RangeWidget nodeRef={ref} store={store} start={0} end={10} step={1} />);
     fireEvent.press(screen.getByTestId('range-increment'));
     expect(spy).not.toHaveBeenCalled();
   });
