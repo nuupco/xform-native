@@ -60,6 +60,30 @@ describe('FormSessionStore — initial state', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Slice C: serializeToXml() passthrough
+// ---------------------------------------------------------------------------
+describe('FormSessionStore — serializeToXml', () => {
+  it('delegates to the underlying session and returns its result', () => {
+    const session = makeFakeSession({
+      events: [{ kind: 'bof' }, { kind: 'eof' }],
+      nodeStates: {},
+      relevance: {},
+      choices: {},
+      answerResults: {},
+      values: {},
+    });
+    const spy = jest
+      .spyOn(session, 'serializeToXml')
+      .mockReturnValue('<xml-from-session/>');
+
+    const store = new FormSessionStore(session);
+
+    expect(store.serializeToXml()).toBe('<xml-from-session/>');
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // REQ-01: subscribe fires on mutations
 // ---------------------------------------------------------------------------
 describe('FormSessionStore — subscribe', () => {

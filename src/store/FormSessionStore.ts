@@ -7,6 +7,10 @@
  * Referential identity contract (REQ-03):
  *   - Same frozen object reference returned between mutations.
  *   - NEW frozen object created on each version bump.
+ *
+ * Slice C addendum: serializeToXml() is an additive passthrough to the
+ * underlying session, ratified to support host apps (e.g. draft save /
+ * finalize) without exposing the raw FormSession across the firewall.
  */
 
 import type { FormSession, AnswerResult } from '@nuup/ts-rosa';
@@ -26,8 +30,10 @@ export class FormSessionStore {
 
   private _snapshot: FormSessionSnapshot;
   private readonly _subscribers = new Set<() => void>();
+  private readonly _session: FormSession;
 
   constructor(session: FormSession) {
+    this._session = session;
     this.adapter = createAdapter(session);
     this._snapshot = Object.freeze({ version: 0 });
   }
@@ -80,6 +86,11 @@ export class FormSessionStore {
    */
   notifyExternalMutation(): void {
     this._bump();
+  }
+
+  /** Additive passthrough — delegates to the underlying session (Slice C). */
+  serializeToXml(): string {
+    return this._session.serializeToXml();
   }
 
   // ---------------------------------------------------------------------------
