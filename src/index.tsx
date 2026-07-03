@@ -18,6 +18,10 @@ export { FormSessionStore } from './store/FormSessionStore';
 export type { FormSessionSnapshot } from './store/FormSessionStore';
 export { useFormSession } from './store/useFormSession';
 
+// Slice C: createFormStore factory (external instance resolution)
+export { createFormStore } from './createFormStore';
+export type { ExternalDataFetcher, CreateFormStoreOpts } from './createFormStore';
+
 // PR-3a: StyleSheet primitives
 export { AppModal } from './widgets/primitives/Modal';
 export type { AppModalProps } from './widgets/primitives/Modal';
