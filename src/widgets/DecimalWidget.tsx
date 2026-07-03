@@ -1,14 +1,16 @@
 /**
  * DecimalWidget — decimal (float) input (REQ-13).
  *
- * Parses input via parseFloat.
+ * Parses input via parseFloat. Draft-vs-committed-store separation
+ * delegated to useDraftValue (widget-draft-value); trailing "." / lone
+ * "-" are held as an uncommitted draft rather than truncated or rejected.
  */
 
 import { View, TextInput, StyleSheet } from 'react-native';
-import { useState } from 'react';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
+import { useDraftValue } from './useDraftValue';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -20,37 +22,41 @@ export interface DecimalWidgetProps {
 
 export function DecimalWidget({ nodeRef, store, appearance }: DecimalWidgetProps) {
   useFormSession(store);
-  const [isFocused, setIsFocused] = useState(false);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const value = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('decimal', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
-  function handleChange(text: string) {
-    if (isReadonly) return;
-    const parsed = parseFloat(text.replace(/,/g, ''));
-    if (!isNaN(parsed)) {
-      store.answerQuestion(nodeRef, parsed);
-    }
+  function parse(text: string) {
+    const s = text.replace(/,/g, '').trim();
+    if (s === '') return { committable: true, value: null };
+    if (/^-?\d+(\.\d+)?$/.test(s)) return { committable: true, value: parseFloat(s) };
+    return { committable: false, value: null };
   }
 
-  const rawValue = value != null ? String(value) : '';
-  const displayValue =
-    variant === 'thousands-sep' && !isFocused && rawValue !== ''
-      ? Number(value).toLocaleString('en-US')
-      : rawValue;
+  function format(raw: string) {
+    return variant === 'thousands-sep' && raw !== '' ? Number(raw).toLocaleString('en-US') : raw;
+  }
+
+  const draft = useDraftValue<number>({
+    storeValue: value,
+    commit: (v) => store.answerQuestion(nodeRef, v),
+    parse,
+    format,
+    readonly: isReadonly,
+  });
 
   return (
     <View style={styles.container}>
       <TextInput
         testID="decimal-input"
         style={[styles.input, isReadonly && styles.readonly]}
-        value={displayValue}
-        onChangeText={handleChange}
+        value={draft.value}
+        onChangeText={draft.onChangeText}
         editable={!isReadonly}
         keyboardType="decimal-pad"
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onFocus={draft.onFocus}
+        onBlur={draft.onBlur}
       />
     </View>
   );

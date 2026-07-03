@@ -1,14 +1,18 @@
 /**
  * LongWidget — long integer input (REQ-13).
  *
- * Uses parseFloat (JavaScript has no 64-bit int; long is a large number).
+ * Uses parseFloat for the committed value (JavaScript has no 64-bit int;
+ * long is a large number — decision 3, no BigInt rework in this change).
+ * The draft parse predicate stays integer-shaped (no decimal points),
+ * matching Int, even though the committed value is produced via parseFloat.
+ * Draft-vs-committed-store separation delegated to useDraftValue.
  */
 
 import { View, TextInput, StyleSheet } from 'react-native';
-import { useState } from 'react';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
+import { useDraftValue } from './useDraftValue';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -20,37 +24,41 @@ export interface LongWidgetProps {
 
 export function LongWidget({ nodeRef, store, appearance }: LongWidgetProps) {
   useFormSession(store);
-  const [isFocused, setIsFocused] = useState(false);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const value = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('long', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
-  function handleChange(text: string) {
-    if (isReadonly) return;
-    const parsed = parseFloat(text.replace(/,/g, ''));
-    if (!isNaN(parsed)) {
-      store.answerQuestion(nodeRef, parsed);
-    }
+  function parse(text: string) {
+    const s = text.replace(/,/g, '').trim();
+    if (s === '') return { committable: true, value: null };
+    if (/^-?\d+$/.test(s)) return { committable: true, value: parseFloat(s) };
+    return { committable: false, value: null };
   }
 
-  const rawValue = value != null ? String(value) : '';
-  const displayValue =
-    variant === 'thousands-sep' && !isFocused && rawValue !== ''
-      ? Number(value).toLocaleString('en-US')
-      : rawValue;
+  function format(raw: string) {
+    return variant === 'thousands-sep' && raw !== '' ? Number(raw).toLocaleString('en-US') : raw;
+  }
+
+  const draft = useDraftValue<number>({
+    storeValue: value,
+    commit: (v) => store.answerQuestion(nodeRef, v),
+    parse,
+    format,
+    readonly: isReadonly,
+  });
 
   return (
     <View style={styles.container}>
       <TextInput
         testID="long-input"
         style={[styles.input, isReadonly && styles.readonly]}
-        value={displayValue}
-        onChangeText={handleChange}
+        value={draft.value}
+        onChangeText={draft.onChangeText}
         editable={!isReadonly}
         keyboardType="number-pad"
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onFocus={draft.onFocus}
+        onBlur={draft.onBlur}
       />
     </View>
   );
