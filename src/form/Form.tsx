@@ -40,10 +40,6 @@ export function Form({ store }: FormProps) {
   // a skip cascade always continues in the direction of the original gesture.
   const directionRef = useRef<'forward' | 'backward'>('forward');
 
-  useEffect(() => {
-    console.log('[xform] Form mounted, snapshot version:', snapshot.version);
-  }, []);
-
   // Auto-skip effect (REQ-10 relevance-skip + REQ-3 label-skip).
   // Precedence per render pass (ADR-D2), at most one step per run:
   //   1. relevance-skip (navigable kinds, direction-aware)
@@ -125,11 +121,6 @@ export function Form({ store }: FormProps) {
 
   function renderContent() {
     const ev = event;
-    console.log(
-      '[xform] render event kind=%s%s',
-      ev.kind,
-      ev.kind === 'bof' || ev.kind === 'eof' ? '' : ` index=${ev.index}`
-    );
     switch (ev.kind) {
       case 'bof':
         return <BofSurface onStart={handleNext} />;
@@ -143,18 +134,6 @@ export function Form({ store }: FormProps) {
           ev.appearance,
           nodeState.readonly,
           ev.mediatype
-        );
-        console.log(
-          '[xform] question ref=%s dataType=%s control=%s appearance=%s mediatype=%s readonly=%s required=%s label=%o widget=%s',
-          ev.ref,
-          ev.dataType,
-          ev.controlType,
-          ev.appearance,
-          ev.mediatype,
-          nodeState.readonly,
-          nodeState.required,
-          ev.label,
-          Widget?.displayName || Widget?.name || 'UNKNOWN'
         );
         const rangeProps =
           ev.rangeBounds != null

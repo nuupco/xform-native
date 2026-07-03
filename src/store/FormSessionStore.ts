@@ -73,6 +73,15 @@ export class FormSessionStore {
     this._bump();
   }
 
+  /**
+   * Trigger a re-render after an out-of-band mutation (background sync, host app
+   * mutating the session/adapter directly). Bumps version + notifies subscribers,
+   * preserving the REQ-03 referential-identity contract (new frozen snapshot).
+   */
+  notifyExternalMutation(): void {
+    this._bump();
+  }
+
   // ---------------------------------------------------------------------------
   // Internal
   // ---------------------------------------------------------------------------

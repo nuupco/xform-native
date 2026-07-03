@@ -7,6 +7,7 @@
  */
 
 import { pickWidget } from '../widgets/pickWidget';
+import { TriggerWidget } from '../widgets/TriggerWidget';
 import { StringWidget } from '../widgets/StringWidget';
 import { IntWidget } from '../widgets/IntWidget';
 import { DecimalWidget } from '../widgets/DecimalWidget';
@@ -64,6 +65,15 @@ describe('pickWidget — PR-3a types', () => {
     const { Widget, variant } = pickWidget('boolean', 'input', 'checkbox');
     expect(Widget).toBe(BooleanWidget);
     expect(variant).toBe('checkbox');
+  });
+});
+
+describe('pickWidget — trigger controlType routing', () => {
+  it('dispatches string + controlType trigger → TriggerWidget, not StringWidget', () => {
+    const { Widget, variant } = pickWidget('string', 'trigger', null);
+    expect(Widget).toBe(TriggerWidget);
+    expect(Widget).not.toBe(StringWidget);
+    expect(variant).toBe('default');
   });
 });
 

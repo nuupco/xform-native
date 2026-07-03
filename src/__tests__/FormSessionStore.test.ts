@@ -254,3 +254,61 @@ describe('FormSessionStore — fake session mirrors AnswerValue storage (REQ-4)'
     expect(node?.value).toMatchObject({ kind: 'string', value: 'Alice' });
   });
 });
+
+// ---------------------------------------------------------------------------
+// notifyExternalMutation — public bump/notify hook for out-of-band mutations
+// ---------------------------------------------------------------------------
+describe('FormSessionStore — notifyExternalMutation', () => {
+  it('notifies subscribers and bumps the snapshot after a direct external mutation', () => {
+    const session = makeFakeSession({
+      events: [
+        { kind: 'bof' },
+        {
+          kind: 'question',
+          ref: '/data/name',
+          dataType: 'string',
+          controlType: 'input',
+          label: 'Name',
+          hint: null,
+          appearance: null,
+        },
+        { kind: 'eof' },
+      ],
+      nodeStates: {
+        '/data/name': { relevant: true, enabled: true, required: false, readonly: false, constraintMsg: null, calculatedValue: null },
+      },
+      relevance: { '/data/name': true },
+      choices: {},
+      answerResults: { '/data/name': AnswerResult.OK },
+      values: { '/data/name': '' },
+    });
+    const store = new FormSessionStore(session);
+    const s1 = store.getSnapshot();
+    const cb = jest.fn();
+    store.subscribe(cb);
+
+    // External mutation bypassing store's four mutators:
+    const tree = session.tree as InstanceTree;
+    const node = tree.root.children.find((c) => c.name === 'name');
+    if (!node) throw new Error('expected node');
+    node.value = { kind: 'string', value: 'External', displayText: 'External' };
+
+    store.notifyExternalMutation();
+
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot().version).toBe(s1.version + 1);
+    expect(store.getSnapshot()).not.toBe(s1);
+  });
+
+  it('is a pure delegation — bumps and notifies even with no prior external change', () => {
+    const store = makeStore();
+    const s1 = store.getSnapshot();
+    const cb = jest.fn();
+    store.subscribe(cb);
+
+    store.notifyExternalMutation();
+
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot().version).toBe(s1.version + 1);
+  });
+});

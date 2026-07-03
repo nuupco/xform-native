@@ -14,6 +14,7 @@ import { IntWidget } from './IntWidget';
 import { DecimalWidget } from './DecimalWidget';
 import { LongWidget } from './LongWidget';
 import { BooleanWidget } from './BooleanWidget';
+import { TriggerWidget } from './TriggerWidget';
 import { NoteWidget } from './NoteWidget';
 import { UncastWidget } from './UncastWidget';
 import { SelectOneWidget } from './SelectOneWidget';
@@ -113,6 +114,14 @@ export function pickWidget(
       Widget: SelectMultiWidget,
       variant: resolveVariant(dataType, controlType, appearance),
     };
+  }
+
+  // 4b. Trigger controlType binds as dataType 'string' (no xsd type), so the
+  // dataType switch would wrongly fall through to StringWidget (case
+  // 'string' below). controlType is the source of truth here, same
+  // rationale as select above.
+  if (controlType === 'trigger') {
+    return { Widget: TriggerWidget, variant: 'default' };
   }
 
   switch (dataType) {
