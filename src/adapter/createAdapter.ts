@@ -12,7 +12,7 @@
 import type { FormSession, ControlType } from '@nuup/ts-rosa';
 import type { FormIndex } from '@nuup/ts-rosa';
 import { isAt, isBof, isEof } from '@nuup/ts-rosa';
-import { resolveReference } from '@nuup/ts-rosa';
+import { resolveReference, addRepeatInstance } from '@nuup/ts-rosa';
 import type { NodeState, SelectChoice, AnswerResult } from '@nuup/ts-rosa';
 import type { FormAdapter, AdaptedEvent, NodeRef } from './FormAdapter';
 import { encodeAnswer } from './encodeAnswer';
@@ -203,6 +203,27 @@ export function createAdapter(session: FormSession): FormAdapter {
         return (value as { value: unknown }).value;
       }
       return value;
+    },
+
+    createRepeatInstance(ref: NodeRef): void {
+      if (ref.levels.length === 0) {
+        throw new Error('createRepeatInstance: ref has no levels (not a repeat reference)');
+      }
+      const lastLevel = ref.levels[ref.levels.length - 1];
+      if (lastLevel === undefined || lastLevel.multiplicity < 0) {
+        throw new Error(
+          'createRepeatInstance: ref is not a concrete repeat-instance-slot reference'
+        );
+      }
+      const node = addRepeatInstance(tree, ref as Parameters<typeof addRepeatInstance>[1]);
+      if (node === null) {
+        throw new Error(
+          'createRepeatInstance: could not add instance (invalid or non-repeat ref)'
+        );
+      }
+      evaluator.initializeRepeatInstance(
+        ref as Parameters<typeof evaluator.initializeRepeatInstance>[0]
+      );
     },
   };
 }

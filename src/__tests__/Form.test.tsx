@@ -850,6 +850,74 @@ describe('Form e2e cascade', () => {
 });
 
 // ---------------------------------------------------------------------------
+// T4 (sdd/repeat-instance-creation): Continue creates and enters a new
+// manual repeat instance (real engine — prompt-new-repeat -> Continue ->
+// first question of the newly created instance).
+// ---------------------------------------------------------------------------
+
+const MANUAL_REPEAT_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Manual Repeat</h:title>
+    <model>
+      <instance>
+        <data id="manual-repeat">
+          <repeat jr:template="">
+            <q/>
+          </repeat>
+        </data>
+      </instance>
+      <bind nodeset="/data/repeat/q" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <repeat nodeset="/data/repeat">
+      <input ref="/data/repeat/q"><label>Repeat Question</label></input>
+    </repeat>
+  </h:body>
+</h:html>`;
+
+describe('Form e2e — repeat-instance-creation (T4)', () => {
+  it('pressing Continue on prompt-new-repeat creates and enters the new instance', async () => {
+    const store = makeRealStore(MANUAL_REPEAT_XML);
+    await render(<Form store={store} />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('bof-start-button'));
+    });
+
+    // Manual repeat with zero instances -> prompt-new-repeat screen.
+    expect(screen.getByTestId('prompt-continue')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('prompt-continue'));
+    });
+
+    // Should now render the new instance's first (and only) question, not
+    // the prompt again and not a repeat summary screen.
+    expect(screen.queryByTestId('prompt-continue')).toBeNull();
+    expect(screen.getByText('Repeat Question')).toBeTruthy();
+  });
+
+  it('the bottom nav-next button still steps past the prompt WITHOUT creating an instance', async () => {
+    const store = makeRealStore(MANUAL_REPEAT_XML);
+    await render(<Form store={store} />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('bof-start-button'));
+    });
+    expect(screen.getByTestId('prompt-continue')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+
+    // No instance created — moved on to end of form.
+    expect(screen.getByText('Form Complete')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // REQ-3: Auto-skip unlabeled groups, forward + backward
 // ---------------------------------------------------------------------------
 

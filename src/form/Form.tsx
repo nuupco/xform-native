@@ -114,6 +114,14 @@ export function Form({ store }: FormProps) {
     store.stepForward();
   }, [store]);
 
+  const handleCreateRepeat = useCallback(() => {
+    const ev = store.adapter.getCurrentEvent();
+    if (ev.kind !== 'prompt-new-repeat') return;
+    directionRef.current = 'forward';
+    store.createRepeatInstance(ev.ref);
+    store.stepForward();
+  }, [store]);
+
   const handleBack = useCallback(() => {
     directionRef.current = 'backward';
     store.stepBackward();
@@ -192,7 +200,7 @@ export function Form({ store }: FormProps) {
         return (
           <View collapsable={false}>
             <LabelHint label={ev.label} hint={null} />
-            <TouchableOpacity onPress={handleNext} testID="prompt-continue" activeOpacity={0.7}>
+            <TouchableOpacity onPress={handleCreateRepeat} testID="prompt-continue" activeOpacity={0.7}>
               <Text>Continue</Text>
             </TouchableOpacity>
           </View>

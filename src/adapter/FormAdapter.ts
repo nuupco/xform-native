@@ -60,4 +60,11 @@ export interface FormAdapter {
   getChoices(ref: NodeRef): readonly SelectChoice[];
   answerQuestion(ref: NodeRef, value: unknown): AnswerResult;
   resolveValue(ref: NodeRef): unknown;
+  /**
+   * Manually create a new instance of a repeat group at the given prompt ref
+   * (Slice D — repeat-instance-creation). Throws if `ref` is not a valid
+   * manual prompt-new-repeat creation context (e.g. a jr:count-bound repeat,
+   * or a non-repeat ref).
+   */
+  createRepeatInstance(ref: NodeRef): void;
 }

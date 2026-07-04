@@ -9,6 +9,8 @@ import { FormSessionStore } from '../store/FormSessionStore';
 import { makeFakeSession } from '../test-support/makeFakeSession';
 import { AnswerResult } from '@nuup/ts-rosa';
 import type { InstanceTree } from '@nuup/ts-rosa';
+import { DOMParser } from '@xmldom/xmldom';
+import { parseDocument, createFormSession } from '@nuup/ts-rosa';
 
 function makeStore() {
   const session = makeFakeSession({
@@ -334,5 +336,98 @@ describe('FormSessionStore — notifyExternalMutation', () => {
 
     expect(cb).toHaveBeenCalledTimes(1);
     expect(store.getSnapshot().version).toBe(s1.version + 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T3 (sdd/repeat-instance-creation): createRepeatInstance — REAL ENGINE.
+// createRepeatInstance is a pure engine mutation (addRepeatInstance +
+// evaluator.initializeRepeatInstance); makeFakeSession cannot model repeat
+// creation, so this is tested against the real ts-rosa engine per design.
+// ---------------------------------------------------------------------------
+function parseXml(xml: string) {
+  const doc = new DOMParser().parseFromString(
+    xml,
+    'text/xml'
+  ) as unknown as Document;
+  return parseDocument(doc);
+}
+
+const MANUAL_REPEAT_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Manual Repeat</h:title>
+    <model>
+      <instance>
+        <data id="manual-repeat">
+          <repeat jr:template="">
+            <q/>
+          </repeat>
+        </data>
+      </instance>
+      <bind nodeset="/data/repeat/q" type="int"/>
+    </model>
+  </h:head>
+  <h:body>
+    <repeat nodeset="/data/repeat">
+      <input ref="/data/repeat/q"><label>Q</label></input>
+    </repeat>
+  </h:body>
+</h:html>`;
+
+function makeRealStore() {
+  const def = parseXml(MANUAL_REPEAT_XML);
+  const session = createFormSession(def);
+  return new FormSessionStore(session);
+}
+
+describe('FormSessionStore — createRepeatInstance (T3, real engine)', () => {
+  it('delegates to the adapter: a new instance appears in the tree', () => {
+    const store = makeRealStore();
+    store.stepForward(); // -> prompt-new-repeat
+    const ev = store.adapter.getCurrentEvent();
+    if (ev.kind !== 'prompt-new-repeat') throw new Error('expected prompt-new-repeat');
+
+    store.createRepeatInstance(ev.ref);
+
+    // Verify via subsequent navigation instead of reaching into the tree
+    // directly (store has no raw tree accessor by design/ADR-2 firewall).
+    store.stepForward();
+    const next = store.adapter.getCurrentEvent();
+    expect(next.kind).toBe('question');
+  });
+
+  it('bumps the snapshot and notifies subscribers when createRepeatInstance is called', () => {
+    const store = makeRealStore();
+    store.stepForward(); // -> prompt-new-repeat
+    const ev = store.adapter.getCurrentEvent();
+    if (ev.kind !== 'prompt-new-repeat') throw new Error('expected prompt-new-repeat');
+
+    const s1 = store.getSnapshot();
+    const cb = jest.fn();
+    store.subscribe(cb);
+
+    store.createRepeatInstance(ev.ref);
+
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot().version).toBe(s1.version + 1);
+    expect(store.getSnapshot()).not.toBe(s1);
+  });
+
+  it('createRepeatInstance followed by stepForward fires two notifications (each mutator bumps once) — React batches these into one render at the component layer (verified in Form.test.tsx)', () => {
+    const store = makeRealStore();
+    store.stepForward(); // -> prompt-new-repeat
+    const ev = store.adapter.getCurrentEvent();
+    if (ev.kind !== 'prompt-new-repeat') throw new Error('expected prompt-new-repeat');
+
+    const cb = jest.fn();
+    store.subscribe(cb);
+
+    store.createRepeatInstance(ev.ref);
+    store.stepForward();
+
+    expect(cb).toHaveBeenCalledTimes(2);
+    const finalEvent = store.adapter.getCurrentEvent();
+    expect(finalEvent.kind).toBe('question');
   });
 });
