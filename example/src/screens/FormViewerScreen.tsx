@@ -11,16 +11,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { DOMParser } from '@xmldom/xmldom';
-import { Form, FormSessionStore } from '@nuup/xform-native';
-import { parseDocument, createFormSession } from '@nuup/ts-rosa';
-import type { FormSession } from '@nuup/ts-rosa';
+import { Form, FormSessionStore, createFormStore } from '@nuup/xform-native';
 
 import { fetchXFormXml } from '../services/apiClient';
 import { saveDraft, deleteDraft } from '../services/draftStore';
 import { enqueue } from '../services/submissionQueue';
 import { saveXForm, loadXForm } from '../services/xformCache';
-import { parseXFormMeta, injectInstanceIntoXForm } from '../services/xmlUtils';
+import { parseXFormMeta } from '../services/xmlUtils';
 import type { SubmissionResult, FormAttachment } from '../services/xmlUtils';
 import type { Manifest } from '../services/submissionQueue';
 import type { RootStackParamList } from '../navigation/types';
@@ -44,7 +41,7 @@ export function FormViewerScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'Viewer'>>();
   const { asset, draft } = route.params;
 
-  const sessionRef = useRef<FormSession | null>(null);
+  const storeRef = useRef<FormSessionStore | null>(null);
   const [store, setStore] = useState<FormSessionStore | null>(null);
   const [xformXml, setXformXml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,20 +59,23 @@ export function FormViewerScreen() {
       : null
   );
 
-  const applyForm = useCallback((xml: string) => {
-    try {
-      const doc = new DOMParser().parseFromString(xml, 'text/xml');
-      const def = parseDocument(doc as unknown as Document);
-      const session = createFormSession(def);
-      sessionRef.current = session;
-      const newStore = new FormSessionStore(session);
-      setStore(newStore);
-      setAtEof(newStore.adapter.getCurrentEvent().kind === 'eof');
-      setXformXml(xml);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to parse form');
-    }
-  }, []);
+  const applyForm = useCallback(
+    async (xml: string) => {
+      try {
+        const newStore = await createFormStore(
+          xml,
+          draft ? { instanceXml: draft.instanceXml } : undefined
+        );
+        storeRef.current = newStore;
+        setStore(newStore);
+        setAtEof(newStore.adapter.getCurrentEvent().kind === 'eof');
+        setXformXml(xml);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to parse form');
+      }
+    },
+    [draft]
+  );
 
   async function load() {
     setLoading(true);
@@ -91,21 +91,12 @@ export function FormViewerScreen() {
           setStaleBannerVisible(true);
           setStaleVersions({ saved: savedVersion, current: freshVersion });
         }
-        // Inject draft instance data back into the XForm so values are pre-populated
-        const mergedXml = injectInstanceIntoXForm(xml, draft.instanceXml);
-        applyForm(mergedXml);
-      } else {
-        applyForm(xml);
       }
+      await applyForm(xml);
     } catch {
       const cached = await loadXForm(asset.uid);
       if (cached) {
-        if (draft) {
-          const mergedXml = injectInstanceIntoXForm(cached.xml, draft.instanceXml);
-          applyForm(mergedXml);
-        } else {
-          applyForm(cached.xml);
-        }
+        await applyForm(cached.xml);
       } else {
         setError('Formulario no disponible offline');
       }
@@ -129,12 +120,12 @@ export function FormViewerScreen() {
   }, [store]);
 
   const handleSaveDraft = async () => {
-    if (!sessionRef.current || !xformXml) {
+    if (!storeRef.current || !xformXml) {
       Alert.alert('Error', 'El formulario no está listo aún.');
       return;
     }
 
-    const xml = sessionRef.current.serializeToXml();
+    const xml = storeRef.current.serializeToXml();
     // TODO: extract binary attachments from tree for full fidelity
     const result: SubmissionResult = { xml, attachments: [] };
     const meta = parseXFormMeta(xformXml);
@@ -155,9 +146,9 @@ export function FormViewerScreen() {
   };
 
   const handleFinalize = async () => {
-    if (!sessionRef.current) return;
+    if (!storeRef.current) return;
 
-    const xml = sessionRef.current.serializeToXml();
+    const xml = storeRef.current.serializeToXml();
     // TODO: extract binary attachments from tree for full fidelity
     const result: SubmissionResult = { xml, attachments: [] };
 

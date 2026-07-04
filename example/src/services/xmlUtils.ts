@@ -5,8 +5,6 @@
  * Re-implemented here to keep the example app self-contained.
  */
 
-import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
-
 // ── UUID ───────────────────────────────────────────────────────────────────────
 
 export function generateUuidV4(): string {
@@ -73,53 +71,4 @@ export function buildSubmission(result: SubmissionResult): FormData {
   }
 
   return formData;
-}
-
-// ── Inject saved instance into XForm ──────────────────────────────────────────
-
-/**
- * Injects saved instance XML back into an XForm so that parseDocument
- * creates a FormDefinition pre-populated with draft values.
- */
-export function injectInstanceIntoXForm(
-  xformXml: string,
-  instanceXml: string
-): string {
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xformXml, 'text/xml');
-    const models = doc.getElementsByTagName('model');
-    if (models.length === 0) return xformXml;
-
-    const model = models[0]!;
-    const instances = model.getElementsByTagName('instance');
-    let primaryInstance: Element | null = null;
-    for (let i = 0; i < instances.length; i++) {
-      const inst = instances[i];
-      if (inst && !inst.getAttribute('src')) {
-        primaryInstance = inst;
-        break;
-      }
-    }
-    if (!primaryInstance) return xformXml;
-
-    // Parse the saved instance XML and get its root element
-    const instanceDoc = parser.parseFromString(instanceXml, 'text/xml');
-    const newRoot = instanceDoc.documentElement;
-    if (!newRoot) return xformXml;
-
-    // Remove old children from primary instance
-    const pi = primaryInstance as any;
-    while (pi.firstChild) {
-      pi.removeChild(pi.firstChild);
-    }
-
-    // Import the new root into the XForm document
-    const imported = doc.importNode(newRoot, true);
-    pi.appendChild(imported);
-
-    return new XMLSerializer().serializeToString(doc);
-  } catch {
-    return xformXml;
-  }
 }
