@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { AnswerResult } from '@nuup/ts-rosa';
 import { useFormSession } from '../store/useFormSession';
-import { pickWidget } from '../widgets/pickWidget';
+import { resolveWidget, useWidgetOverrides, type WidgetOverride } from '../widgets/registry';
 import { tokens } from '../tokens/tokens';
 import type { FormSessionStore } from '../store/FormSessionStore';
 import {
@@ -24,10 +24,20 @@ import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 
 export interface FormProps {
   store: FormSessionStore;
+  /** Additive (widget-registry, D5): frozen at mount, wins tie-break over context entries. */
+  widgets?: readonly WidgetOverride[];
 }
 
-export function Form({ store }: FormProps) {
+export function Form({ store, widgets: widgetsProp }: FormProps) {
   const snapshot = useFormSession(store);
+  const contextOverrides = useWidgetOverrides();
+  // Freeze overrides at mount (design data-flow): context first, then the
+  // `widgets` prop — pickBest scans in order and ties go to the LAST entry,
+  // so appending prop entries last makes them win the tie-break (D5).
+  const overridesRef = useRef<readonly WidgetOverride[]>([
+    ...contextOverrides,
+    ...(widgetsProp ?? []),
+  ]);
   const [advanceBlocked, setAdvanceBlocked] = useState<{
     type: 'required' | 'constraint';
     message: string;
@@ -136,12 +146,15 @@ export function Form({ store }: FormProps) {
         return <EofSurface />;
       case 'question': {
         const nodeState = store.adapter.getNodeState(ev.ref);
-        const { Widget } = pickWidget(
-          ev.dataType,
-          ev.controlType,
-          ev.appearance,
-          nodeState.readonly,
-          ev.mediatype
+        const { Widget } = resolveWidget(
+          {
+            dataType: ev.dataType,
+            controlType: ev.controlType,
+            appearance: ev.appearance,
+            readonly: nodeState.readonly,
+            mediatype: ev.mediatype,
+          },
+          overridesRef.current
         );
         const rangeProps =
           ev.rangeBounds != null

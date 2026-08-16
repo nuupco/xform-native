@@ -99,3 +99,11 @@ export type { BarcodeWidgetProps } from './widgets/BarcodeWidget';
 // PR-4: Form component
 export { Form } from './form/Form';
 export type { FormProps } from './form/Form';
+
+// widget-registry: injectable widget override registry (D3/D4/D5)
+export {
+  resolveWidget,
+  WidgetRegistryProvider,
+  useWidgetOverrides,
+} from './widgets/registry';
+export type { XFormWidgetProps, WidgetOverride, PickWidgetArgs } from './widgets/registry';
