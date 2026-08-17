@@ -185,7 +185,23 @@ export function createAdapter(session: FormSession): FormAdapter {
 
     answerQuestion(ref: NodeRef, value: unknown): AnswerResult {
       const node = resolveReference(tree, ref);
-      const dataType = node?.dataType ?? 'string';
+      // Select bindings carry dataType 'string' at the instance-tree/bind
+      // level (JavaRosa convention — same reason pickWidget.ts routes
+      // selects by controlType, not dataType). Encoding with the raw
+      // instance-node dataType joins a select-multi array into a plain
+      // string via toRawString, which cast('string', ...) then stores as a
+      // STRING AnswerValue — resolveValue's unwrap returns that string, and
+      // Array.isArray() on it is false, so the widget reads "no selections"
+      // even though answerQuestion reported OK. Encode select controls with
+      // the correct array-aware dataType instead, mirroring pickWidget's
+      // "controlType is the source of truth" rule.
+      const controlType = navigator.getQuestionAtIndex()?.getControlType();
+      const dataType =
+        controlType === 'select1'
+          ? 'selectOne'
+          : controlType === 'select'
+            ? 'selectMulti'
+            : (node?.dataType ?? 'string');
       const encoded = encodeAnswer(dataType, value);
       return evaluator.answerQuestion(
         ref as Parameters<typeof evaluator.answerQuestion>[0],
