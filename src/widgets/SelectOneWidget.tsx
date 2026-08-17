@@ -174,6 +174,8 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           placeholder="Search…"
         />
         <FlatList
+          testID="select-one-autocomplete-list"
+          style={styles.autocompleteList}
           data={filtered}
           keyExtractor={(item, index) => `${item.value}__${index}`}
           renderItem={({ item }) => {
@@ -379,6 +381,14 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.color.primary,
   },
   // autocomplete
+  // No ScrollView exists anywhere in the page hierarchy (Form.tsx /
+  // FormViewerScreen.tsx), so an unbounded FlatList with 100+ options grows
+  // without limit and pushes the rest of the page off-screen. Bounding this
+  // list gives it its own internal scroll (FlatList scrolls natively once
+  // it has a fixed/max height).
+  autocompleteList: {
+    maxHeight: 320,
+  },
   autocompleteInput: {
     borderWidth: 1,
     borderColor: tokens.color.text,

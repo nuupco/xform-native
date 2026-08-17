@@ -209,6 +209,8 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
           placeholder="Search…"
         />
         <FlatList
+          testID="select-multi-autocomplete-list"
+          style={styles.autocompleteList}
           data={filtered}
           keyExtractor={(item, index) => `${item.value}__${index}`}
           renderItem={({ item }) => {
@@ -406,6 +408,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   // autocomplete
+  // No ScrollView exists anywhere in the page hierarchy (Form.tsx /
+  // FormViewerScreen.tsx), so an unbounded FlatList with 100+ options grows
+  // without limit and pushes the rest of the page off-screen. Bounding this
+  // list gives it its own internal scroll (FlatList scrolls natively once
+  // it has a fixed/max height).
+  autocompleteList: {
+    maxHeight: 320,
+  },
   autocompleteInput: {
     borderWidth: 1,
     borderColor: tokens.color.text,
