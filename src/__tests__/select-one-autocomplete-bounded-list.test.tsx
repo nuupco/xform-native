@@ -1,13 +1,19 @@
 /**
- * SelectOneWidget `autocomplete` variant — FlatList must have a bounded
- * height so it scrolls internally instead of expanding without limit.
+ * SelectOneWidget `autocomplete` variant — unified with `minimal-autocomplete`
+ * (trigger + BottomSheet with search TextInput + filtered option list).
  *
- * REQ hotfix: with 100+ choices and no ScrollView anywhere in the page
- * hierarchy (Form.tsx / FormViewerScreen.tsx), an unbounded FlatList pushed
- * the rest of the page (including the app header) off-screen. Fix: give the
- * FlatList a maxHeight in its style so it owns its own bounded scroll area.
+ * REQ hotfix history: the previous inline TextInput+FlatList implementation
+ * of 'autocomplete' had bounded-height (FlatList maxHeight) and
+ * keyboardShouldPersistTaps fixes applied, but selecting a result on-device
+ * still didn't fire. Rather than keep debugging that inline path, 'autocomplete'
+ * was unified to render the SAME BottomSheet-based implementation as
+ * 'minimal-autocomplete' — already solid and confirmed on-device today
+ * (bounded height via BottomSheet's own maxHeight + internal ScrollView,
+ * keyboardShouldPersistTaps, KeyboardAvoidingView). These tests now assert
+ * that bound + tap-persistence behavior through the shared BottomSheet.
  */
-import { render, cleanup } from '@testing-library/react-native';
+import { act } from 'react';
+import { render, fireEvent, cleanup } from '@testing-library/react-native';
 import { AnswerResult, type DataType, type SelectChoice, type ControlType } from '@nuup/ts-rosa';
 import { FormSessionStore } from '../store/FormSessionStore';
 import { makeFakeSession, type FakeSessionScript } from '../test-support/makeFakeSession';
@@ -68,8 +74,8 @@ const choices: SelectChoice[] = Array.from({ length: 120 }, (_, i) => ({
   label: `Option ${i}`,
 }));
 
-describe('SelectOneWidget — autocomplete variant bounded FlatList', () => {
-  it('FlatList style defines a maxHeight so it does not grow without limit', async () => {
+describe('SelectOneWidget — autocomplete variant (unified bottom-sheet) bounded scroll', () => {
+  it('bottom-sheet panel style defines a maxHeight so it does not grow without limit', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/s1',
       dataType: 'selectOne',
@@ -79,12 +85,15 @@ describe('SelectOneWidget — autocomplete variant bounded FlatList', () => {
     const { getByTestId } = await render(
       <SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />,
     );
-    const list = getByTestId('select-one-autocomplete-list');
-    const flatStyle = Object.assign({}, ...[list.props.style].flat());
-    expect(flatStyle.maxHeight).toBeDefined();
+    await act(async () => {
+      fireEvent.press(getByTestId('select-one-dropdown-trigger'));
+    });
+    const panel = getByTestId('select-one-sheet');
+    const panelStyle = Object.assign({}, ...[panel.props.style].flat());
+    expect(panelStyle.maxHeight).toBeDefined();
   });
 
-  it('FlatList persists taps while the search TextInput keyboard is open (REQ hotfix)', async () => {
+  it('internal ScrollView persists taps while the search TextInput keyboard is open (REQ hotfix)', async () => {
     // Without keyboardShouldPersistTaps="handled", the FIRST tap on a result
     // below a focused TextInput only dismisses the keyboard instead of
     // firing onPress — a well-known RN gotcha. Confirmed on-device: user
@@ -98,7 +107,36 @@ describe('SelectOneWidget — autocomplete variant bounded FlatList', () => {
     const { getByTestId } = await render(
       <SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />,
     );
-    const list = getByTestId('select-one-autocomplete-list');
-    expect(list.props.keyboardShouldPersistTaps).toBe('handled');
+    await act(async () => {
+      fireEvent.press(getByTestId('select-one-dropdown-trigger'));
+    });
+    const scroll = getByTestId('select-one-sheet-scroll');
+    expect(scroll.props.keyboardShouldPersistTaps).toBe('handled');
+  });
+
+  it('selecting a result after filtering commits the value (on-device regression coverage)', async () => {
+    // This is the exact scenario reported broken on-device with the old
+    // inline TextInput+FlatList 'autocomplete': type a filter, tap the
+    // matching result, selection must fire.
+    const { store, ref } = makeStoreFor({
+      ref: '/data/s1',
+      dataType: 'selectOne',
+      controlType: 'select1',
+      choices,
+    });
+    const spy = jest.spyOn(store, 'answerQuestion');
+    const { getByTestId } = await render(
+      <SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />,
+    );
+    await act(async () => {
+      fireEvent.press(getByTestId('select-one-dropdown-trigger'));
+    });
+    await act(async () => {
+      fireEvent.changeText(getByTestId('select-one-minimal-autocomplete-search'), 'Option 42');
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('select-one-option-val42'));
+    });
+    expect(spy).toHaveBeenCalledWith(ref, 'val42');
   });
 });

@@ -9,7 +9,7 @@
  *   default      → radio-style list (Pressable per option)
  *   minimal      → bottom-sheet dropdown (BottomSheet primitive)
  *   likert       → horizontal row of labeled radio Pressables
- *   autocomplete → TextInput with filtered FlatList dropdown
+ *   autocomplete → same as minimal-autocomplete (trigger + BottomSheet search)
  *   columns      → multi-column FlatList with numColumns={2}
  *   columns-pack → compact multi-column FlatList
  *   quick        → horizontal ScrollView of chip/tag Pressables
@@ -83,7 +83,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
             {selected?.label ?? selected?.value ?? 'Select…'}
           </Text>
         </Pressable>
-        <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
+        <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-one-sheet">
           {choices.map((choice, index) => (
             <Pressable
               key={`${choice.value}__${index}`}
@@ -99,7 +99,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
     );
   }
 
-  if (variant === 'minimal-autocomplete') {
+  if (variant === 'minimal-autocomplete' || variant === 'autocomplete') {
     const selected = choices.find((c) => c.value === currentValue);
     return (
       <View style={styles.container}>
@@ -113,7 +113,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
             {selected?.label ?? selected?.value ?? 'Select…'}
           </Text>
         </Pressable>
-        <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
+        <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-one-sheet">
           <TextInput
             testID="select-one-minimal-autocomplete-search"
             style={styles.autocompleteInput}
@@ -158,42 +158,6 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
             );
           })}
         </View>
-      </View>
-    );
-  }
-
-  if (variant === 'autocomplete') {
-    return (
-      <View style={styles.container}>
-        <TextInput
-          testID="select-one-autocomplete-input"
-          style={styles.autocompleteInput}
-          value={query}
-          onChangeText={setQuery}
-          editable={!isReadonly}
-          placeholder="Search…"
-        />
-        <FlatList
-          testID="select-one-autocomplete-list"
-          style={styles.autocompleteList}
-          keyboardShouldPersistTaps="handled"
-          data={filtered}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          renderItem={({ item }) => {
-            const isSelected = item.value === currentValue;
-            return (
-              <Pressable
-                testID={`select-one-autocomplete-option-${item.value}`}
-                style={[styles.autocompleteOption, isSelected && styles.autocompleteOptionSelected]}
-                onPress={() => handleSelect(item.value)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <Text style={styles.autocompleteOptionLabel}>{item.label ?? item.value}</Text>
-              </Pressable>
-            );
-          }}
-        />
       </View>
     );
   }
@@ -381,15 +345,8 @@ const styles = StyleSheet.create({
     borderColor: tokens.color.primary,
     backgroundColor: tokens.color.primary,
   },
-  // autocomplete
-  // No ScrollView exists anywhere in the page hierarchy (Form.tsx /
-  // FormViewerScreen.tsx), so an unbounded FlatList with 100+ options grows
-  // without limit and pushes the rest of the page off-screen. Bounding this
-  // list gives it its own internal scroll (FlatList scrolls natively once
-  // it has a fixed/max height).
-  autocompleteList: {
-    maxHeight: 320,
-  },
+  // autocomplete (used by both 'autocomplete' and 'minimal-autocomplete',
+  // rendered inside BottomSheet's own bounded/scrollable content)
   autocompleteInput: {
     borderWidth: 1,
     borderColor: tokens.color.text,
@@ -399,19 +356,6 @@ const styles = StyleSheet.create({
     color: tokens.color.text,
     backgroundColor: tokens.color.background,
     marginBottom: tokens.spacing.xs,
-  },
-  autocompleteOption: {
-    paddingVertical: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.sm,
-    marginVertical: 2,
-    borderRadius: tokens.radius.sm,
-  },
-  autocompleteOptionSelected: {
-    backgroundColor: tokens.color.surface,
-  },
-  autocompleteOptionLabel: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
   },
   // columns
   // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)

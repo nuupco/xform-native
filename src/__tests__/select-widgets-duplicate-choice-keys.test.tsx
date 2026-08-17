@@ -9,7 +9,8 @@
  * of same-keyed siblings, so a duplicate value must still render as TWO
  * distinct elements in the tree, not one.
  */
-import { render, cleanup } from '@testing-library/react-native';
+import { act } from 'react';
+import { render, fireEvent, cleanup } from '@testing-library/react-native';
 import { AnswerResult, type DataType, type SelectChoice, type ControlType } from '@nuup/ts-rosa';
 import { FormSessionStore } from '../store/FormSessionStore';
 import { makeFakeSession, type FakeSessionScript } from '../test-support/makeFakeSession';
@@ -106,17 +107,20 @@ describe('SelectOneWidget — duplicate choice values render without collapsing'
     expectNoDuplicateKeyWarning();
   });
 
-  it('autocomplete variant (FlatList) renders all choices, including both duplicates', async () => {
+  it('autocomplete variant (unified bottom-sheet) renders all choices, including both duplicates', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/s3',
       dataType: 'selectOne',
       controlType: 'select1',
       choices: duplicateChoices,
     });
-    const { getAllByTestId } = await render(
+    const { getAllByTestId, getByTestId } = await render(
       <SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />,
     );
-    expect(getAllByTestId('select-one-autocomplete-option-1121')).toHaveLength(2);
+    await act(async () => {
+      fireEvent.press(getByTestId('select-one-dropdown-trigger'));
+    });
+    expect(getAllByTestId('select-one-option-1121')).toHaveLength(2);
     expectNoDuplicateKeyWarning();
   });
 });
@@ -138,7 +142,7 @@ describe('SelectMultiWidget — duplicate choice values render without collapsin
     expectNoDuplicateKeyWarning();
   });
 
-  it('autocomplete variant (FlatList) renders all choices, including both duplicates', async () => {
+  it('autocomplete variant (unified bottom-sheet) renders all choices, including both duplicates', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/m2',
       dataType: 'selectMulti',
@@ -146,10 +150,13 @@ describe('SelectMultiWidget — duplicate choice values render without collapsin
       choices: duplicateChoices,
       value: [],
     });
-    const { getAllByTestId } = await render(
+    const { getAllByTestId, getByTestId } = await render(
       <SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />,
     );
-    expect(getAllByTestId('select-multi-autocomplete-option-1121')).toHaveLength(2);
+    await act(async () => {
+      fireEvent.press(getByTestId('select-multi-dropdown-trigger'));
+    });
+    expect(getAllByTestId('select-multi-sheet-option-1121')).toHaveLength(2);
     expectNoDuplicateKeyWarning();
   });
 });

@@ -139,7 +139,11 @@ describe('SelectOneWidget likert', () => {
 // ---------------------------------------------------------------------------
 
 describe('SelectOneWidget autocomplete', () => {
-  it('renders TextInput and all options initially', async () => {
+  // 'autocomplete' is unified with 'minimal-autocomplete': a trigger opens a
+  // BottomSheet with a search TextInput + filtered option list, instead of an
+  // inline TextInput+FlatList (removed — on-device selection never fired
+  // there; see BottomSheet's bounded-height + keyboardShouldPersistTaps fix).
+  it('renders a trigger that opens a bottom-sheet with search and all options', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/autocomplete',
       dataType: 'selectOne',
@@ -148,10 +152,14 @@ describe('SelectOneWidget autocomplete', () => {
       appearance: 'autocomplete',
     });
     await render(<SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />);
-    expect(screen.getByTestId('select-one-autocomplete-input')).toBeTruthy();
-    expect(screen.getByTestId('select-one-autocomplete-option-val1')).toBeTruthy();
-    expect(screen.getByTestId('select-one-autocomplete-option-val2')).toBeTruthy();
-    expect(screen.getByTestId('select-one-autocomplete-option-val3')).toBeTruthy();
+    expect(screen.getByTestId('select-one-dropdown-trigger')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-one-dropdown-trigger'));
+    });
+    expect(screen.getByTestId('select-one-minimal-autocomplete-search')).toBeTruthy();
+    expect(screen.getByTestId('select-one-option-val1')).toBeTruthy();
+    expect(screen.getByTestId('select-one-option-val2')).toBeTruthy();
+    expect(screen.getByTestId('select-one-option-val3')).toBeTruthy();
   });
 
   it('filters options by label substring on type', async () => {
@@ -164,11 +172,14 @@ describe('SelectOneWidget autocomplete', () => {
     });
     await render(<SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
-      fireEvent.changeText(screen.getByTestId('select-one-autocomplete-input'), 'Two');
+      fireEvent.press(screen.getByTestId('select-one-dropdown-trigger'));
     });
-    expect(screen.queryByTestId('select-one-autocomplete-option-val1')).toBeNull();
-    expect(screen.getByTestId('select-one-autocomplete-option-val2')).toBeTruthy();
-    expect(screen.queryByTestId('select-one-autocomplete-option-val3')).toBeNull();
+    await act(async () => {
+      fireEvent.changeText(screen.getByTestId('select-one-minimal-autocomplete-search'), 'Two');
+    });
+    expect(screen.queryByTestId('select-one-option-val1')).toBeNull();
+    expect(screen.getByTestId('select-one-option-val2')).toBeTruthy();
+    expect(screen.queryByTestId('select-one-option-val3')).toBeNull();
   });
 
   it('selecting a filtered option commits the value', async () => {
@@ -182,10 +193,13 @@ describe('SelectOneWidget autocomplete', () => {
     const spy = jest.spyOn(store, 'answerQuestion');
     await render(<SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
-      fireEvent.changeText(screen.getByTestId('select-one-autocomplete-input'), 'Two');
+      fireEvent.press(screen.getByTestId('select-one-dropdown-trigger'));
     });
     await act(async () => {
-      fireEvent.press(screen.getByTestId('select-one-autocomplete-option-val2'));
+      fireEvent.changeText(screen.getByTestId('select-one-minimal-autocomplete-search'), 'Two');
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-one-option-val2'));
     });
     expect(spy).toHaveBeenCalledWith(ref, 'val2');
   });
@@ -201,12 +215,10 @@ describe('SelectOneWidget autocomplete', () => {
     });
     const spy = jest.spyOn(store, 'answerQuestion');
     await render(<SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />);
-    await act(async () => {
-      fireEvent.changeText(screen.getByTestId('select-one-autocomplete-input'), 'Two');
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('select-one-autocomplete-option-val2'));
-    });
+    // Trigger is non-accessible/non-interactive while readonly (same as
+    // 'minimal' variant), so the sheet never opens and nothing can be
+    // pressed — confirms the readonly guard still holds for this variant.
+    expect(screen.queryByTestId('select-one-minimal-autocomplete-search')).toBeNull();
     expect(spy).not.toHaveBeenCalled();
   });
 });

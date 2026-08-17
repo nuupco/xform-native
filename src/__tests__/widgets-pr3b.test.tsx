@@ -215,11 +215,12 @@ describe('SelectMultiWidget', () => {
     expect(screen.getByText('Cherry')).toBeTruthy();
   });
 
-  it('autocomplete variant FlatList persists taps while the search keyboard is open (REQ hotfix)', async () => {
-    // Same RN gotcha as SelectOneWidget's autocomplete variant: without
-    // keyboardShouldPersistTaps="handled", the first tap on a result below a
-    // focused search TextInput only dismisses the keyboard instead of
-    // firing onPress.
+  it('autocomplete variant (unified bottom-sheet) persists taps while the search keyboard is open (REQ hotfix)', async () => {
+    // 'autocomplete' is unified with 'minimal-autocomplete': a trigger opens
+    // a BottomSheet whose internal ScrollView carries
+    // keyboardShouldPersistTaps="handled" — without it, the first tap on a
+    // result below a focused search TextInput only dismisses the keyboard
+    // instead of firing onPress (the on-device bug this unification fixes).
     const { store, ref } = makeStoreFor({
       ref: '/data/fruits',
       dataType: 'selectMulti',
@@ -230,8 +231,11 @@ describe('SelectMultiWidget', () => {
     const { getByTestId } = await render(
       <SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />,
     );
-    const list = getByTestId('select-multi-autocomplete-list');
-    expect(list.props.keyboardShouldPersistTaps).toBe('handled');
+    await act(async () => {
+      fireEvent.press(getByTestId('select-multi-dropdown-trigger'));
+    });
+    const scroll = getByTestId('select-multi-sheet-scroll');
+    expect(scroll.props.keyboardShouldPersistTaps).toBe('handled');
   });
 
   it('selecting multiple choices commits readonly string[] (space-separated tokens)', async () => {

@@ -10,7 +10,7 @@
  *   minimal      → bottom-sheet dropdown with checkboxes
  *   columns      → multi-column FlatList with numColumns={2}
  *   columns-pack → compact multi-column FlatList
- *   autocomplete → TextInput with filtered FlatList of checkboxes
+ *   autocomplete → same as minimal-autocomplete (trigger + BottomSheet search)
  *   likert       → horizontal row of labeled checkbox Pressables
  */
 
@@ -121,7 +121,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     );
   }
 
-  if (variant === 'minimal-autocomplete') {
+  if (variant === 'minimal-autocomplete' || variant === 'autocomplete') {
     const selectedLabels = choices
       .filter((c) => selections.includes(c.value))
       .map((c) => c.label ?? c.value)
@@ -193,45 +193,6 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
             );
           })}
         </View>
-      </View>
-    );
-  }
-
-  if (variant === 'autocomplete') {
-    return (
-      <View style={styles.container}>
-        <TextInput
-          testID="select-multi-autocomplete-input"
-          style={styles.autocompleteInput}
-          value={query}
-          onChangeText={setQuery}
-          editable={!isReadonly}
-          placeholder="Search…"
-        />
-        <FlatList
-          testID="select-multi-autocomplete-list"
-          style={styles.autocompleteList}
-          keyboardShouldPersistTaps="handled"
-          data={filtered}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          renderItem={({ item }) => {
-            const isSelected = selections.includes(item.value);
-            return (
-              <Pressable
-                testID={`select-multi-autocomplete-option-${item.value}`}
-                style={[styles.autocompleteOption, isSelected && styles.autocompleteOptionSelected]}
-                onPress={() => handleToggle(item.value)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.autocompleteOptionLabel}>{item.label ?? item.value}</Text>
-              </Pressable>
-            );
-          }}
-        />
       </View>
     );
   }
@@ -408,15 +369,8 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.xs,
     fontWeight: 'bold',
   },
-  // autocomplete
-  // No ScrollView exists anywhere in the page hierarchy (Form.tsx /
-  // FormViewerScreen.tsx), so an unbounded FlatList with 100+ options grows
-  // without limit and pushes the rest of the page off-screen. Bounding this
-  // list gives it its own internal scroll (FlatList scrolls natively once
-  // it has a fixed/max height).
-  autocompleteList: {
-    maxHeight: 320,
-  },
+  // autocomplete (used by both 'autocomplete' and 'minimal-autocomplete',
+  // rendered inside BottomSheet's own bounded/scrollable content)
   autocompleteInput: {
     borderWidth: 1,
     borderColor: tokens.color.text,
@@ -426,22 +380,6 @@ const styles = StyleSheet.create({
     color: tokens.color.text,
     backgroundColor: tokens.color.background,
     marginBottom: tokens.spacing.xs,
-  },
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  autocompleteOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 40,
-    marginVertical: 2,
-    borderRadius: tokens.radius.sm,
-  },
-  autocompleteOptionSelected: {
-    backgroundColor: tokens.color.surface,
-  },
-  autocompleteOptionLabel: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    marginLeft: tokens.spacing.sm,
   },
   // columns
   // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)

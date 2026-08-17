@@ -255,7 +255,11 @@ describe('SelectMultiWidget columns-pack', () => {
 // ---------------------------------------------------------------------------
 
 describe('SelectMultiWidget autocomplete', () => {
-  it('renders TextInput and all options initially', async () => {
+  // 'autocomplete' is unified with 'minimal-autocomplete': a trigger opens a
+  // BottomSheet with a search TextInput + filtered checkbox list, instead of
+  // an inline TextInput+FlatList (removed — on-device selection never fired
+  // there; see BottomSheet's bounded-height + keyboardShouldPersistTaps fix).
+  it('renders a trigger that opens a bottom-sheet with search and all options', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/autocomplete',
       dataType: 'selectMulti',
@@ -264,10 +268,14 @@ describe('SelectMultiWidget autocomplete', () => {
       appearance: 'autocomplete',
     });
     await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />);
-    expect(screen.getByTestId('select-multi-autocomplete-input')).toBeTruthy();
-    expect(screen.getByTestId('select-multi-autocomplete-option-val1')).toBeTruthy();
-    expect(screen.getByTestId('select-multi-autocomplete-option-val2')).toBeTruthy();
-    expect(screen.getByTestId('select-multi-autocomplete-option-val3')).toBeTruthy();
+    expect(screen.getByTestId('select-multi-dropdown-trigger')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-multi-dropdown-trigger'));
+    });
+    expect(screen.getByTestId('select-multi-minimal-autocomplete-search')).toBeTruthy();
+    expect(screen.getByTestId('select-multi-sheet-option-val1')).toBeTruthy();
+    expect(screen.getByTestId('select-multi-sheet-option-val2')).toBeTruthy();
+    expect(screen.getByTestId('select-multi-sheet-option-val3')).toBeTruthy();
   });
 
   it('filters options by label substring on type', async () => {
@@ -280,11 +288,14 @@ describe('SelectMultiWidget autocomplete', () => {
     });
     await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
-      fireEvent.changeText(screen.getByTestId('select-multi-autocomplete-input'), 'Two');
+      fireEvent.press(screen.getByTestId('select-multi-dropdown-trigger'));
     });
-    expect(screen.queryByTestId('select-multi-autocomplete-option-val1')).toBeNull();
-    expect(screen.getByTestId('select-multi-autocomplete-option-val2')).toBeTruthy();
-    expect(screen.queryByTestId('select-multi-autocomplete-option-val3')).toBeNull();
+    await act(async () => {
+      fireEvent.changeText(screen.getByTestId('select-multi-minimal-autocomplete-search'), 'Two');
+    });
+    expect(screen.queryByTestId('select-multi-sheet-option-val1')).toBeNull();
+    expect(screen.getByTestId('select-multi-sheet-option-val2')).toBeTruthy();
+    expect(screen.queryByTestId('select-multi-sheet-option-val3')).toBeNull();
   });
 
   it('selecting a filtered option commits array with value', async () => {
@@ -298,10 +309,13 @@ describe('SelectMultiWidget autocomplete', () => {
     const spy = jest.spyOn(store, 'answerQuestion');
     await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />);
     await act(async () => {
-      fireEvent.changeText(screen.getByTestId('select-multi-autocomplete-input'), 'Two');
+      fireEvent.press(screen.getByTestId('select-multi-dropdown-trigger'));
     });
     await act(async () => {
-      fireEvent.press(screen.getByTestId('select-multi-autocomplete-option-val2'));
+      fireEvent.changeText(screen.getByTestId('select-multi-minimal-autocomplete-search'), 'Two');
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-multi-sheet-option-val2'));
     });
     expect(spy).toHaveBeenCalledWith(ref, ['val2']);
   });
@@ -317,12 +331,10 @@ describe('SelectMultiWidget autocomplete', () => {
     });
     const spy = jest.spyOn(store, 'answerQuestion');
     await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />);
-    await act(async () => {
-      fireEvent.changeText(screen.getByTestId('select-multi-autocomplete-input'), 'Two');
-    });
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('select-multi-autocomplete-option-val2'));
-    });
+    // Trigger is non-accessible/non-interactive while readonly (same as
+    // 'minimal' variant), so the sheet never opens and nothing can be
+    // pressed — confirms the readonly guard still holds for this variant.
+    expect(screen.queryByTestId('select-multi-minimal-autocomplete-search')).toBeNull();
     expect(spy).not.toHaveBeenCalled();
   });
 });
