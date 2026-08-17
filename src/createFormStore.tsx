@@ -22,6 +22,8 @@ import {
 } from '@nuup/ts-rosa';
 import type { XmlParser } from '@nuup/ts-rosa';
 import { FormSessionStore } from './store/FormSessionStore';
+import { createPhaseTimer } from './loadTiming';
+import type { PhaseTimingListener } from './loadTiming';
 
 /** ODK's reserved URI for the last-saved-submission secondary instance. */
 const LAST_SAVED_SRC = 'jr://instance/last-saved';
@@ -37,6 +39,15 @@ export interface CreateFormStoreOpts {
   externalInstanceResolver?: ExternalDataFetcher;
   /** Optional host override of the XmlParser seam. */
   xmlParser?: XmlParser;
+  /**
+   * ADR-3: opt-in split-cost timing instrumentation. When supplied, wraps
+   * `parseForm` / `resolveExternalInstances` / `createFormSession` in
+   * `start`/`end` events plus a `total` end event. Omitting this option is
+   * byte-identical behavior (no-regression for existing callers/small
+   * CSVs) — only plain-data `PhaseTiming` events cross this boundary, never
+   * raw ts-rosa types (ADR-2 firewall).
+   */
+  onPhaseTiming?: PhaseTimingListener;
 }
 
 let _defaultXmlParserRegistered = false;
@@ -66,55 +77,97 @@ export async function createFormStore(
 ): Promise<FormSessionStore> {
   ensureXmlParser(opts?.xmlParser);
 
-  let def = parseForm(xmlSource);
+  const onPhaseTiming = opts?.onPhaseTiming;
+  const timer = onPhaseTiming ? createPhaseTimer(onPhaseTiming) : undefined;
+  const totalStartedAt = timer ? performanceNow() : 0;
+  if (onPhaseTiming) onPhaseTiming({ phase: 'total', event: 'start' });
+
+  try {
+    return await runCreateFormStore(xmlSource, opts, timer);
+  } finally {
+    if (onPhaseTiming) {
+      onPhaseTiming({
+        phase: 'total',
+        event: 'end',
+        durationMs: performanceNow() - totalStartedAt,
+      });
+    }
+  }
+}
+
+function performanceNow(): number {
+  return globalThis.performance?.now?.() ?? Date.now();
+}
+
+async function runCreateFormStore(
+  xmlSource: string,
+  opts: CreateFormStoreOpts | undefined,
+  timer: ReturnType<typeof createPhaseTimer> | undefined
+): Promise<FormSessionStore> {
+  let def = timer
+    ? timer.run('parseForm', () => parseForm(xmlSource))
+    : parseForm(xmlSource);
 
   if (def.externalInstances.size > 0) {
-    // Pre-flight fail-loud: scan declared external instances against the
-    // supplied resolver BEFORE calling ts-rosa, so we can name the exact
-    // unresolved URI(s) with an actionable message.
-    const hardRequired = [...def.externalInstances.values()]
-      .map((entry) => entry.src)
-      .filter((src) => src !== LAST_SAVED_SRC);
+    const resolveExternalInstancesPhase = async () => {
+      // Pre-flight fail-loud: scan declared external instances against the
+      // supplied resolver BEFORE calling ts-rosa, so we can name the exact
+      // unresolved URI(s) with an actionable message.
+      const hardRequired = [...def.externalInstances.values()]
+        .map((entry) => entry.src)
+        .filter((src) => src !== LAST_SAVED_SRC);
 
-    if (hardRequired.length > 0 && !opts?.externalInstanceResolver) {
-      throw new Error(
-        `createFormStore: form declares external instance(s) requiring data [${hardRequired.join(
-          ', '
-        )}] but no externalInstanceResolver was supplied. Pass opts.externalInstanceResolver.`
-      );
-    }
+      if (hardRequired.length > 0 && !opts?.externalInstanceResolver) {
+        throw new Error(
+          `createFormStore: form declares external instance(s) requiring data [${hardRequired.join(
+            ', '
+          )}] but no externalInstanceResolver was supplied. Pass opts.externalInstanceResolver.`
+        );
+      }
 
-    const host = opts?.externalInstanceResolver;
-    if (host) {
-      registerExternalInstanceResolver({
-        async resolve(uri: string) {
-          const raw = await host.resolve(uri);
-          if (raw === null && uri !== LAST_SAVED_SRC) {
-            throw new Error(
-              `createFormStore: externalInstanceResolver returned null for required external instance '${uri}'.`
-            );
-          }
-          return raw;
-        },
-      });
-    } else {
-      // Only last-saved present, no host resolver supplied: register a
-      // default null-returning resolver. ts-rosa's resolveExternalInstances
-      // calls the resolver unconditionally whenever externalInstances.size
-      // > 0, so without SOME resolver registered it throws a generic
-      // "not registered" error instead of the intended empty-tree semantics.
-      registerExternalInstanceResolver({
-        resolve: async () => null,
-      });
-    }
+      const host = opts?.externalInstanceResolver;
+      if (host) {
+        registerExternalInstanceResolver({
+          async resolve(uri: string) {
+            const raw = await host.resolve(uri);
+            if (raw === null && uri !== LAST_SAVED_SRC) {
+              throw new Error(
+                `createFormStore: externalInstanceResolver returned null for required external instance '${uri}'.`
+              );
+            }
+            return raw;
+          },
+        });
+      } else {
+        // Only last-saved present, no host resolver supplied: register a
+        // default null-returning resolver. ts-rosa's resolveExternalInstances
+        // calls the resolver unconditionally whenever externalInstances.size
+        // > 0, so without SOME resolver registered it throws a generic
+        // "not registered" error instead of the intended empty-tree semantics.
+        registerExternalInstanceResolver({
+          resolve: async () => null,
+        });
+      }
 
-    def = await resolveExternalInstances(def);
+      return resolveExternalInstances(def);
+    };
+
+    def = timer
+      ? await timer.runAsync('resolveExternalInstances', resolveExternalInstancesPhase)
+      : await resolveExternalInstancesPhase();
   }
 
-  const session = createFormSession(
-    def,
-    opts?.instanceXml !== undefined ? { instanceXml: opts.instanceXml } : undefined
-  );
+  const session = timer
+    ? timer.run('createFormSession', () =>
+        createFormSession(
+          def,
+          opts?.instanceXml !== undefined ? { instanceXml: opts.instanceXml } : undefined
+        )
+      )
+    : createFormSession(
+        def,
+        opts?.instanceXml !== undefined ? { instanceXml: opts.instanceXml } : undefined
+      );
 
   return new FormSessionStore(session);
 }

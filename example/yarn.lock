@@ -1038,9 +1038,9 @@
     "@turf/length" "^7.3.5"
     "@turf/nearest-point-on-line" "^7.3.5"
 
-"@nuup/ts-rosa@github:nuupco/ts-rosa#main":
-  version "0.1.0"
-  resolved "https://codeload.github.com/nuupco/ts-rosa/tar.gz/fec4c211b22f961e55abc0c630b6e34432c034d1"
+"@nuup/ts-rosa@github:nuupco/ts-rosa#5283b88cde5e5de7fc60f56981cd24760546ef23":
+  version "0.1.2"
+  resolved "https://codeload.github.com/nuupco/ts-rosa/tar.gz/5283b88cde5e5de7fc60f56981cd24760546ef23"
   dependencies:
     "@xmldom/xmldom" "^0.9.0"
     crypto-js "^4.2.0"
@@ -1052,7 +1052,7 @@
 "@nuup/xform-native@file:..":
   version "1.1.0"
   dependencies:
-    "@nuup/ts-rosa" "github:nuupco/ts-rosa#main"
+    "@nuup/ts-rosa" "github:nuupco/ts-rosa#5283b88cde5e5de7fc60f56981cd24760546ef23"
     "@xmldom/xmldom" "^0.9.0"
 
 "@react-native-community/datetimepicker@^9.1.0":
