@@ -6,8 +6,8 @@
 
 import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -17,7 +17,29 @@ export interface StringWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: {
+      marginVertical: t.spacing.xs,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: t.color.text,
+      borderRadius: t.radius.sm,
+      padding: t.spacing.sm,
+      fontSize: t.font.md,
+      color: t.color.text,
+      backgroundColor: t.color.background,
+    },
+    readonly: {
+      backgroundColor: t.color.surface,
+      color: t.color.text,
+    },
+  });
+}
+
 export function StringWidget({ nodeRef, store, appearance }: StringWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const value = store.adapter.resolveValue(nodeRef);
@@ -46,21 +68,3 @@ export function StringWidget({ nodeRef, store, appearance }: StringWidgetProps) 
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: tokens.spacing.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    backgroundColor: tokens.color.background,
-  },
-  readonly: {
-    backgroundColor: tokens.color.surface,
-    color: tokens.color.text,
-  },
-});

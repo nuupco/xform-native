@@ -107,3 +107,8 @@ export {
   useWidgetOverrides,
 } from './widgets/registry';
 export type { XFormWidgetProps, WidgetOverride, PickWidgetArgs } from './widgets/registry';
+
+// form-theming: mount-time-only ThemeProvider over tokens.ts (D1/D2)
+export { ThemeProvider, useTheme, useThemedStyles } from './theme/ThemeContext';
+export { mergeTheme } from './theme/theme';
+export type { Theme } from './theme/theme';

@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
-import { tokens } from '../tokens/tokens';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 
 let _ImagePicker: any | null = null;
 let _pickerLoaded: boolean | undefined;
@@ -38,7 +38,34 @@ export interface ImageWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { gap: t.spacing.sm },
+    thumbnail: {
+      width: 120,
+      height: 120,
+      borderRadius: t.radius.sm,
+      backgroundColor: t.color.surface,
+    },
+    buttonRow: {
+      flexDirection: 'row' as const,
+      gap: t.spacing.sm,
+    },
+    button: {
+      padding: t.spacing.sm,
+      backgroundColor: t.color.surface,
+      borderRadius: t.radius.sm,
+    },
+    buttonDisabled: { opacity: 0.4 },
+    buttonText: { color: t.color.text, fontSize: t.font.sm },
+  });
+}
+
 export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWidgetProps) {
+  // Theming (D2): useThemedStyles MUST stay the first statement, before the
+  // peer-dependency gating early return below, to preserve hook-order
+  // stability (select-widgets-hook-order invariant).
+  const styles = useThemedStyles(createStyles);
   const picker = getImagePicker();
   const resolved = store.adapter.resolveValue(nodeRef);
   const uri: string | null =
@@ -116,23 +143,3 @@ export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWi
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: tokens.spacing.sm },
-  thumbnail: {
-    width: 120,
-    height: 120,
-    borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.surface,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: tokens.spacing.sm,
-  },
-  button: {
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-  },
-  buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: tokens.color.text, fontSize: tokens.font.sm },
-});
