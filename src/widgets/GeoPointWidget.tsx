@@ -11,7 +11,7 @@
  * layer here — the widget itself renders the map inline inside its own
  * modal, driven directly by `store.answerQuestion` / `resolveValue`.
  */
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { UnsupportedWidget } from './UnsupportedWidget';
 import { AppModal } from './primitives/Modal';
 import { SafeAreaBottom } from './primitives/SafeAreaBottom';
 import { tokens } from '../tokens/tokens';
+import { useGeoGps } from './primitives/useGeoGps';
 
 interface GeoPoint {
   lat: number;
@@ -104,8 +105,6 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
   );
   // Manually tapped pin (takes precedence over live GPS on accept)
   const [tappedPoint, setTappedPoint] = useState<GeoPoint | null>(null);
-  // Live GPS position (blue dot), used as fallback when the map hasn't been tapped
-  const [currentPoint, setCurrentPoint] = useState<GeoPoint | null>(null);
 
   // When resolved value changes externally, sync local state
   useEffect(() => {
@@ -114,66 +113,20 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
     }
   }, [resolved]);
 
-  const mountedRef = useRef(true);
-  const watchRef = useRef<{ remove: () => void } | null>(null);
-  const cameraRef = useRef<any>(null);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      watchRef.current?.remove();
-    };
-  }, []);
-
-  const stopWatch = useCallback(() => {
-    watchRef.current?.remove();
-    watchRef.current = null;
-  }, []);
-
-  const startWatching = useCallback(async () => {
-    if (!geo || readonly) return;
-    try {
-      const { status } = await geo.Location.requestForegroundPermissionsAsync();
-      if (!mountedRef.current || status !== 'granted') return;
-
-      const sub = await geo.Location.watchPositionAsync(
-        {
-          accuracy: geo.Location.Accuracy?.BestForNavigation,
-          timeInterval: 1000,
-          distanceInterval: 0,
-        },
-        (loc: any) => {
-          if (!mountedRef.current) return;
-          setCurrentPoint({
-            lat: loc.coords.latitude,
-            lon: loc.coords.longitude,
-            alt: loc.coords.altitude ?? 0,
-            acc: loc.coords.accuracy ?? 0,
-          });
-        },
-      );
-
-      if (!mountedRef.current) {
-        sub.remove();
-        return;
-      }
-      watchRef.current = sub;
-    } catch {
-      // GPS capture is best-effort
-    }
-  }, [geo, readonly]);
+  const gps = useGeoGps(geo, { enabled: !readonly });
+  const currentPoint = gps.currentPoint;
+  const cameraRef = gps.cameraRef;
 
   const openMap = useCallback(() => {
     setModalVisible(true);
     setTappedPoint(isGeoPoint(coordinate) ? coordinate : null);
-    void startWatching();
-  }, [coordinate, startWatching]);
+    void gps.start();
+  }, [coordinate, gps]);
 
   const closeMap = useCallback(() => {
-    stopWatch();
+    gps.stop();
     setModalVisible(false);
-  }, [stopWatch]);
+  }, [gps]);
 
   const handleMapPress = useCallback(
     (event: any) => {
@@ -198,9 +151,8 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
   }, []);
 
   const handleRecenter = useCallback(() => {
-    if (!currentPoint) return;
-    cameraRef.current?.flyTo?.({ center: [currentPoint.lon, currentPoint.lat], duration: 400 });
-  }, [currentPoint]);
+    gps.recenter();
+  }, [gps]);
 
   const handleAccept = useCallback(() => {
     // Manually tapped pin takes precedence over live GPS position
@@ -212,16 +164,14 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
   }, [tappedPoint, currentPoint, nodeRef, store, closeMap]);
 
   const handleCancel = useCallback(() => {
-    stopWatch();
     setTappedPoint(null);
-    setCurrentPoint(null);
     if (isGeoPoint(resolved)) {
       setCoordinate(resolved);
     } else {
       setCoordinate(null);
     }
     closeMap();
-  }, [resolved, closeMap, stopWatch]);
+  }, [resolved, closeMap]);
 
   if (!geo) {
     return <UnsupportedWidget dataType="geopoint" />;
@@ -315,12 +265,20 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
               <Text style={styles.buttonText}>⊙</Text>
             </Pressable>
 
-            {!currentPoint && (
-              <View style={styles.statusOverlay} pointerEvents="none">
+            <View style={styles.statusOverlay} pointerEvents="none">
+              {(gps.status === 'requesting' || gps.status === 'acquiring') && (
                 <ActivityIndicator size="small" />
-                <Text style={styles.statusText}>Adquiriendo señal GPS…</Text>
-              </View>
-            )}
+              )}
+              <Text style={styles.statusText}>
+                {gps.status === 'denied'
+                  ? 'Sin permiso de ubicación'
+                  : gps.status === 'error'
+                    ? 'No se pudo obtener la ubicación'
+                    : gps.status === 'tracking' && currentPoint
+                      ? `GPS ±${currentPoint.acc.toFixed(1)} m`
+                      : 'Adquiriendo señal GPS…'}
+              </Text>
+            </View>
           </View>
 
           <SafeAreaBottom style={styles.buttonRow}>
