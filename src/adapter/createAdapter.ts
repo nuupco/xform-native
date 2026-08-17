@@ -58,8 +58,12 @@ export function createAdapter(session: FormSession): FormAdapter {
         dataType: q?.getDataType() ?? 'string',
         controlType: (q?.getControlType() ?? 'input') as ControlType,
         appearance: q?.getAppearance?.() ?? null,
-        label: q?.getLabelInnerText() ?? null,
-        hint: q?.getHintText?.() ?? null,
+        // getQuestionText()/getSubstitutedHintText() resolve itext +
+        // evaluate any <output> against the current instance.
+        // getLabelInnerText()/getHintText() are the RAW ${n}-placeholder
+        // templates, unresolved — using them leaks literal "${0}" into the UI.
+        label: q?.getQuestionText() ?? null,
+        hint: q?.getSubstitutedHintText?.() ?? null,
         index: stepCount,
         rangeBounds: q?.getRangeBounds?.() ?? null,
         mediatype: q?.getMediatype?.() ?? null,

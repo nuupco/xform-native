@@ -247,6 +247,8 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
       getRangeBounds(): { start?: number; end?: number; step?: number } | null;
       getAppearance(): string | null;
       getMediatype(): string | null;
+      getQuestionText(): string | null;
+      getSubstitutedHintText(): string | null;
     } | null {
       const pos = idx !== undefined ? formIndices.indexOf(idx) : cursor;
       const ev = events[pos >= 0 ? pos : cursor];
@@ -264,6 +266,12 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
           getRangeBounds: () => null,
           getAppearance: () => q.appearance,
           getMediatype: () => null,
+          // Fake scripts supply the final label/hint directly (no <output>
+          // template modeling), so the "resolved" reader returns the same
+          // value as the raw one — real ts-rosa is what actually resolves
+          // <output> substitutions.
+          getQuestionText: () => q.label,
+          getSubstitutedHintText: () => q.hint,
         };
       }
       return {
@@ -274,6 +282,8 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
         getRangeBounds: () => null,
         getAppearance: () => null,
         getMediatype: () => null,
+        getQuestionText: () => label as string | null,
+        getSubstitutedHintText: () => null,
       };
     },
   };
