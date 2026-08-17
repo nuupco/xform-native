@@ -98,6 +98,114 @@ import { Form } from '@nuup/xform-native';
 <Form store={store} />
 ```
 
+`Form` also accepts four optional, additive props — each is frozen at mount
+and, when omitted, produces exactly the same markup, testIDs, and copy as
+before. See "Composition & Theming" below for details.
+
+## Composition & Theming
+
+Four opt-in seams let a consumer customize `Form` without forking it. All are
+additive: omitting them preserves current behavior exactly.
+
+### Widget registry
+
+Override which widget component renders for a given
+`(controlType, dataType, appearance)` triple, either via context or via the
+`widgets` prop directly on `Form` (`widgets` wins ties over context entries).
+Overrides wrap — never replace — the built-in `pickWidget` dispatch chain.
+
+```tsx
+import { Form, WidgetRegistryProvider } from '@nuup/xform-native';
+import type { WidgetOverride, XFormWidgetProps } from '@nuup/xform-native';
+
+function RankAutocompleteWidget({ nodeRef, store }: XFormWidgetProps) {
+  // custom rendering
+}
+
+const overrides: WidgetOverride[] = [
+  {
+    match: { controlType: 'select1', appearance: 'autocomplete' },
+    Widget: RankAutocompleteWidget,
+  },
+];
+
+<WidgetRegistryProvider widgets={overrides}>
+  <Form store={store} />
+</WidgetRegistryProvider>;
+
+// or, directly on Form:
+<Form store={store} widgets={overrides} />;
+```
+
+### Theming
+
+`ThemeProvider` supplies a theme override to `useTheme()` / `useThemedStyles()`
+at mount time. Theming is **not reactive**: changing the `theme` prop on an
+already-mounted subtree does not re-render existing widgets — remount to pick
+up a new theme.
+
+```tsx
+import { ThemeProvider, useTheme, mergeTheme } from '@nuup/xform-native';
+
+<ThemeProvider theme={{ color: { primary: '#1B5E20' } }}>
+  <Form store={store} />
+</ThemeProvider>;
+
+// inside a custom widget:
+function MyWidget() {
+  const theme = useTheme(); // custom values, or `tokens` defaults with no provider
+}
+```
+
+### Composition slots
+
+`Form`'s `slots` prop lets you replace the navigation row, the
+validation-error surface, or group/repeat layout with your own render props.
+Every slot context includes `defaultElement` — the exact JSX `Form` would
+have rendered — so you can wrap instead of reimplement.
+
+```tsx
+import { Form } from '@nuup/xform-native';
+import type { FormSlots } from '@nuup/xform-native';
+
+const slots: FormSlots = {
+  renderNavigation: ({ onBack, onNext, defaultElement }) => (
+    <MyNavBar onBack={onBack} onNext={onNext}>{defaultElement}</MyNavBar>
+  ),
+  renderError: ({ block, defaultElement }) => (
+    <MyToast>{block.message}</MyToast>
+  ),
+};
+
+<Form store={store} slots={slots} />;
+```
+
+### Validation hooks
+
+`Form`'s `validators` prop lets you inject a validation callback per
+`(controlType, dataType, appearance)`. It is a **plain callback**, not a
+React hook, run inside `Form`'s existing `handleNext` logic. Use
+`ctx.defaultValidate()` to compose over the built-in required/constraint
+checks instead of reimplementing them.
+
+```tsx
+import { Form } from '@nuup/xform-native';
+import type { ValidatorOverride } from '@nuup/xform-native';
+
+const validators: ValidatorOverride[] = [
+  {
+    match: { controlType: 'note' },
+    validate: (ctx) => {
+      const defaultBlock = ctx.defaultValidate();
+      if (defaultBlock) return defaultBlock;
+      return null; // no additional custom rule
+    },
+  },
+];
+
+<Form store={store} validators={validators} />;
+```
+
 ### `FormSessionStore`
 
 Reactive wrapper around a `FormAdapter`. Implements the `useSyncExternalStore` contract.
