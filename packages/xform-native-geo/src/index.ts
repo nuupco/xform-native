@@ -34,7 +34,17 @@ function loadLocation(): any {
 }
 
 Object.defineProperty(module.exports, 'MapLibre', {
-  get: loadMapLibre,
+  get() {
+    const maplibre = loadMapLibre();
+    return {
+      Map: maplibre.Map,
+      Camera: maplibre.Camera,
+      Marker: maplibre.Marker,
+      RasterSource: maplibre.RasterSource,
+      GeoJSONSource: maplibre.GeoJSONSource,
+      Layer: maplibre.Layer,
+    };
+  },
   enumerable: true,
   configurable: true,
 });

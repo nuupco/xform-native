@@ -5,6 +5,11 @@
  * UnsupportedWidget when the dep is absent at runtime.
  *
  * Value shape: { lat: number, lon: number, alt: number, acc: number } | null
+ *
+ * UX ported from expo-enketo-form's GeoBridge (WebView-bridge modal),
+ * adapted to this repo's inline-widget architecture: no WebView/bridge
+ * layer here — the widget itself renders the map inline inside its own
+ * modal, driven directly by `store.answerQuestion` / `resolveValue`.
  */
 import { useCallback, useState, useEffect, useRef } from 'react';
 import {
@@ -12,6 +17,7 @@ import {
   Text,
   Pressable,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
@@ -55,6 +61,30 @@ function isGeoPoint(value: unknown): value is GeoPoint {
   );
 }
 
+// OSM raster base — no API key required
+const OSM_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{ id: 'osm-layer', type: 'raster', source: 'osm' }],
+};
+
+// ESRI World Imagery — free satellite tiles, no API key.
+// ESRI URL order is z/y/x (row before column).
+const ESRI_TILES = [
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+];
+const ESRI_MAX_ZOOM = 17;
+
+const DEFAULT_CENTER: [number, number] = [-99.1332, 19.4326];
+
 export interface GeoPointWidgetProps {
   nodeRef: NodeRef;
   store: FormSessionStore;
@@ -69,8 +99,12 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
 
   const [modalVisible, setModalVisible] = useState(false);
   const [coordinate, setCoordinate] = useState<GeoPoint | null>(
-    isGeoPoint(resolved) ? resolved : null
+    isGeoPoint(resolved) ? resolved : null,
   );
+  // Manually tapped pin (takes precedence over live GPS on accept)
+  const [tappedPoint, setTappedPoint] = useState<GeoPoint | null>(null);
+  // Live GPS position (blue dot), used as fallback when the map hasn't been tapped
+  const [currentPoint, setCurrentPoint] = useState<GeoPoint | null>(null);
 
   // When resolved value changes externally, sync local state
   useEffect(() => {
@@ -80,83 +114,125 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
   }, [resolved]);
 
   const mountedRef = useRef(true);
+  const watchRef = useRef<{ remove: () => void } | null>(null);
+  const cameraRef = useRef<any>(null);
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      watchRef.current?.remove();
     };
   }, []);
 
-  const openMap = useCallback(() => {
-    setModalVisible(true);
+  const stopWatch = useCallback(() => {
+    watchRef.current?.remove();
+    watchRef.current = null;
   }, []);
 
-  const closeMap = useCallback(() => {
-    setModalVisible(false);
-  }, []);
-
-  const handleGpsCapture = useCallback(async () => {
+  const startWatching = useCallback(async () => {
     if (!geo || readonly) return;
     try {
       const { status } = await geo.Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      const location = await geo.Location.getCurrentPositionAsync({});
-      if (location?.coords && mountedRef.current) {
-        setCoordinate({
-          lat: location.coords.latitude,
-          lon: location.coords.longitude,
-          alt: location.coords.altitude ?? 0,
-          acc: location.coords.accuracy ?? 0,
-        });
+      if (!mountedRef.current || status !== 'granted') return;
+
+      const sub = await geo.Location.watchPositionAsync(
+        {
+          accuracy: geo.Location.Accuracy?.BestForNavigation,
+          timeInterval: 1000,
+          distanceInterval: 0,
+        },
+        (loc: any) => {
+          if (!mountedRef.current) return;
+          setCurrentPoint({
+            lat: loc.coords.latitude,
+            lon: loc.coords.longitude,
+            alt: loc.coords.altitude ?? 0,
+            acc: loc.coords.accuracy ?? 0,
+          });
+        },
+      );
+
+      if (!mountedRef.current) {
+        sub.remove();
+        return;
       }
+      watchRef.current = sub;
     } catch {
       // GPS capture is best-effort
     }
   }, [geo, readonly]);
 
+  const openMap = useCallback(() => {
+    setModalVisible(true);
+    setTappedPoint(isGeoPoint(coordinate) ? coordinate : null);
+    void startWatching();
+  }, [coordinate, startWatching]);
+
+  const closeMap = useCallback(() => {
+    stopWatch();
+    setModalVisible(false);
+  }, [stopWatch]);
+
   const handleMapPress = useCallback(
-    (feature: any) => {
-      if (readonly || !feature?.geometry?.coordinates) return;
-      const [lon, lat] = feature.geometry.coordinates as [number, number];
-      setCoordinate({
-        lat,
-        lon,
-        alt: 0,
-        acc: 0,
-      });
+    (event: any) => {
+      if (readonly) return;
+      const lngLat = event?.nativeEvent?.lngLat;
+      if (!lngLat) return;
+      const [lon, lat] = lngLat;
+      if (
+        typeof lat !== 'number' || typeof lon !== 'number' ||
+        isNaN(lat) || isNaN(lon) ||
+        lat < -90 || lat > 90 || lon < -180 || lon > 180
+      ) {
+        return;
+      }
+      setTappedPoint({ lat, lon, alt: 0, acc: 0 });
     },
-    [readonly]
+    [readonly],
   );
 
+  const handleUndo = useCallback(() => {
+    setTappedPoint(null);
+  }, []);
+
+  const handleRecenter = useCallback(() => {
+    if (!currentPoint) return;
+    cameraRef.current?.flyTo?.({ center: [currentPoint.lon, currentPoint.lat], duration: 400 });
+  }, [currentPoint]);
+
   const handleAccept = useCallback(() => {
-    if (coordinate) {
-      store.answerQuestion(nodeRef, coordinate);
+    // Manually tapped pin takes precedence over live GPS position
+    const point = tappedPoint ?? currentPoint;
+    if (point) {
+      store.answerQuestion(nodeRef, point);
     }
     closeMap();
-  }, [coordinate, nodeRef, store, closeMap]);
+  }, [tappedPoint, currentPoint, nodeRef, store, closeMap]);
 
   const handleCancel = useCallback(() => {
-    // Revert to the stored value on cancel
+    stopWatch();
+    setTappedPoint(null);
+    setCurrentPoint(null);
     if (isGeoPoint(resolved)) {
       setCoordinate(resolved);
     } else {
       setCoordinate(null);
     }
     closeMap();
-  }, [resolved, closeMap]);
-
-  // Auto-capture GPS when modal opens (only in edit mode)
-  useEffect(() => {
-    if (modalVisible && !readonly && !coordinate) {
-      handleGpsCapture();
-    }
-  }, [modalVisible, readonly, coordinate, handleGpsCapture]);
+  }, [resolved, closeMap, stopWatch]);
 
   if (!geo) {
     return <UnsupportedWidget dataType="geopoint" />;
   }
 
   const { MapLibre } = geo;
+  const canAccept = tappedPoint !== null || currentPoint !== null;
+  const mapCenter = tappedPoint
+    ? [tappedPoint.lon, tappedPoint.lat]
+    : coordinate
+      ? [coordinate.lon, coordinate.lat]
+      : DEFAULT_CENTER;
 
   if (readonly) {
     return (
@@ -192,33 +268,72 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
       >
         <View style={styles.modalContent}>
           <View style={styles.mapContainer}>
-            <MapLibre.MapView
+            <MapLibre.Map
               style={styles.map}
+              mapStyle={OSM_STYLE}
               onPress={handleMapPress}
               testID="geo-maplibre-map"
             >
               <MapLibre.Camera
-                centerCoordinate={
-                  coordinate
-                    ? [coordinate.lon, coordinate.lat]
-                    : [-99.1332, 19.4326]
-                }
-                zoomLevel={15}
+                ref={cameraRef}
+                initialViewState={{ center: mapCenter, zoom: 15 }}
               />
-              {coordinate && (
-                <MapLibre.MarkerView
-                  coordinate={[coordinate.lon, coordinate.lat]}
-                >
+
+              <MapLibre.RasterSource
+                id="esri-satellite"
+                tiles={ESRI_TILES}
+                tileSize={256}
+                maxzoom={ESRI_MAX_ZOOM}
+              >
+                <MapLibre.Layer id="esri-satellite-layer" type="raster" layerIndex={1} />
+              </MapLibre.RasterSource>
+
+              {tappedPoint && (
+                <MapLibre.Marker id="tapped-pin" lngLat={[tappedPoint.lon, tappedPoint.lat]}>
                   <View style={styles.pin} testID="geo-map-pin" />
-                </MapLibre.MarkerView>
+                </MapLibre.Marker>
               )}
-            </MapLibre.MapView>
+
+              {currentPoint && (
+                <MapLibre.Marker id="current-pos" lngLat={[currentPoint.lon, currentPoint.lat]}>
+                  <View style={styles.gpsDotOuter}>
+                    <View style={styles.gpsDotInner} />
+                  </View>
+                </MapLibre.Marker>
+              )}
+            </MapLibre.Map>
+
+            <Pressable
+              onPress={handleRecenter}
+              style={styles.recenterButton}
+              testID="geo-recenter-button"
+              disabled={!currentPoint}
+            >
+              <Text style={styles.buttonText}>⊙</Text>
+            </Pressable>
+
+            {!currentPoint && (
+              <View style={styles.statusOverlay} pointerEvents="none">
+                <ActivityIndicator size="small" />
+                <Text style={styles.statusText}>Adquiriendo señal GPS…</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.buttonRow}>
+            {tappedPoint && (
+              <Pressable
+                onPress={handleUndo}
+                style={[styles.button, styles.undoButton]}
+                testID="geo-undo-button"
+              >
+                <Text style={styles.buttonText}>Undo</Text>
+              </Pressable>
+            )}
             <Pressable
-              onPress={handleAccept}
-              style={[styles.button, styles.acceptButton]}
+              onPress={canAccept ? handleAccept : undefined}
+              style={[styles.button, styles.acceptButton, !canAccept && styles.buttonDisabled]}
+              disabled={!canAccept}
               testID="geo-accept-button"
             >
               <Text style={styles.buttonText}>Accept</Text>
@@ -256,9 +371,17 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     backgroundColor: tokens.color.primary,
+    flex: 1,
   },
   cancelButton: {
     backgroundColor: tokens.color.error,
+    flex: 1,
+  },
+  undoButton: {
+    backgroundColor: tokens.color.surface,
+  },
+  buttonDisabled: {
+    opacity: 0.4,
   },
   modalContent: {
     flex: 1,
@@ -280,6 +403,49 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: tokens.color.error,
     borderRadius: 10,
+  },
+  gpsDotOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(33,150,243,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#2196F3',
+  },
+  gpsDotInner: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: '#2196F3',
+  },
+  recenterButton: {
+    position: 'absolute',
+    top: tokens.spacing.sm,
+    right: tokens.spacing.sm,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusOverlay: {
+    position: 'absolute',
+    bottom: tokens.spacing.sm,
+    left: tokens.spacing.sm,
+    right: tokens.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: tokens.radius.sm,
+    padding: tokens.spacing.xs,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: tokens.font.sm,
   },
   buttonRow: {
     flexDirection: 'row',

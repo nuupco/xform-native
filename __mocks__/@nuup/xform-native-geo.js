@@ -1,101 +1,8 @@
 // Manual mock for @nuup/xform-native-geo (optional peer dep bundle)
-// Exposes MapLibre + expo-location interfaces used by GeoPointWidget.
+// Exposes MapLibre (v11+ API) + expo-location interfaces used by the geo widgets.
 
-const React = require('react');
-const { View, Text } = require('react-native');
+const maplibre = require('../@maplibre/maplibre-react-native');
 
-// Mock MapLibre MapView
-const MapView = jest.fn().mockImplementation((props) => {
-  return React.createElement(View, {
-    testID: props.testID ?? 'maplibre-mapview',
-    style: props.style,
-    onPress: () => {
-      if (props.onPress) {
-        props.onPress({
-          geometry: { coordinates: [-99.2000, 19.5000] },
-        });
-      }
-    },
-    children: props.children,
-  });
-});
-
-// Mock Camera
-const Camera = jest.fn().mockImplementation((props) => {
-  return React.createElement(View, {
-    testID: 'maplibre-camera',
-    children: props.children,
-  });
-});
-
-// Mock MarkerView
-const MarkerView = jest.fn().mockImplementation((props) => {
-  return React.createElement(View, {
-    testID: 'maplibre-marker',
-    children: props.children,
-  });
-});
-
-// Mock RasterSource
-const RasterSource = jest.fn().mockImplementation((props) => {
-  return React.createElement(View, {
-    testID: 'maplibre-raster-source',
-    children: props.children,
-  });
-});
-
-// Mock RasterLayer
-const RasterLayer = jest.fn().mockImplementation((props) => {
-  return React.createElement(View, {
-    testID: 'maplibre-raster-layer',
-  });
-});
-
-// Mock ShapeSource
-const ShapeSource = jest.fn().mockImplementation((props) => {
-  return React.createElement(View, {
-    testID: 'maplibre-shape-source',
-    children: props.children,
-  });
-});
-
-// Mock FillLayer
-const FillLayer = jest.fn().mockImplementation(() => {
-  return React.createElement(View, { testID: 'maplibre-fill-layer' });
-});
-
-// Mock LineLayer
-const LineLayer = jest.fn().mockImplementation(() => {
-  return React.createElement(View, { testID: 'maplibre-line-layer' });
-});
-
-// Mock UserLocation
-const UserLocation = jest.fn().mockImplementation(() => {
-  return React.createElement(View, { testID: 'maplibre-user-location' });
-});
-
-// Mock LocationManager
-const LocationManager = {
-  start: jest.fn().mockResolvedValue(undefined),
-  stop: jest.fn(),
-  getLastKnownLocation: jest.fn().mockResolvedValue(null),
-};
-
-// Mock MapLibre module
-const MapLibre = {
-  MapView,
-  Camera,
-  MarkerView,
-  RasterSource,
-  RasterLayer,
-  ShapeSource,
-  FillLayer,
-  LineLayer,
-  UserLocation,
-  LocationManager,
-};
-
-// Mock expo-location
 const mockLocation = {
   coords: {
     latitude: 19.4326,
@@ -105,10 +12,30 @@ const mockLocation = {
   },
 };
 
+let watchCallback = null;
+
 const Location = {
+  Accuracy: { BestForNavigation: 6 },
   requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
   getCurrentPositionAsync: jest.fn().mockResolvedValue(mockLocation),
-  watchPositionAsync: jest.fn().mockResolvedValue({ remove: jest.fn() }),
+  getLastKnownPositionAsync: jest.fn().mockResolvedValue(mockLocation),
+  watchPositionAsync: jest.fn().mockImplementation((_options, callback) => {
+    watchCallback = callback;
+    callback(mockLocation);
+    return Promise.resolve({ remove: jest.fn() });
+  }),
+  __triggerWatch: (loc) => {
+    if (watchCallback) watchCallback(loc);
+  },
+};
+
+const MapLibre = {
+  Map: maplibre.Map,
+  Camera: maplibre.Camera,
+  Marker: maplibre.Marker,
+  RasterSource: maplibre.RasterSource,
+  GeoJSONSource: maplibre.GeoJSONSource,
+  Layer: maplibre.Layer,
 };
 
 module.exports = {

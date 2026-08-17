@@ -98,14 +98,38 @@ describe('GeoShapeWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
     });
+    // Minimum 3 points required before the polygon renders
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-shape-map'));
     });
-    expect(screen.getByTestId('maplibre-shape-source')).toBeTruthy();
-    expect(screen.getByTestId('maplibre-fill-layer')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-map'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-map'));
+    });
+    expect(screen.getByTestId('maplibre-geojson-source-shape')).toBeTruthy();
+    expect(screen.getByTestId('maplibre-layer-shape-fill-layer')).toBeTruthy();
   });
 
-  it('stores ODK-format string on Accept', async () => {
+  it('accept is disabled below the 3-point minimum', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-map'));
+    });
+    expect(screen.getByTestId('geo-shape-accept-button').props.accessibilityState?.disabled)
+      .toBe(true);
+  });
+
+  it('stores ODK-format string on Accept with the ring closed', async () => {
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
@@ -120,12 +144,19 @@ describe('GeoShapeWidget', () => {
       fireEvent.press(screen.getByTestId('geo-shape-map'));
     });
     await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-map'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-map'));
+    });
+    await act(async () => {
       fireEvent.press(screen.getByTestId('geo-shape-accept-button'));
     });
-    expect(answerSpy).toHaveBeenCalledWith(
-      ev.ref,
-      expect.stringMatching(/^-?\d+\.\d+\s+-?\d+\.\d+\s+\d+\s+\d+$/),
-    );
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    const committed = answerSpy.mock.calls[0]![1] as string;
+    const parts = committed.split(';').map((p) => p.trim());
+    expect(parts).toHaveLength(4); // 3 tapped vertices + closing repeat of the first
+    expect(parts[0]).toBe(parts.at(3));
   });
 
   it('does not call answerQuestion on Cancel', async () => {

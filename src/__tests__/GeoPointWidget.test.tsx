@@ -184,17 +184,17 @@ describe('GeoPointWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-open-map-button'));
     });
-    expect(mockGeo.Location.getCurrentPositionAsync).toHaveBeenCalled();
+    expect(mockGeo.Location.watchPositionAsync).toHaveBeenCalled();
   });
 
   it('unmounting mid-GPS-capture does not set state after unmount', async () => {
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
-    let resolveLocation: (value: any) => void = () => {};
-    mockGeo.Location.getCurrentPositionAsync.mockImplementationOnce(
+    let resolveWatch: (value: any) => void = () => {};
+    mockGeo.Location.watchPositionAsync.mockImplementationOnce(
       () => new Promise((resolve) => {
-        resolveLocation = resolve;
+        resolveWatch = resolve;
       }),
     );
     const warnSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -208,7 +208,7 @@ describe('GeoPointWidget', () => {
       unmount();
     });
     await act(async () => {
-      resolveLocation(mockGeo.__mockLocation);
+      resolveWatch({ remove: jest.fn() });
       await Promise.resolve();
       await Promise.resolve();
     });

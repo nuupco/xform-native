@@ -1,59 +1,63 @@
-// Manual mock for @maplibre/maplibre-react-native (optional peer dep)
+// Manual mock for @maplibre/maplibre-react-native (v11+ API, optional peer dep)
 
 const React = require('react');
 const { View } = require('react-native');
 
-const MapView = jest.fn().mockImplementation((props) => {
+const Map = jest.fn().mockImplementation((props) => {
   return React.createElement(View, {
-    testID: props.testID ?? 'maplibre-mapview',
+    testID: props.testID ?? 'maplibre-map',
     style: props.style,
+    onPress: () => {
+      if (props.onPress) {
+        props.onPress({ nativeEvent: { lngLat: [-99.2, 19.5] } });
+      }
+    },
     children: props.children,
   });
 });
 
-const Camera = jest.fn().mockImplementation((props) => {
+const Camera = React.forwardRef((props, ref) => {
+  React.useImperativeHandle(ref, () => ({
+    flyTo: jest.fn(),
+  }));
   return React.createElement(View, {
     testID: 'maplibre-camera',
     children: props.children,
   });
 });
 
-const MarkerView = jest.fn().mockImplementation((props) => {
+const Marker = jest.fn().mockImplementation((props) => {
   return React.createElement(View, {
-    testID: 'maplibre-marker',
+    testID: props.id ? `maplibre-marker-${props.id}` : 'maplibre-marker',
     children: props.children,
   });
 });
 
 const RasterSource = jest.fn().mockImplementation((props) => {
   return React.createElement(View, {
-    testID: 'maplibre-raster-source',
+    testID: props.id ? `maplibre-raster-source-${props.id}` : 'maplibre-raster-source',
     children: props.children,
   });
 });
 
-const RasterLayer = jest.fn().mockImplementation((props) => {
+const GeoJSONSource = jest.fn().mockImplementation((props) => {
   return React.createElement(View, {
-    testID: 'maplibre-raster-layer',
+    testID: props.id ? `maplibre-geojson-source-${props.id}` : 'maplibre-geojson-source',
+    children: props.children,
   });
 });
 
-const UserLocation = jest.fn().mockImplementation(() => {
-  return React.createElement(View, { testID: 'maplibre-user-location' });
+const Layer = jest.fn().mockImplementation((props) => {
+  return React.createElement(View, {
+    testID: props.id ? `maplibre-layer-${props.id}` : 'maplibre-layer',
+  });
 });
 
-const LocationManager = {
-  start: jest.fn().mockResolvedValue(undefined),
-  stop: jest.fn(),
-  getLastKnownLocation: jest.fn().mockResolvedValue(null),
-};
-
 module.exports = {
-  MapView,
+  Map,
   Camera,
-  MarkerView,
+  Marker,
   RasterSource,
-  RasterLayer,
-  UserLocation,
-  LocationManager,
+  GeoJSONSource,
+  Layer,
 };

@@ -98,11 +98,32 @@ describe('GeoTraceWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
     });
+    // Minimum 2 points required before the line renders
     await act(async () => {
       fireEvent.press(screen.getByTestId('geo-trace-map'));
     });
-    expect(screen.getByTestId('maplibre-shape-source')).toBeTruthy();
-    expect(screen.getByTestId('maplibre-line-layer')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-map'));
+    });
+    expect(screen.getByTestId('maplibre-geojson-source-trace')).toBeTruthy();
+    expect(screen.getByTestId('maplibre-layer-trace-line-layer')).toBeTruthy();
+  });
+
+  it('accept is disabled below the 2-point minimum', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-map'));
+    });
+    expect(screen.getByTestId('geo-trace-accept-button').props.accessibilityState?.disabled)
+      .toBe(true);
   });
 
   it('stores ODK-format string on Accept', async () => {
@@ -120,11 +141,14 @@ describe('GeoTraceWidget', () => {
       fireEvent.press(screen.getByTestId('geo-trace-map'));
     });
     await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-map'));
+    });
+    await act(async () => {
       fireEvent.press(screen.getByTestId('geo-trace-accept-button'));
     });
     expect(answerSpy).toHaveBeenCalledWith(
       ev.ref,
-      expect.stringMatching(/^-?\d+\.\d+\s+-?\d+\.\d+\s+\d+\s+\d+$/),
+      expect.stringMatching(/^-?\d+\.\d+\s+-?\d+\.\d+\s+\d+\s+\d+(\s*;\s*-?\d+\.\d+\s+-?\d+\.\d+\s+\d+\s+\d+)+$/),
     );
   });
 
