@@ -46,7 +46,7 @@ export default function App() {
 | `DecimalWidget` | `decimal` | — | Decimal numeric input |
 | `LongWidget` | `long` | — | Long text / multiline input |
 | `BooleanWidget` | `boolean` | — | Yes/no toggle or checkbox |
-| `DateWidget` | `date` | — | Date picker |
+| `DateWidget` | `date` | `@react-native-community/datetimepicker` (optional) | Manual TextInput entry, plus a native date picker button when the dep is installed |
 | `TimeWidget` | `time` | — | Time picker |
 | `DateTimeWidget` | `dateTime` | — | Date + time picker |
 | `SelectOneWidget` | `selectOne` | — | Single-choice select |
@@ -69,6 +69,8 @@ export default function App() {
 
 Media, geo, and barcode widgets are gated behind optional peer dependencies. If a dependency is missing at runtime, the widget gracefully falls back to `UnsupportedWidget`.
 
+`DateWidget` is different: its optional peer dependency only ADDS a native date picker button next to the existing manual TextInput. Without it, `DateWidget` behaves exactly as before (manual TextInput only) — it never falls back to `UnsupportedWidget`.
+
 | Package | Widgets | Install |
 |---------|---------|---------|
 | `expo-image-picker` | ImageWidget | `npm install expo-image-picker` |
@@ -77,6 +79,7 @@ Media, geo, and barcode widgets are gated behind optional peer dependencies. If 
 | `react-native-svg` | SignatureWidget | `npm install react-native-svg` |
 | `expo-document-picker` | FileWidget | `npm install expo-document-picker` |
 | `@maplibre/maplibre-react-native` | GeoPointWidget, GeoShapeWidget, GeoTraceWidget | `npm install @maplibre/maplibre-react-native` |
+| `@react-native-community/datetimepicker` | DateWidget (`default` variant, adds native picker button) | `npm install @react-native-community/datetimepicker` |
 
 ## CLI
 

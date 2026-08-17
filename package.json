@@ -65,14 +65,16 @@
     "expo-av": "*",
     "react-native-svg": "*",
     "expo-document-picker": "*",
-    "expo-camera": "*"
+    "expo-camera": "*",
+    "@react-native-community/datetimepicker": "*"
   },
   "peerDependenciesMeta": {
     "expo-image-picker": { "optional": true },
     "expo-av": { "optional": true },
     "react-native-svg": { "optional": true },
     "expo-document-picker": { "optional": true },
-    "expo-camera": { "optional": true }
+    "expo-camera": { "optional": true },
+    "@react-native-community/datetimepicker": { "optional": true }
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.0",

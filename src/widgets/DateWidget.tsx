@@ -1,26 +1,51 @@
 /**
  * DateWidget — renders a date entry field (REQ-13).
  *
- * RN-core only — no @react-native-community/datetimepicker (ZERO native deps constraint).
- * Entry via formatted TextInput with mask/validation.
+ * RN-core only by default — no hard dependency on
+ * @react-native-community/datetimepicker (ZERO native deps constraint). Entry
+ * via formatted TextInput with mask/validation.
+ *
+ * @react-native-community/datetimepicker is an OPTIONAL peer dep (same gating
+ * pattern as expo-image-picker in ImageWidget.tsx). Unlike ImageWidget, the
+ * manual TextInput is never replaced when the dep is absent — it's the
+ * baseline that already works. When the dep IS present, the `default` variant
+ * (full YYYY-MM-DD) additionally renders a button that opens the native date
+ * picker alongside the TextInput. `month-year` and `year` variants have no
+ * standard native picker equivalent and are unaffected.
  *
  * Value shape (ts-rosa codecs.ts:153-158, AnswerValue.ts:27):
  *   date value = Date object (UTC midnight for the given date).
  *   store.answerQuestion receives a Date directly.
  *
  * Variants (ADR-3 date):
- *   default    → full YYYY-MM-DD TextInput
+ *   default    → full YYYY-MM-DD TextInput (+ native picker button when available)
  *   month-year → MM-YYYY entry, stored as Date with day=1
  *   year       → YYYY entry, stored as Date with month=1, day=1
  */
 
 import { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, Pressable, Text, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
+
+let _DateTimePicker: any | null = null;
+let _pickerLoaded: boolean | undefined;
+
+function getDateTimePicker(): any | null {
+  if (_pickerLoaded === undefined) {
+    try {
+      _DateTimePicker = require('@react-native-community/datetimepicker').default;
+      _pickerLoaded = true;
+    } catch {
+      _DateTimePicker = null;
+      _pickerLoaded = false;
+    }
+  }
+  return _DateTimePicker;
+}
 
 export interface DateWidgetProps {
   nodeRef: NodeRef;
@@ -142,6 +167,27 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeDisplayValue]);
 
+  // Native picker visibility (default variant only). Declared unconditionally
+  // alongside the other hooks above, regardless of whether the optional
+  // datetimepicker peer dep is present, to keep hook order stable.
+  const [showNativePicker, setShowNativePicker] = useState(false);
+  const DateTimePicker = getDateTimePicker();
+  const showPickerButton = variant === 'default' && DateTimePicker !== null;
+
+  function handleNativePickerChange(_event: unknown, selectedDate?: Date) {
+    setShowNativePicker(false);
+    if (!selectedDate) return;
+    const utcDate = new Date(
+      Date.UTC(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate(),
+      ),
+    );
+    setText(formatDateDisplay(utcDate));
+    store.answerQuestion(nodeRef, utcDate);
+  }
+
   const placeholder =
     variant === 'month-year' ? 'MM-YYYY' : variant === 'year' ? 'YYYY' : 'YYYY-MM-DD';
 
@@ -168,17 +214,37 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        testID="date-input"
-        style={[styles.input, isReadonly && styles.readonly]}
-        value={text}
-        onChangeText={handleChange}
-        editable={!isReadonly}
-        placeholder={placeholder}
-        keyboardType="numeric"
-        maxLength={maxLength}
-        autoCapitalize="none"
-      />
+      <View style={styles.row}>
+        <TextInput
+          testID="date-input"
+          style={[styles.input, styles.inputFlex, isReadonly && styles.readonly]}
+          value={text}
+          onChangeText={handleChange}
+          editable={!isReadonly}
+          placeholder={placeholder}
+          keyboardType="numeric"
+          maxLength={maxLength}
+          autoCapitalize="none"
+        />
+        {showPickerButton && (
+          <Pressable
+            testID="date-picker-button"
+            onPress={() => setShowNativePicker(true)}
+            disabled={isReadonly}
+            style={[styles.pickerButton, isReadonly && styles.readonly]}
+          >
+            <Text>📅</Text>
+          </Pressable>
+        )}
+      </View>
+      {showPickerButton && showNativePicker && (
+        <DateTimePicker
+          testID="date-native-picker"
+          value={value instanceof Date ? value : new Date()}
+          mode="date"
+          onChange={handleNativePickerChange}
+        />
+      )}
     </View>
   );
 }
@@ -187,6 +253,11 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: tokens.spacing.xs,
   },
+  row: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: tokens.spacing.sm,
+  },
   input: {
     borderWidth: 1,
     borderColor: tokens.color.text,
@@ -194,6 +265,16 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.sm,
     fontSize: tokens.font.md,
     color: tokens.color.text,
+    backgroundColor: tokens.color.background,
+  },
+  inputFlex: {
+    flex: 1,
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderColor: tokens.color.text,
+    borderRadius: tokens.radius.sm,
+    padding: tokens.spacing.sm,
     backgroundColor: tokens.color.background,
   },
   readonly: {
