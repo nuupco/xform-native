@@ -6,7 +6,7 @@
  * Layout only — no bridge logic, no Expo deps, RN-core only.
  */
 
-import { Modal, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { tokens } from '../../tokens/tokens';
 
 export interface BottomSheetProps {
@@ -33,23 +33,35 @@ export function BottomSheet({ visible, onClose, children, testID }: BottomSheetP
       animationType="slide"
       onRequestClose={onClose}
     >
-      {/* Full-screen pressable overlay — tap outside panel to dismiss */}
-      <Pressable style={styles.overlay} onPress={onClose}>
-        {/* Inner pressable stops propagation so tapping inside panel doesn't dismiss */}
-        <Pressable style={styles.panel} testID={testID} onPress={() => {}}>
-          <ScrollView
-            testID={testID ? `${testID}-scroll` : undefined}
-            keyboardShouldPersistTaps="handled"
-          >
-            {children}
-          </ScrollView>
+      {/* Shifts the bottom-anchored overlay/panel above the keyboard instead
+          of leaving a short (few-results) panel anchored to the screen
+          bottom, where the keyboard now sits and hides it. */}
+      <KeyboardAvoidingView
+        testID={testID ? `${testID}-keyboard-avoiding` : undefined}
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* Full-screen pressable overlay — tap outside panel to dismiss */}
+        <Pressable style={styles.overlay} onPress={onClose}>
+          {/* Inner pressable stops propagation so tapping inside panel doesn't dismiss */}
+          <Pressable style={styles.panel} testID={testID} onPress={() => {}}>
+            <ScrollView
+              testID={testID ? `${testID}-scroll` : undefined}
+              keyboardShouldPersistTaps="handled"
+            >
+              {children}
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoiding: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',

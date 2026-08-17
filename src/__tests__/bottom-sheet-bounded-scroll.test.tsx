@@ -35,4 +35,19 @@ describe('BottomSheet — bounded height with internal scroll', () => {
     );
     expect(() => getByTestId('sheet-panel-scroll')).not.toThrow();
   });
+
+  it('wraps the panel in a KeyboardAvoidingView so a short filtered list is not hidden behind the keyboard (REQ hotfix)', async () => {
+    // The panel is bottom-anchored (overlay justifyContent: 'flex-end') and
+    // sizes to its content up to maxHeight. When a search narrows the list
+    // to a handful of results, the panel shrinks and ends up positioned
+    // right where the on-screen keyboard now sits, hiding the results —
+    // confirmed on-device. KeyboardAvoidingView shifts the panel up above
+    // the keyboard instead of leaving it anchored to the (now covered) bottom.
+    const { getByTestId } = await render(
+      <BottomSheet visible onClose={() => {}} testID="sheet-panel">
+        <></>
+      </BottomSheet>,
+    );
+    expect(() => getByTestId('sheet-panel-keyboard-avoiding')).not.toThrow();
+  });
 });
