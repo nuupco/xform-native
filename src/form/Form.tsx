@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { resolveWidget, useWidgetOverrides, type WidgetOverride } from '../widgets/registry';
 import { tokens } from '../tokens/tokens';
@@ -252,7 +252,19 @@ export function Form({ store, widgets: widgetsProp, slots, validators: validator
 
   return (
     <View style={styles.container} collapsable={false}>
-      {renderContent()}
+      {/* Neither Form nor its host app is guaranteed to wrap question
+          content in a scroll container — a select with many choices (or any
+          long content) can be taller than the screen. Own the scroll here so
+          content never overflows past the top/bottom with no way to reach
+          it, while nav stays pinned outside the scroll. */}
+      <ScrollView
+        testID="form-content-scroll"
+        style={styles.contentScroll}
+        contentContainerStyle={styles.contentScrollInner}
+        keyboardShouldPersistTaps="handled"
+      >
+        {renderContent()}
+      </ScrollView>
       {showNav &&
         renderSlot(slots?.renderNavigation, {
           onBack: handleBack,
@@ -282,12 +294,19 @@ export function Form({ store, widgets: widgetsProp, slots, validators: validator
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  contentScroll: {
+    flex: 1,
+  },
+  contentScrollInner: {
     padding: tokens.spacing.md,
+    flexGrow: 1,
   },
   navRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: tokens.spacing.md,
+    padding: tokens.spacing.md,
   },
   navButton: {
     paddingHorizontal: tokens.spacing.lg,

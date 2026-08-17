@@ -82,6 +82,53 @@ function makeStore(script: Parameters<typeof makeFakeSession>[0]) {
 // ---------------------------------------------------------------------------
 
 describe('Form component', () => {
+  it('wraps question content in a scrollable container so long content (e.g. many select choices) can scroll instead of overflowing the screen (REQ hotfix)', async () => {
+    // Confirmed on-device: neither Form.tsx nor the host app wraps question
+    // content in any ScrollView. A select1 default variant with ~17 real
+    // choices overflowed past the top of the screen (the question label
+    // rendered UNDER the app header) with the nav row pushed off the bottom
+    // and no way to scroll to reach either.
+    const choices = Array.from({ length: 20 }, (_, i) => ({
+      value: `v${i}`,
+      label: `Option ${i}`,
+    }));
+    const store = makeStore({
+      events: [
+        { kind: 'bof' },
+        {
+          kind: 'question',
+          ref: '/data/q1',
+          dataType: 'selectOne',
+          controlType: 'select1',
+          label: 'Pick one',
+          hint: null,
+          appearance: null,
+        },
+        { kind: 'eof' },
+      ],
+      nodeStates: {
+        '/data/q1': {
+          readonly: false,
+          required: false,
+          relevant: true,
+          enabled: true,
+          constraintMsg: null,
+          calculatedValue: null,
+        },
+      },
+      relevance: { '/data/q1': true },
+      choices: { '/data/q1': choices },
+      answerResults: { '/data/q1': AnswerResult.OK },
+      values: { '/data/q1': null },
+    });
+    store.stepForward();
+    const { getByTestId } = await render(<Form store={store} />);
+    expect(() => getByTestId('form-content-scroll')).not.toThrow();
+    // Nav row must still be present (not lost inside/behind the scroll change).
+    expect(screen.getByTestId('nav-back')).toBeTruthy();
+    expect(screen.getByTestId('nav-next')).toBeTruthy();
+  });
+
   it('renders bof surface with start button', async () => {
     const store = makeStore({
       events: [{ kind: 'bof' }, { kind: 'eof' }],
