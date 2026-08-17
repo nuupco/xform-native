@@ -22,6 +22,7 @@ import {
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { AppModal } from './primitives/Modal';
+import { SafeAreaBottom } from './primitives/SafeAreaBottom';
 import { tokens } from '../tokens/tokens';
 
 interface Vertex {
@@ -311,7 +312,7 @@ export function GeoTraceWidget({ nodeRef, store, appearance: _appearance }: GeoT
             )}
           </View>
 
-          <View style={styles.buttonRow}>
+          <SafeAreaBottom style={styles.buttonRow}>
             {vertices.length > 0 && (
               <Pressable
                 onPress={handleUndo}
@@ -336,7 +337,7 @@ export function GeoTraceWidget({ nodeRef, store, appearance: _appearance }: GeoT
             >
               <Text style={styles.buttonText}>Cancel</Text>
             </Pressable>
-          </View>
+          </SafeAreaBottom>
         </View>
       </AppModal>
     </View>

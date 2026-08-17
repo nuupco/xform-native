@@ -22,6 +22,7 @@ import {
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { AppModal } from './primitives/Modal';
+import { SafeAreaBottom } from './primitives/SafeAreaBottom';
 import { tokens } from '../tokens/tokens';
 
 interface GeoPoint {
@@ -322,7 +323,7 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
             )}
           </View>
 
-          <View style={styles.buttonRow}>
+          <SafeAreaBottom style={styles.buttonRow}>
             {tappedPoint && (
               <Pressable
                 onPress={handleUndo}
@@ -347,7 +348,7 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
             >
               <Text style={styles.buttonText}>Cancel</Text>
             </Pressable>
-          </View>
+          </SafeAreaBottom>
         </View>
       </AppModal>
     </View>
