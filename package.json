@@ -55,7 +55,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@nuup/ts-rosa": "github:nuupco/ts-rosa#5283b88cde5e5de7fc60f56981cd24760546ef23",
+    "@nuup/ts-rosa": "github:nuupco/ts-rosa#124c31d82bdaa334007114680476b560b945a2d6",
     "@xmldom/xmldom": "^0.9.0"
   },
   "peerDependencies": {
