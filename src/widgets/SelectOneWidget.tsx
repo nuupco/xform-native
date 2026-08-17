@@ -84,9 +84,9 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           </Text>
         </Pressable>
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
-          {choices.map((choice) => (
+          {choices.map((choice, index) => (
             <Pressable
-              key={choice.value}
+              key={`${choice.value}__${index}`}
               testID={`select-one-option-${choice.value}`}
               style={styles.option}
               onPress={() => handleSelect(choice.value)}
@@ -103,11 +103,11 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
     return (
       <View style={styles.container}>
         <View testID="select-one-likert-container" style={styles.likertRow}>
-          {choices.map((choice) => {
+          {choices.map((choice, index) => {
             const isSelected = choice.value === currentValue;
             return (
               <Pressable
-                key={choice.value}
+                key={`${choice.value}__${index}`}
                 testID={`select-one-likert-option-${choice.value}`}
                 style={styles.likertCell}
                 onPress={() => handleSelect(choice.value)}
@@ -137,7 +137,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
         />
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.value}
+          keyExtractor={(item, index) => `${item.value}__${index}`}
           renderItem={({ item }) => {
             const isSelected = item.value === currentValue;
             return (
@@ -163,7 +163,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
         <FlatList
           testID="select-one-columns-list"
           data={choices}
-          keyExtractor={(item) => item.value}
+          keyExtractor={(item, index) => `${item.value}__${index}`}
           numColumns={2}
           renderItem={({ item }) => {
             const isSelected = item.value === currentValue;
@@ -191,7 +191,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
         <FlatList
           testID="select-one-columns-pack-list"
           data={choices}
-          keyExtractor={(item) => item.value}
+          keyExtractor={(item, index) => `${item.value}__${index}`}
           numColumns={2}
           renderItem={({ item }) => {
             const isSelected = item.value === currentValue;
@@ -222,11 +222,11 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.quickRow}
         >
-          {choices.map((choice) => {
+          {choices.map((choice, index) => {
             const isSelected = choice.value === currentValue;
             return (
               <Pressable
-                key={choice.value}
+                key={`${choice.value}__${index}`}
                 testID={`select-one-quick-option-${choice.value}`}
                 style={[styles.quickChip, isSelected && styles.quickChipSelected]}
                 onPress={() => handleSelect(choice.value)}
@@ -247,11 +247,11 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
   // default (radio-style) — fallback for unrecognized variants
   return (
     <View style={styles.container}>
-      {choices.map((choice) => {
+      {choices.map((choice, index) => {
         const isSelected = choice.value === currentValue;
         return (
           <Pressable
-            key={choice.value}
+            key={`${choice.value}__${index}`}
             testID={`select-one-option-${choice.value}`}
             style={[styles.option, isSelected && styles.optionSelected]}
             onPress={() => handleSelect(choice.value)}

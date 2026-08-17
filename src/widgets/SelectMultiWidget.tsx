@@ -98,11 +98,11 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
           </Text>
         </Pressable>
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-multi-sheet">
-          {choices.map((choice) => {
+          {choices.map((choice, index) => {
             const isSelected = selections.includes(choice.value);
             return (
               <Pressable
-                key={choice.value}
+                key={`${choice.value}__${index}`}
                 testID={`select-multi-sheet-option-${choice.value}`}
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => handleToggle(choice.value)}
@@ -125,11 +125,11 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     return (
       <View style={styles.container}>
         <View testID="select-multi-likert-container" style={styles.likertRow}>
-          {choices.map((choice) => {
+          {choices.map((choice, index) => {
             const isSelected = selections.includes(choice.value);
             return (
               <Pressable
-                key={choice.value}
+                key={`${choice.value}__${index}`}
                 testID={`select-multi-likert-option-${choice.value}`}
                 style={styles.likertCell}
                 onPress={() => handleToggle(choice.value)}
@@ -161,7 +161,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
         />
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.value}
+          keyExtractor={(item, index) => `${item.value}__${index}`}
           renderItem={({ item }) => {
             const isSelected = selections.includes(item.value);
             return (
@@ -190,7 +190,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
         <FlatList
           testID="select-multi-columns-list"
           data={choices}
-          keyExtractor={(item) => item.value}
+          keyExtractor={(item, index) => `${item.value}__${index}`}
           numColumns={2}
           renderItem={({ item }) => {
             const isSelected = selections.includes(item.value);
@@ -220,7 +220,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
         <FlatList
           testID="select-multi-columns-pack-list"
           data={choices}
-          keyExtractor={(item) => item.value}
+          keyExtractor={(item, index) => `${item.value}__${index}`}
           numColumns={2}
           renderItem={({ item }) => {
             const isSelected = selections.includes(item.value);
@@ -247,11 +247,11 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
   // default (checkbox list) — fallback for unrecognized variants
   return (
     <View style={styles.container}>
-      {choices.map((choice) => {
+      {choices.map((choice, index) => {
         const isSelected = selections.includes(choice.value);
         return (
           <Pressable
-            key={choice.value}
+            key={`${choice.value}__${index}`}
             testID={`select-multi-option-${choice.value}`}
             style={[styles.option, isSelected && styles.optionSelected]}
             onPress={() => handleToggle(choice.value)}
