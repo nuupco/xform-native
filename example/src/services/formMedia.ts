@@ -15,10 +15,50 @@
  *   live server and should be treated as best-effort, not confirmed.
  */
 
+import * as FileSystem from 'expo-file-system/legacy';
 import { getConfig, buildAuthHeader } from './apiClient';
+
+const ASSET_FILE_FETCH_TIMEOUT_MS = 15000;
+
+function cacheDir(): string {
+  return `${FileSystem.documentDirectory}asset-file-cache/`;
+}
+
+function cachePath(uid: string, filename: string): string {
+  return `${cacheDir()}${uid}__${filename}`;
+}
+
+async function readCachedAssetFile(uid: string, filename: string): Promise<string | null> {
+  const path = cachePath(uid, filename);
+  const info = await FileSystem.getInfoAsync(path);
+  if (!info.exists) return null;
+  return FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
+}
+
+async function writeCachedAssetFile(uid: string, filename: string, content: string): Promise<void> {
+  await FileSystem.makeDirectoryAsync(cacheDir(), { intermediates: true });
+  await FileSystem.writeAsStringAsync(cachePath(uid, filename), content, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+}
 
 function trimSlash(url: string): string {
   return url.replace(/\/$/, '');
+}
+
+async function fetchWithTimeout(url: string, headers: Record<string, string>): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ASSET_FILE_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { headers, signal: controller.signal });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('KoBo request timed out');
+    }
+    throw new Error('KoBo request failed: network error');
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 type KoboAssetFile = {
@@ -34,12 +74,7 @@ export async function listAssetFiles(uid: string): Promise<KoboAssetFile[]> {
   const headers = buildAuthHeader(config.auth);
   const url = `${trimSlash(config.baseUrl)}/api/v2/assets/${uid}/files/?format=json`;
 
-  let res: Response;
-  try {
-    res = await fetch(url, { headers });
-  } catch {
-    throw new Error('KoBo request failed: network error');
-  }
+  const res = await fetchWithTimeout(url, headers);
   if (!res.ok) throw new Error(`KoBo request failed: ${res.status}`);
 
   const json = await res.json();
@@ -55,6 +90,9 @@ export async function fetchAssetFileContent(
   uid: string,
   filename: string
 ): Promise<string | null> {
+  const cached = await readCachedAssetFile(uid, filename);
+  if (cached !== null) return cached;
+
   const files = await listAssetFiles(uid);
   const match = files.find((f) => f.metadata?.filename === filename);
   if (!match) return null;
@@ -62,13 +100,10 @@ export async function fetchAssetFileContent(
   const config = await getConfig();
   const headers = buildAuthHeader(config.auth);
 
-  let res: Response;
-  try {
-    res = await fetch(match.content, { headers });
-  } catch {
-    throw new Error('KoBo request failed: network error');
-  }
+  const res = await fetchWithTimeout(match.content, headers);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`KoBo request failed: ${res.status}`);
-  return res.text();
+  const content = await res.text();
+  await writeCachedAssetFile(uid, filename, content);
+  return content;
 }
