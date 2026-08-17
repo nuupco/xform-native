@@ -131,6 +131,16 @@ describe('resolveVariant — selectOne minimal+autocomplete composition', () => 
   it('still picks first recognized token for other combinations', () => {
     expect(resolveVariant('selectOne', 'select1', 'likert columns')).toBe('likert');
   });
+
+  it('treats "search" as a synonym for "autocomplete" (bare token)', () => {
+    expect(resolveVariant('selectOne', 'select1', 'search')).toBe('autocomplete');
+  });
+
+  it('returns minimal-autocomplete for real-world "minimal and search" (production XLSForm convention, "and" ignored as unrecognized filler)', () => {
+    expect(resolveVariant('selectOne', 'select1', 'minimal and search')).toBe(
+      'minimal-autocomplete',
+    );
+  });
 });
 
 describe('resolveVariant — selectMulti minimal+autocomplete composition', () => {

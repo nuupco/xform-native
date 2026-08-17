@@ -119,7 +119,13 @@ export function resolveVariant(
 
   if (!appearance || appearance.trim() === '') return bucket.__default;
 
-  const tokens = appearance.toLowerCase().trim().split(/\s+/);
+  const rawTokens = appearance.toLowerCase().trim().split(/\s+/);
+
+  // 'search' is a real-world synonym for 'autocomplete' seen in production
+  // XLSForms (e.g. appearance="minimal and search") — treat it identically.
+  // Unrecognized filler tokens like 'and' are simply skipped below, same as
+  // any other unknown token.
+  const tokens = rawTokens.map((t) => (t === 'search' ? 'autocomplete' : t));
 
   // Special case: 'minimal' + 'autocomplete' are composable (not mutually
   // exclusive) for selectOne/selectMulti — 'minimal' picks the bottom-sheet
