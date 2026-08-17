@@ -23,6 +23,8 @@ export type SubmitOutcome =
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
+const XFORM_FETCH_TIMEOUT_MS = 15000;
+
 function trimSlash(url: string): string {
   return url.replace(/\/$/, '');
 }
@@ -112,11 +114,19 @@ export async function fetchXFormXml(xformLink: string): Promise<string> {
     ...buildAuthHeader(config.auth),
     Accept: 'application/xml',
   };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), XFORM_FETCH_TIMEOUT_MS);
+
   let res: Response;
   try {
-    res = await fetch(xformLink, { headers });
-  } catch {
+    res = await fetch(xformLink, { headers, signal: controller.signal });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('KoBo request timed out');
+    }
     throw new Error('KoBo request failed: network error');
+  } finally {
+    clearTimeout(timeout);
   }
   if (!res.ok) throw new Error(`KoBo request failed: ${res.status}`);
   const contentType = res.headers.get('content-type') ?? '';
