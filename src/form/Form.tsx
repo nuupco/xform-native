@@ -220,12 +220,17 @@ export function Form({ store, widgets: widgetsProp, slots, validators: validator
           ),
         });
       case 'repeat':
+        // ev.multiplicity is the 0-based index of the instance you're
+        // currently landing on, not a total count — landing on the first
+        // (auto-created) instance is multiplicity 0, so +1 to display it as
+        // "how many entries exist so far" instead of reading as "created
+        // nothing" when the engine actually created one correctly.
         return renderSlot(slots?.renderGroup, {
           event: ev,
           defaultElement: (
             <View collapsable={false}>
               <LabelHint label={ev.label} hint={null} />
-              <Text testID="repeat-multiplicity">Entries: {ev.multiplicity}</Text>
+              <Text testID="repeat-multiplicity">Entries: {ev.multiplicity + 1}</Text>
             </View>
           ),
         });
