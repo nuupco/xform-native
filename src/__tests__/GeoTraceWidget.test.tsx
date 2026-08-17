@@ -310,6 +310,60 @@ describe('GeoTraceWidget GPS vertex capture', () => {
   });
 });
 
+describe('GeoTraceWidget offline tile layer', () => {
+  it('renders the offline raster layer and shifts the trace line layerIndex above it', async () => {
+    const { Layer } = require('@maplibre/maplibre-react-native');
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-map'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-map'));
+    });
+    expect(screen.getByTestId('maplibre-raster-source-esri-offline')).toBeTruthy();
+    const calls = (Layer as jest.Mock).mock.calls.map(([p]: any[]) => p);
+    const satellite = calls.find((p) => p.id === 'esri-satellite-layer');
+    const offline = calls.find((p) => p.id === 'esri-offline-layer');
+    const traceLine = calls.find((p) => p.id === 'trace-line-layer');
+    expect(satellite?.layerIndex).toBe(1);
+    expect(offline?.layerIndex).toBe(2);
+    expect(traceLine?.layerIndex).toBe(3);
+  });
+});
+
+describe('GeoTraceWidget offline tile prewarm', () => {
+  it('renders a prewarm button and shows success status on completion', async () => {
+    const mockGeo = require('@nuup/xform-native-geo');
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    expect(screen.getByTestId('geo-trace-prewarm-button')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-prewarm-button'));
+    });
+    expect(mockGeo.preWarmSatelliteTiles).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(screen.getByText('Mapas descargados para uso sin conexión')).toBeTruthy();
+  });
+});
+
 describe('GeoTraceWidget readonly mode', () => {
   it('shows label but no button when readonly', async () => {
     const store = makeStore('19.4326 -99.1332 0 5; 19.5000 -99.2000 0 5', true);
