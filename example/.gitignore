@@ -3,6 +3,12 @@
 # dependencies
 node_modules/
 
+# This app uses yarn only — other package managers' lockfiles are ignored so
+# a stray `npm install`/`bun install` can't silently reintroduce them.
+package-lock.json
+bun.lock
+bun.lockb
+
 # Expo
 .expo/
 dist/

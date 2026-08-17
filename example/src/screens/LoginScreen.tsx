@@ -18,8 +18,8 @@ export function LoginScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [baseUrl, setBaseUrl] = useState('https://kf.kobo.nuup.org/');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('bajionuup');
+  const [password, setPassword] = useState('Bajio2024');
   const [connecting, setConnecting] = useState(false);
 
   const handleConnect = async () => {
