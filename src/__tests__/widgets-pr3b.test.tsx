@@ -332,6 +332,49 @@ describe('DateWidget', () => {
     fireEvent.changeText(screen.getByTestId('date-input'), 'not-a-date');
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it('auto-masks digits-only input into YYYY-MM-DD as the user types (numeric keyboard, no separator key)', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/dob',
+      dataType: 'date',
+      value: null,
+    });
+    const spy = jest.spyOn(store, 'answerQuestion');
+    await render(<DateWidget nodeRef={ref} store={store} />);
+    const input = screen.getByTestId('date-input');
+
+    // Numeric keyboard cannot type "-": user only ever types digits.
+    await act(async () => {
+      fireEvent.changeText(input, '20250115');
+    });
+    expect(screen.getByDisplayValue('2025-01-15')).toBeTruthy();
+    expect(spy).toHaveBeenCalledWith(
+      ref,
+      expect.objectContaining({ getUTCFullYear: expect.any(Function) }),
+    );
+    const calledValue = spy.mock.calls[spy.mock.calls.length - 1]?.[1] as Date;
+    expect(calledValue.getUTCFullYear()).toBe(2025);
+    expect(calledValue.getUTCMonth()).toBe(0);
+    expect(calledValue.getUTCDate()).toBe(15);
+  });
+
+  it('month-year variant auto-masks digits into MM-YYYY', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/dob',
+      dataType: 'date',
+      value: null,
+    });
+    const spy = jest.spyOn(store, 'answerQuestion');
+    await render(<DateWidget nodeRef={ref} store={store} appearance="month-year" />);
+    const input = screen.getByTestId('date-input');
+    await act(async () => {
+      fireEvent.changeText(input, '062025');
+    });
+    expect(screen.getByDisplayValue('06-2025')).toBeTruthy();
+    const calledValue = spy.mock.calls[spy.mock.calls.length - 1]?.[1] as Date;
+    expect(calledValue.getUTCFullYear()).toBe(2025);
+    expect(calledValue.getUTCMonth()).toBe(5);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -381,6 +424,25 @@ describe('TimeWidget', () => {
     expect(input.props.editable).toBe(false);
     fireEvent.changeText(input, '10:00');
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('auto-masks digits-only input into HH:MM as the user types (numeric keyboard, no separator key)', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/arrival',
+      dataType: 'time',
+      value: null,
+    });
+    const spy = jest.spyOn(store, 'answerQuestion');
+    await render(<TimeWidget nodeRef={ref} store={store} />);
+    const input = screen.getByTestId('time-input');
+
+    await act(async () => {
+      fireEvent.changeText(input, '0930');
+    });
+    expect(screen.getByDisplayValue('09:30')).toBeTruthy();
+    const calledValue = spy.mock.calls[spy.mock.calls.length - 1]?.[1] as Date;
+    expect(calledValue.getUTCHours()).toBe(9);
+    expect(calledValue.getUTCMinutes()).toBe(30);
   });
 });
 

@@ -11,6 +11,7 @@
  * Display: HH:MM (UTC hours/minutes from the Date value).
  */
 
+import { useState, useEffect } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
@@ -42,22 +43,45 @@ function parseTimeInput(text: string): Date | null {
   return d;
 }
 
+/**
+ * Auto-mask raw digits into "HH:MM", as the user types on a numeric-only
+ * keyboard (which has no ":" key). Extracts only digits and re-inserts the
+ * separator after the 2nd digit.
+ */
+function maskTimeDigits(text: string): string {
+  const digits = text.replace(/\D/g, '');
+  const hh = digits.slice(0, 2);
+  const mm = digits.slice(2, 4);
+  return mm ? `${hh}:${mm}` : hh;
+}
+
 export function TimeWidget({ nodeRef, store, appearance: _appearance }: TimeWidgetProps) {
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const value = store.adapter.resolveValue(nodeRef);
   const isReadonly = nodeState?.readonly ?? false;
 
-  let displayValue = '';
+  let storeDisplayValue = '';
   if (value instanceof Date) {
-    displayValue = formatTimeDisplay(value);
+    storeDisplayValue = formatTimeDisplay(value);
   } else if (typeof value === 'string' && value !== '') {
-    displayValue = value;
+    storeDisplayValue = value;
   }
 
-  function handleChange(text: string) {
+  // Local text state drives the TextInput so the masked "HH:MM" string is
+  // visible WHILE the user is still typing (numeric keyboard has no ":" key).
+  const [text, setText] = useState(storeDisplayValue);
+
+  useEffect(() => {
+    setText(storeDisplayValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeDisplayValue]);
+
+  function handleChange(raw: string) {
     if (isReadonly) return;
-    const parsed = parseTimeInput(text);
+    const masked = maskTimeDigits(raw);
+    setText(masked);
+    const parsed = parseTimeInput(masked);
     if (parsed !== null) {
       store.answerQuestion(nodeRef, parsed);
     }
@@ -68,7 +92,7 @@ export function TimeWidget({ nodeRef, store, appearance: _appearance }: TimeWidg
       <TextInput
         testID="time-input"
         style={[styles.input, isReadonly && styles.readonly]}
-        value={displayValue}
+        value={text}
         onChangeText={handleChange}
         editable={!isReadonly}
         placeholder="HH:MM"

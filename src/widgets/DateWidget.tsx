@@ -14,6 +14,7 @@
  *   year       → YYYY entry, stored as Date with month=1, day=1
  */
 
+import { useState, useEffect } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { tokens } from '../tokens/tokens';
@@ -42,6 +43,33 @@ function parseDateInput(text: string): Date | null {
   const d = new Date(`${text}T00:00:00.000Z`);
   if (isNaN(d.getTime())) return null;
   return d;
+}
+
+/**
+ * Auto-mask raw digits into the given date variant's separator format, as the
+ * user types on a numeric-only keyboard (which has no "-" key). Extracts only
+ * digits from the input (so it works whether the caller passes raw digits or
+ * an already-masked string with stale separators) and re-inserts separators
+ * at fixed digit positions.
+ */
+function maskDateDigits(text: string, variant: string): string {
+  const digits = text.replace(/\D/g, '');
+  if (variant === 'month-year') {
+    const mm = digits.slice(0, 2);
+    const yyyy = digits.slice(2, 6);
+    return yyyy ? `${mm}-${yyyy}` : mm;
+  }
+  if (variant === 'year') {
+    return digits.slice(0, 4);
+  }
+  // default: YYYY-MM-DD
+  const yyyy = digits.slice(0, 4);
+  const mm = digits.slice(4, 6);
+  const dd = digits.slice(6, 8);
+  let out = yyyy;
+  if (mm) out += `-${mm}`;
+  if (dd) out += `-${dd}`;
+  return out;
 }
 
 /** Format a Date as UTC MM-YYYY string for display. */
@@ -88,34 +116,49 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
   const variant = resolveVariant('date', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
-  // Determine display string and commit parser based on variant
-  let displayValue = '';
+  // Determine the store-derived display string based on variant
+  let storeDisplayValue = '';
   if (value instanceof Date) {
     if (variant === 'month-year') {
-      displayValue = formatMonthYearDisplay(value);
+      storeDisplayValue = formatMonthYearDisplay(value);
     } else if (variant === 'year') {
-      displayValue = formatYearDisplay(value);
+      storeDisplayValue = formatYearDisplay(value);
     } else {
-      displayValue = formatDateDisplay(value);
+      storeDisplayValue = formatDateDisplay(value);
     }
   } else if (typeof value === 'string' && value !== '') {
-    displayValue = value;
+    storeDisplayValue = value;
   }
+
+  // Local text state drives the TextInput so the masked (separator-inserted)
+  // string is visible WHILE the user is still typing, not only once the full
+  // value is valid and committed to the store.
+  const [text, setText] = useState(storeDisplayValue);
+
+  // Keep local text in sync when the store value changes from outside
+  // (e.g. programmatic answer, navigating to a different question instance).
+  useEffect(() => {
+    setText(storeDisplayValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeDisplayValue]);
 
   const placeholder =
     variant === 'month-year' ? 'MM-YYYY' : variant === 'year' ? 'YYYY' : 'YYYY-MM-DD';
 
   const maxLength = variant === 'month-year' ? 7 : variant === 'year' ? 4 : 10;
 
-  function handleChange(text: string) {
+  function handleChange(raw: string) {
     if (isReadonly) return;
+    const masked = maskDateDigits(raw, variant);
+    setText(masked);
+
     let parsed: Date | null = null;
     if (variant === 'month-year') {
-      parsed = parseMonthYearInput(text);
+      parsed = parseMonthYearInput(masked);
     } else if (variant === 'year') {
-      parsed = parseYearInput(text);
+      parsed = parseYearInput(masked);
     } else {
-      parsed = parseDateInput(text);
+      parsed = parseDateInput(masked);
     }
     if (parsed !== null) {
       store.answerQuestion(nodeRef, parsed);
@@ -128,7 +171,7 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
       <TextInput
         testID="date-input"
         style={[styles.input, isReadonly && styles.readonly]}
-        value={displayValue}
+        value={text}
         onChangeText={handleChange}
         editable={!isReadonly}
         placeholder={placeholder}
