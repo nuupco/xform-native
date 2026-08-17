@@ -38,8 +38,18 @@ const MapLibre = {
   Layer: maplibre.Layer,
 };
 
+const SATELLITE_TILE_URI_TEMPLATE = 'file:///mock-documents/xform-satellite-tiles/{z}/{x}/{y}.png';
+const MAX_CACHED_TILES = 4000;
+
 module.exports = {
   MapLibre,
   Location,
   __mockLocation: mockLocation,
+  SATELLITE_TILE_URI_TEMPLATE,
+  MAX_CACHED_TILES,
+  estimateSatelliteTileCount: jest.fn().mockReturnValue(0),
+  preWarmSatelliteTiles: jest
+    .fn()
+    .mockResolvedValue({ downloaded: 0, skipped: 0, capReached: false }),
+  clearSatelliteTileCache: jest.fn().mockResolvedValue(undefined),
 };
