@@ -112,3 +112,12 @@ export type { XFormWidgetProps, WidgetOverride, PickWidgetArgs } from './widgets
 export { ThemeProvider, useTheme, useThemedStyles } from './theme/ThemeContext';
 export { mergeTheme } from './theme/theme';
 export type { Theme } from './theme/theme';
+
+// form-composition-slots: optional render-prop overrides for nav/error/group (D6)
+export type {
+  FormSlots,
+  FormErrorBlock,
+  FormNavigationSlotContext,
+  FormErrorSlotContext,
+  FormGroupSlotContext,
+} from './form/slots';

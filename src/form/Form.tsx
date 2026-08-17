@@ -21,14 +21,17 @@ import {
   LabelHint,
 } from './surfaces';
 import { WidgetErrorBoundary } from './WidgetErrorBoundary';
+import { renderSlot, type FormSlots } from './slots';
 
 export interface FormProps {
   store: FormSessionStore;
   /** Additive (widget-registry, D5): frozen at mount, wins tie-break over context entries. */
   widgets?: readonly WidgetOverride[];
+  /** Additive (form-composition-slots, D6): optional render-prop overrides for nav/error/group. */
+  slots?: FormSlots;
 }
 
-export function Form({ store, widgets: widgetsProp }: FormProps) {
+export function Form({ store, widgets: widgetsProp, slots }: FormProps) {
   const snapshot = useFormSession(store);
   const contextOverrides = useWidgetOverrides();
   // Freeze overrides at mount (design data-flow): context first, then the
@@ -189,26 +192,38 @@ export function Form({ store, widgets: widgetsProp }: FormProps) {
                 {...rangeProps}
               />
             </WidgetErrorBoundary>
-            {advanceBlocked?.type === 'constraint' && (
-              <ConstraintSurface message={advanceBlocked.message} />
-            )}
-            {advanceBlocked?.type === 'required' && <RequiredSurface />}
+            {advanceBlocked &&
+              renderSlot(slots?.renderError, {
+                block: advanceBlocked,
+                defaultElement:
+                  advanceBlocked.type === 'constraint' ? (
+                    <ConstraintSurface message={advanceBlocked.message} />
+                  ) : (
+                    <RequiredSurface />
+                  ),
+              })}
           </View>
         );
       }
       case 'group':
-        return (
-          <View collapsable={false}>
-            <LabelHint label={ev.label} hint={ev.hint} />
-          </View>
-        );
+        return renderSlot(slots?.renderGroup, {
+          event: ev,
+          defaultElement: (
+            <View collapsable={false}>
+              <LabelHint label={ev.label} hint={ev.hint} />
+            </View>
+          ),
+        });
       case 'repeat':
-        return (
-          <View collapsable={false}>
-            <LabelHint label={ev.label} hint={null} />
-            <Text testID="repeat-multiplicity">Entries: {ev.multiplicity}</Text>
-          </View>
-        );
+        return renderSlot(slots?.renderGroup, {
+          event: ev,
+          defaultElement: (
+            <View collapsable={false}>
+              <LabelHint label={ev.label} hint={null} />
+              <Text testID="repeat-multiplicity">Entries: {ev.multiplicity}</Text>
+            </View>
+          ),
+        });
       case 'prompt-new-repeat':
         return (
           <View collapsable={false}>
@@ -228,24 +243,29 @@ export function Form({ store, widgets: widgetsProp }: FormProps) {
   return (
     <View style={styles.container} collapsable={false}>
       {renderContent()}
-      {showNav && (
-        <View style={styles.navRow} collapsable={false}>
-          <TouchableOpacity
-            onPress={handleBack}
-            testID="nav-back"
-            style={styles.navButton}
-          >
-            <Text>Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleNext}
-            testID="nav-next"
-            style={styles.navButton}
-          >
-            <Text>Next</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {showNav &&
+        renderSlot(slots?.renderNavigation, {
+          onBack: handleBack,
+          onNext: handleNext,
+          defaultElement: (
+            <View style={styles.navRow} collapsable={false}>
+              <TouchableOpacity
+                onPress={handleBack}
+                testID="nav-back"
+                style={styles.navButton}
+              >
+                <Text>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleNext}
+                testID="nav-next"
+                style={styles.navButton}
+              >
+                <Text>Next</Text>
+              </TouchableOpacity>
+            </View>
+          ),
+        })}
     </View>
   );
 }
