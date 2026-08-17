@@ -215,6 +215,25 @@ describe('SelectMultiWidget', () => {
     expect(screen.getByText('Cherry')).toBeTruthy();
   });
 
+  it('autocomplete variant FlatList persists taps while the search keyboard is open (REQ hotfix)', async () => {
+    // Same RN gotcha as SelectOneWidget's autocomplete variant: without
+    // keyboardShouldPersistTaps="handled", the first tap on a result below a
+    // focused search TextInput only dismisses the keyboard instead of
+    // firing onPress.
+    const { store, ref } = makeStoreFor({
+      ref: '/data/fruits',
+      dataType: 'selectMulti',
+      controlType: 'select',
+      choices,
+      value: [],
+    });
+    const { getByTestId } = await render(
+      <SelectMultiWidget nodeRef={ref} store={store} appearance="autocomplete" />,
+    );
+    const list = getByTestId('select-multi-autocomplete-list');
+    expect(list.props.keyboardShouldPersistTaps).toBe('handled');
+  });
+
   it('selecting multiple choices commits readonly string[] (space-separated tokens)', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/fruits',

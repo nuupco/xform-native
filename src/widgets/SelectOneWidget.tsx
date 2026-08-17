@@ -176,6 +176,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
         <FlatList
           testID="select-one-autocomplete-list"
           style={styles.autocompleteList}
+          keyboardShouldPersistTaps="handled"
           data={filtered}
           keyExtractor={(item, index) => `${item.value}__${index}`}
           renderItem={({ item }) => {

@@ -211,6 +211,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
         <FlatList
           testID="select-multi-autocomplete-list"
           style={styles.autocompleteList}
+          keyboardShouldPersistTaps="handled"
           data={filtered}
           keyExtractor={(item, index) => `${item.value}__${index}`}
           renderItem={({ item }) => {

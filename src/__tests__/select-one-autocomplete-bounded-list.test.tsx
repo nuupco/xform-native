@@ -83,4 +83,22 @@ describe('SelectOneWidget — autocomplete variant bounded FlatList', () => {
     const flatStyle = Object.assign({}, ...[list.props.style].flat());
     expect(flatStyle.maxHeight).toBeDefined();
   });
+
+  it('FlatList persists taps while the search TextInput keyboard is open (REQ hotfix)', async () => {
+    // Without keyboardShouldPersistTaps="handled", the FIRST tap on a result
+    // below a focused TextInput only dismisses the keyboard instead of
+    // firing onPress — a well-known RN gotcha. Confirmed on-device: user
+    // types a filter, taps the matching result, and selection doesn't fire.
+    const { store, ref } = makeStoreFor({
+      ref: '/data/s1',
+      dataType: 'selectOne',
+      controlType: 'select1',
+      choices,
+    });
+    const { getByTestId } = await render(
+      <SelectOneWidget nodeRef={ref} store={store} appearance="autocomplete" />,
+    );
+    const list = getByTestId('select-one-autocomplete-list');
+    expect(list.props.keyboardShouldPersistTaps).toBe('handled');
+  });
 });
