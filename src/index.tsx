@@ -121,3 +121,18 @@ export type {
   FormErrorSlotContext,
   FormGroupSlotContext,
 } from './form/slots';
+
+// form-validation-hooks: injectable per-controlType validation callback (D7/D8)
+export {
+  defaultAdvanceValidator,
+  resolveValidator,
+  ValidationRegistryProvider,
+  useValidatorOverrides,
+} from './form/validation';
+export type {
+  AdvanceBlock,
+  AdvanceValidator,
+  AdvanceValidatorCtx,
+  ValidatorOverride,
+  QuestionEvent,
+} from './form/validation';

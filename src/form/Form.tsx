@@ -8,7 +8,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { AnswerResult } from '@nuup/ts-rosa';
 import { useFormSession } from '../store/useFormSession';
 import { resolveWidget, useWidgetOverrides, type WidgetOverride } from '../widgets/registry';
 import { tokens } from '../tokens/tokens';
@@ -22,6 +21,13 @@ import {
 } from './surfaces';
 import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 import { renderSlot, type FormSlots } from './slots';
+import {
+  defaultAdvanceValidator,
+  resolveValidator,
+  useValidatorOverrides,
+  type AdvanceBlock,
+  type ValidatorOverride,
+} from './validation';
 
 export interface FormProps {
   store: FormSessionStore;
@@ -29,9 +35,11 @@ export interface FormProps {
   widgets?: readonly WidgetOverride[];
   /** Additive (form-composition-slots, D6): optional render-prop overrides for nav/error/group. */
   slots?: FormSlots;
+  /** Additive (form-validation-hooks, D7/D8): frozen at mount, wins tie-break over context entries. */
+  validators?: readonly ValidatorOverride[];
 }
 
-export function Form({ store, widgets: widgetsProp, slots }: FormProps) {
+export function Form({ store, widgets: widgetsProp, slots, validators: validatorsProp }: FormProps) {
   const snapshot = useFormSession(store);
   const contextOverrides = useWidgetOverrides();
   // Freeze overrides at mount (design data-flow): context first, then the
@@ -41,10 +49,13 @@ export function Form({ store, widgets: widgetsProp, slots }: FormProps) {
     ...contextOverrides,
     ...(widgetsProp ?? []),
   ]);
-  const [advanceBlocked, setAdvanceBlocked] = useState<{
-    type: 'required' | 'constraint';
-    message: string;
-  } | null>(null);
+  const contextValidatorOverrides = useValidatorOverrides();
+  // Same freeze-at-mount + context-then-prop tie-break pattern as widgets (D8).
+  const validatorOverridesRef = useRef<readonly ValidatorOverride[]>([
+    ...contextValidatorOverrides,
+    ...(validatorsProp ?? []),
+  ]);
+  const [advanceBlocked, setAdvanceBlocked] = useState<AdvanceBlock | null>(null);
 
   // Direction of the most recent explicit navigation gesture (ADR-D1, REQ-3).
   // Set synchronously in handleNext/handleBack before the corresponding
@@ -88,10 +99,6 @@ export function Form({ store, widgets: widgetsProp, slots }: FormProps) {
     setAdvanceBlocked(null);
   }, [event.kind, eventIndex]);
 
-  function isValueEmpty(value: unknown): boolean {
-    return value === null || value === undefined || value === '';
-  }
-
   const handleNext = useCallback(() => {
     directionRef.current = 'forward';
     const ev = store.adapter.getCurrentEvent();
@@ -102,24 +109,22 @@ export function Form({ store, widgets: widgetsProp, slots }: FormProps) {
       // pressed, the stored value is always constraint-valid, and
       // store.lastAnswerResult records the outcome of the last real commit
       // attempt for this ref. Next must never unconditionally re-commit.
-      const value = store.adapter.resolveValue(ev.ref);
-      const nodeState = store.adapter.getNodeState(ev.ref);
-      const lastResult = store.lastAnswerResult;
-      if (nodeState.required && isValueEmpty(value)) {
-        setAdvanceBlocked({
-          type: 'required',
-          message: 'This field is required',
-        });
-        return;
-      }
-      if (
-        lastResult?.ref === ev.ref &&
-        lastResult.result === AnswerResult.CONSTRAINT_VIOLATED
-      ) {
-        setAdvanceBlocked({
-          type: 'constraint',
-          message: nodeState.constraintMsg ?? 'Invalid value',
-        });
+      //
+      // Validation is a plain callback (D7), not a hook: resolveValidator()
+      // is a synchronous lookup, not a conditional hook call, so it cannot
+      // threaten the select-widgets-hook-order invariant. defaultValidate()
+      // lets a custom validator compose over the extracted default logic
+      // instead of reimplementing required/constraint checks from scratch.
+      const validate =
+        resolveValidator(ev, validatorOverridesRef.current) ?? defaultAdvanceValidator;
+      const block = validate({
+        nodeRef: ev.ref,
+        store,
+        event: ev,
+        defaultValidate: () => defaultAdvanceValidator({ nodeRef: ev.ref, store, event: ev, defaultValidate: () => null }),
+      });
+      if (block) {
+        setAdvanceBlocked(block);
         return;
       }
     }
@@ -196,10 +201,10 @@ export function Form({ store, widgets: widgetsProp, slots }: FormProps) {
               renderSlot(slots?.renderError, {
                 block: advanceBlocked,
                 defaultElement:
-                  advanceBlocked.type === 'constraint' ? (
-                    <ConstraintSurface message={advanceBlocked.message} />
-                  ) : (
+                  advanceBlocked.type === 'required' ? (
                     <RequiredSurface />
+                  ) : (
+                    <ConstraintSurface message={advanceBlocked.message} />
                   ),
               })}
           </View>

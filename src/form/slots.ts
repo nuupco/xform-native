@@ -14,12 +14,21 @@
 
 import type { ReactNode } from 'react';
 import type { AdaptedEvent } from '../adapter/FormAdapter';
+import type { AdvanceBlock } from './validation';
 
-/** Shape of the current validation-block state Form already tracks internally. */
-export interface FormErrorBlock {
-  type: 'required' | 'constraint';
-  message: string;
-}
+/**
+ * Shape of the current validation-block state Form tracks internally.
+ *
+ * Reconciled with Group D (form-validation-hooks): this is now a re-export
+ * alias of `AdvanceBlock` (design D7, `src/form/validation.ts`) rather than a
+ * separate duplicate type. Group C defined this locally as a placeholder
+ * (`{type: 'required'|'constraint', message}`) because `AdvanceBlock` did not
+ * exist yet; now that it does, `renderError`'s block must be exactly the same
+ * type a custom validator can produce (including its arbitrary custom `type`
+ * tags), so keeping two divergent shapes would silently break custom
+ * validators paired with a custom `renderError` slot.
+ */
+export type FormErrorBlock = AdvanceBlock;
 
 export interface FormNavigationSlotContext {
   onBack: () => void;
