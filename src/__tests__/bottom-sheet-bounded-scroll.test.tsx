@@ -7,7 +7,7 @@
  * with no way to scroll to it. Fix: bound panel height + wrap children in a
  * scrollable container.
  */
-import { render, cleanup } from '@testing-library/react-native';
+import { render, fireEvent, cleanup } from '@testing-library/react-native';
 import { BottomSheet } from '../widgets/primitives/BottomSheet';
 
 afterEach(async () => {
@@ -49,5 +49,28 @@ describe('BottomSheet — bounded height with internal scroll', () => {
       </BottomSheet>,
     );
     expect(() => getByTestId('sheet-panel-keyboard-avoiding')).not.toThrow();
+  });
+
+  it('panel is a plain (non-Pressable) container — it no longer intercepts presses as its own responder (REQ hotfix)', async () => {
+    // Confirmed on-device: with the panel as a nested Pressable ("stop
+    // propagation, don't dismiss on tap-inside"), tapping an option row
+    // inside it (e.g. a SelectMultiWidget checkbox) did NOT fire the row's
+    // onPress at all — a real Android touch-responder-negotiation conflict
+    // between the ancestor Pressable and the descendant row Pressable that
+    // fireEvent.press in tests never exercises (it invokes onPress directly,
+    // bypassing responder negotiation entirely). Making the panel a plain
+    // View (no press handler of its own) removes it from that negotiation.
+    // Accepted trade-off: a press that lands on the panel's own empty
+    // padding (not on a row) now bubbles to the overlay's onClose instead of
+    // being swallowed — confirmed here, since a plain View has nothing to
+    // intercept it with.
+    const onClose = jest.fn();
+    const { getByTestId } = await render(
+      <BottomSheet visible onClose={onClose} testID="sheet-panel">
+        <></>
+      </BottomSheet>,
+    );
+    fireEvent.press(getByTestId('sheet-panel'));
+    expect(onClose).toHaveBeenCalled();
   });
 });

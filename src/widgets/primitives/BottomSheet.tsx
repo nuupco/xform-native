@@ -6,7 +6,7 @@
  * Layout only — no bridge logic, no Expo deps, RN-core only.
  */
 
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { tokens } from '../../tokens/tokens';
 
 export interface BottomSheetProps {
@@ -41,17 +41,28 @@ export function BottomSheet({ visible, onClose, children, testID }: BottomSheetP
         style={styles.keyboardAvoiding}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Full-screen pressable overlay — tap outside panel to dismiss */}
+        {/* Full-screen pressable overlay — tap outside panel to dismiss.
+            The panel itself is a plain View (NOT a nested Pressable): a
+            Pressable-inside-Pressable-inside-Pressable chain (overlay > panel
+            > option rows) works fine with RNTL's fireEvent.press (which
+            invokes onPress directly, bypassing responder negotiation) but on
+            real Android devices the ancestor Pressables can win the touch
+            responder negotiation, silently swallowing taps on the option rows
+            — confirmed on-device: checkbox rows inside this sheet did not
+            respond to taps at all. A non-interactive View doesn't compete for
+            the responder, so touches pass through to whichever descendant
+            Pressable actually claims them (the option rows), while taps on
+            the panel's own empty padding still land on the overlay Pressable
+            underneath and close the sheet — an acceptable trade-off. */}
         <Pressable style={styles.overlay} onPress={onClose}>
-          {/* Inner pressable stops propagation so tapping inside panel doesn't dismiss */}
-          <Pressable style={styles.panel} testID={testID} onPress={() => {}}>
+          <View style={styles.panel} testID={testID}>
             <ScrollView
               testID={testID ? `${testID}-scroll` : undefined}
               keyboardShouldPersistTaps="handled"
             >
               {children}
             </ScrollView>
-          </Pressable>
+          </View>
         </Pressable>
       </KeyboardAvoidingView>
     </Modal>
