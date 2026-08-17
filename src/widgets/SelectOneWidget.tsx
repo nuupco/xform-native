@@ -99,6 +99,44 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
     );
   }
 
+  if (variant === 'minimal-autocomplete') {
+    const selected = choices.find((c) => c.value === currentValue);
+    return (
+      <View style={styles.container}>
+        <Pressable
+          testID="select-one-dropdown-trigger"
+          style={styles.dropdownTrigger}
+          onPress={() => !isReadonly && setSheetOpen(true)}
+          accessible={!isReadonly}
+        >
+          <Text style={styles.dropdownTriggerText}>
+            {selected?.label ?? selected?.value ?? 'Select…'}
+          </Text>
+        </Pressable>
+        <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
+          <TextInput
+            testID="select-one-minimal-autocomplete-search"
+            style={styles.autocompleteInput}
+            value={query}
+            onChangeText={setQuery}
+            editable={!isReadonly}
+            placeholder="Search…"
+          />
+          {filtered.map((choice, index) => (
+            <Pressable
+              key={`${choice.value}__${index}`}
+              testID={`select-one-option-${choice.value}`}
+              style={styles.option}
+              onPress={() => handleSelect(choice.value)}
+            >
+              <Text style={styles.optionLabel}>{choice.label ?? choice.value}</Text>
+            </Pressable>
+          ))}
+        </BottomSheet>
+      </View>
+    );
+  }
+
   if (variant === 'likert') {
     return (
       <View style={styles.container}>

@@ -107,6 +107,46 @@ describe('resolveVariant — binary', () => {
   });
 });
 
+describe('resolveVariant — selectOne minimal+autocomplete composition', () => {
+  it('returns minimal-autocomplete when both tokens are present (minimal first)', () => {
+    expect(resolveVariant('selectOne', 'select1', 'minimal autocomplete')).toBe(
+      'minimal-autocomplete',
+    );
+  });
+
+  it('returns minimal-autocomplete regardless of token order (autocomplete first)', () => {
+    expect(resolveVariant('selectOne', 'select1', 'autocomplete minimal')).toBe(
+      'minimal-autocomplete',
+    );
+  });
+
+  it('still returns minimal when only minimal is present', () => {
+    expect(resolveVariant('selectOne', 'select1', 'minimal')).toBe('minimal');
+  });
+
+  it('still returns autocomplete when only autocomplete is present', () => {
+    expect(resolveVariant('selectOne', 'select1', 'autocomplete')).toBe('autocomplete');
+  });
+
+  it('still picks first recognized token for other combinations', () => {
+    expect(resolveVariant('selectOne', 'select1', 'likert columns')).toBe('likert');
+  });
+});
+
+describe('resolveVariant — selectMulti minimal+autocomplete composition', () => {
+  it('returns minimal-autocomplete when both tokens are present', () => {
+    expect(resolveVariant('selectMulti', 'select', 'minimal autocomplete')).toBe(
+      'minimal-autocomplete',
+    );
+  });
+
+  it('returns minimal-autocomplete regardless of token order', () => {
+    expect(resolveVariant('selectMulti', 'select', 'autocomplete minimal')).toBe(
+      'minimal-autocomplete',
+    );
+  });
+});
+
 describe('resolveVariant — unknown dataType (never throws)', () => {
   it('returns default for unknown dataType', () => {
     // TypeScript would complain about 'geopoint' here since it is not in the

@@ -161,6 +161,34 @@ describe('SelectOneWidget', () => {
     await render(<SelectOneWidget nodeRef={ref} store={store} />);
     expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
+
+  it('minimal+autocomplete appearance renders a bottom-sheet WITH a search box that filters choices', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/color',
+      dataType: 'selectOne',
+      controlType: 'select1',
+      choices,
+    });
+    await render(
+      <SelectOneWidget nodeRef={ref} store={store} appearance="minimal autocomplete" />,
+    );
+    // Still a bottom-sheet dropdown trigger (minimal behavior)
+    const trigger = screen.getByTestId('select-one-dropdown-trigger');
+    expect(trigger).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(trigger);
+    });
+    // But also has a search box (autocomplete behavior layered on top)
+    const search = screen.getByTestId('select-one-minimal-autocomplete-search');
+    expect(search).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.changeText(search, 'Two');
+    });
+    expect(screen.getByText('Option Two')).toBeTruthy();
+    expect(screen.queryByText('Option One')).toBeNull();
+    expect(screen.queryByText('Option Three')).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

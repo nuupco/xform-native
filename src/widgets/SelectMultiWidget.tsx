@@ -121,6 +121,55 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     );
   }
 
+  if (variant === 'minimal-autocomplete') {
+    const selectedLabels = choices
+      .filter((c) => selections.includes(c.value))
+      .map((c) => c.label ?? c.value)
+      .join(', ');
+    return (
+      <View style={styles.container}>
+        <Pressable
+          testID="select-multi-dropdown-trigger"
+          style={styles.dropdownTrigger}
+          onPress={() => !isReadonly && setSheetOpen(true)}
+          accessible={!isReadonly}
+        >
+          <Text style={styles.dropdownTriggerText}>
+            {selectedLabels || 'Select…'}
+          </Text>
+        </Pressable>
+        <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-multi-sheet">
+          <TextInput
+            testID="select-multi-minimal-autocomplete-search"
+            style={styles.autocompleteInput}
+            value={query}
+            onChangeText={setQuery}
+            editable={!isReadonly}
+            placeholder="Search…"
+          />
+          {filtered.map((choice, index) => {
+            const isSelected = selections.includes(choice.value);
+            return (
+              <Pressable
+                key={`${choice.value}__${index}`}
+                testID={`select-multi-sheet-option-${choice.value}`}
+                style={[styles.option, isSelected && styles.optionSelected]}
+                onPress={() => handleToggle(choice.value)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
+              >
+                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text style={styles.optionLabel}>{choice.label ?? choice.value}</Text>
+              </Pressable>
+            );
+          })}
+        </BottomSheet>
+      </View>
+    );
+  }
+
   if (variant === 'likert') {
     return (
       <View style={styles.container}>

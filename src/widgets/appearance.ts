@@ -59,6 +59,7 @@ export const APPEARANCE_TABLE: Readonly<
     minimal: 'minimal',
     likert: 'likert',
     autocomplete: 'autocomplete',
+    'minimal-autocomplete': 'minimal-autocomplete',
     columns: 'columns',
     'columns-pack': 'columns-pack',
     quick: 'quick',
@@ -70,6 +71,7 @@ export const APPEARANCE_TABLE: Readonly<
     columns: 'columns',
     'columns-pack': 'columns-pack',
     autocomplete: 'autocomplete',
+    'minimal-autocomplete': 'minimal-autocomplete',
     likert: 'likert',
   },
   date: {
@@ -118,6 +120,20 @@ export function resolveVariant(
   if (!appearance || appearance.trim() === '') return bucket.__default;
 
   const tokens = appearance.toLowerCase().trim().split(/\s+/);
+
+  // Special case: 'minimal' + 'autocomplete' are composable (not mutually
+  // exclusive) for selectOne/selectMulti — 'minimal' picks the bottom-sheet
+  // control style, 'autocomplete' layers a search box on top of it. This is
+  // a known, explicit combination — not a general N-token composition system.
+  if (
+    (dataType === 'selectOne' || dataType === 'selectMulti') &&
+    tokens.includes('minimal') &&
+    tokens.includes('autocomplete') &&
+    'minimal-autocomplete' in bucket
+  ) {
+    return bucket['minimal-autocomplete'] as VariantId;
+  }
+
   for (const token of tokens) {
     if (token !== '__default' && token in bucket) {
       return bucket[token] as VariantId;
