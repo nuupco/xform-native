@@ -265,10 +265,10 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
       </Text>
       <Pressable
         onPress={openMap}
-        style={styles.button}
+        style={styles.openButton}
         testID="geo-shape-open-map-button"
       >
-        <Text style={styles.buttonText}>Draw Shape</Text>
+        <Text style={styles.openButtonText}>Draw Shape</Text>
       </Pressable>
 
       <AppModal
@@ -385,6 +385,24 @@ const styles = StyleSheet.create({
   buttonText: {
     color: tokens.color.text,
     fontSize: tokens.font.sm,
+  },
+  // Confirmed on-device: the trigger used styles.button, whose
+  // backgroundColor (tokens.color.surface, #F5F5F5) is the SAME color the
+  // host app uses for its page background — zero contrast made the button
+  // render as plain unstyled text. Use the primary color (matching the
+  // modal's own Accept button) so it reads as an actionable button.
+  openButton: {
+    padding: tokens.spacing.sm,
+    borderRadius: tokens.radius.sm,
+    backgroundColor: tokens.color.primary,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: tokens.spacing.md,
+  },
+  openButtonText: {
+    color: '#fff',
+    fontSize: tokens.font.sm,
+    fontWeight: '600',
   },
   acceptButton: {
     backgroundColor: tokens.color.primary,

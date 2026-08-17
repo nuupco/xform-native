@@ -74,6 +74,21 @@ describe('GeoShapeWidget', () => {
     expect(screen.getByTestId('geo-shape-open-map-button')).toBeTruthy();
   });
 
+  it('the open-map trigger uses a contrasting background, not the page-background-matching surface color (REQ hotfix)', async () => {
+    // Confirmed on-device: the trigger used tokens.color.surface (#F5F5F5),
+    // the exact color the host app uses for its own page background — zero
+    // contrast rendered the button as plain unstyled text.
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const { getByTestId } = await render(
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    const trigger = getByTestId('geo-shape-open-map-button');
+    const triggerStyle = Object.assign({}, ...[trigger.props.style].flat());
+    expect(triggerStyle.backgroundColor).not.toBe('#F5F5F5');
+  });
+
   it('opens modal with map on button press', async () => {
     const store = makeStore();
     store.stepForward();
