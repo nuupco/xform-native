@@ -22,6 +22,14 @@ export { useFormSession } from './store/useFormSession';
 export { createFormStore } from './createFormStore';
 export type { ExternalDataFetcher, CreateFormStoreOpts } from './createFormStore';
 
+// form-load-profiling: opt-in split-cost timing instrumentation (ADR-3)
+export { createPhaseTimer } from './loadTiming';
+export type { FormLoadPhase, PhaseTiming, PhaseTimingListener } from './loadTiming';
+
+// example-app-loading-ux: framework-agnostic discard-on-resolve cancellation
+export { createCancellableFormLoad } from './loadCancellation';
+export type { CancellableLoad } from './loadCancellation';
+
 // PR-3a: StyleSheet primitives
 export { AppModal } from './widgets/primitives/Modal';
 export type { AppModalProps } from './widgets/primitives/Modal';

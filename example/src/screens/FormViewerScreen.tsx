@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
@@ -15,13 +14,17 @@ import {
   Form,
   FormSessionStore,
   createFormStore,
+  createCancellableFormLoad,
   ThemeProvider,
   useFormSession,
   type WidgetOverride,
   type XFormWidgetProps,
   type FormSlots,
   type ValidatorOverride,
+  type FormLoadPhase,
+  type PhaseTiming,
 } from '@nuup/xform-native';
+import { FormLoadingOverlay } from '../components/FormLoadingOverlay';
 
 // ── Demo: shadcn-lite capability showcase ──────────────────────────────────────
 // These are minimal, functional demonstrations of the 4 additive Form
@@ -125,6 +128,15 @@ export function FormViewerScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [atEof, setAtEof] = useState(false);
+  const [loadPhase, setLoadPhase] = useState<FormLoadPhase | null>(null);
+
+  // Discard-on-resolve cancellation: epochRef identifies the "current"
+  // load attempt. Cancelling bumps the epoch and asks the in-flight
+  // cancellable wrapper to discard its eventual result — no setStore/
+  // setXformXml/setAtEof happens for a stale epoch, so a cancelled load can
+  // never leave a half-applied store behind (see design ADR-3).
+  const epochRef = useRef(0);
+  const cancellableRef = useRef<{ cancel: () => void } | null>(null);
   const [staleBannerVisible, setStaleBannerVisible] = useState(
     draft?.isStale === true
   );
@@ -137,61 +149,96 @@ export function FormViewerScreen() {
       : null
   );
 
-  const applyForm = useCallback(
-    async (xml: string) => {
-      try {
-        const newStore = await createFormStore(xml, {
-          ...(draft ? { instanceXml: draft.instanceXml } : {}),
-          externalInstanceResolver: {
-            resolve: async (uri: string) => {
-              // jr://file-csv/<name>.csv, jr://file/<name> — both map to a
-              // media file attached to this asset, named by the last path
-              // segment.
-              const match = uri.match(/^jr:\/\/file(?:-csv)?\/(.+)$/);
-              const filename = match?.[1];
-              if (!filename) return null;
-              return fetchAssetFileContent(asset.uid, filename);
-            },
+  const buildStore = useCallback(
+    (xml: string) =>
+      createFormStore(xml, {
+        ...(draft ? { instanceXml: draft.instanceXml } : {}),
+        externalInstanceResolver: {
+          resolve: async (uri: string) => {
+            // jr://file-csv/<name>.csv, jr://file/<name> — both map to a
+            // media file attached to this asset, named by the last path
+            // segment.
+            const match = uri.match(/^jr:\/\/file(?:-csv)?\/(.+)$/);
+            const filename = match?.[1];
+            if (!filename) return null;
+            return fetchAssetFileContent(asset.uid, filename);
           },
-        });
-        storeRef.current = newStore;
-        setStore(newStore);
-        setAtEof(newStore.adapter.getCurrentEvent().kind === 'eof');
-        setXformXml(xml);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to parse form');
-      }
-    },
+        },
+        onPhaseTiming: (t: PhaseTiming) => {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.log('[form-load]', t);
+          }
+          if (t.event === 'start' && t.phase !== 'total') {
+            setLoadPhase(t.phase);
+          }
+        },
+      }),
     [draft, asset.uid]
   );
 
   async function load() {
+    const myEpoch = ++epochRef.current;
     setLoading(true);
     setError(null);
-    try {
-      const xml = await fetchXFormXml(asset.xform_link);
-      await saveXForm(asset.uid, xml);
+    setLoadPhase(null);
 
-      if (draft) {
-        const freshVersion = parseXFormMeta(xml).version ?? '';
-        const savedVersion = draft.manifest.formVersion;
-        if (savedVersion && freshVersion && savedVersion !== freshVersion) {
-          setStaleBannerVisible(true);
-          setStaleVersions({ saved: savedVersion, current: freshVersion });
+    const cancellable = createCancellableFormLoad(async () => {
+      let xml: string;
+      try {
+        xml = await fetchXFormXml(asset.xform_link);
+        await saveXForm(asset.uid, xml);
+
+        if (draft) {
+          const freshVersion = parseXFormMeta(xml).version ?? '';
+          const savedVersion = draft.manifest.formVersion;
+          if (savedVersion && freshVersion && savedVersion !== freshVersion) {
+            setStaleBannerVisible(true);
+            setStaleVersions({ saved: savedVersion, current: freshVersion });
+          }
         }
+      } catch {
+        const cached = await loadXForm(asset.uid);
+        if (!cached) throw new Error('Formulario no disponible offline');
+        xml = cached.xml;
       }
-      await applyForm(xml);
-    } catch {
-      const cached = await loadXForm(asset.uid);
-      if (cached) {
-        await applyForm(cached.xml);
-      } else {
-        setError('Formulario no disponible offline');
+
+      const newStore = await buildStore(xml);
+      return { xml, newStore };
+    });
+    cancellableRef.current = cancellable;
+
+    try {
+      const result = await cancellable.promise;
+
+      // Cancel race with completion: `result` is null exactly when
+      // cancelled before settling — never both a valid session AND a
+      // discard. A stale epoch (a newer load started after this one) is
+      // treated the same way: skip all state writes for this attempt.
+      if (result === null || epochRef.current !== myEpoch) {
+        return;
+      }
+
+      storeRef.current = result.newStore;
+      setStore(result.newStore);
+      setAtEof(result.newStore.adapter.getCurrentEvent().kind === 'eof');
+      setXformXml(result.xml);
+    } catch (e) {
+      if (epochRef.current === myEpoch) {
+        setError(e instanceof Error ? e.message : 'Failed to parse form');
       }
     } finally {
-      setLoading(false);
+      if (epochRef.current === myEpoch) {
+        setLoading(false);
+      }
     }
   }
+
+  const handleCancelLoad = useCallback(() => {
+    cancellableRef.current?.cancel();
+    epochRef.current += 1;
+    navigation.goBack();
+  }, [navigation]);
 
   useEffect(() => {
     void load();
@@ -299,10 +346,7 @@ export function FormViewerScreen() {
       {/* Body */}
       <View style={styles.body}>
         {loading && (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#1976d2" />
-            <Text style={styles.loadingText}>Cargando formulario...</Text>
-          </View>
+          <FormLoadingOverlay phase={loadPhase} onCancel={handleCancelLoad} />
         )}
         {!loading && error && (
           <View style={styles.centered}>
