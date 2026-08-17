@@ -32,6 +32,25 @@ describe('AppModal', () => {
     // confirm no crash occurred.
     expect(true).toBe(true);
   });
+
+  it('fullScreen mode gives children an unbounded (flex:1) container instead of the centered dialog inset (REQ hotfix)', async () => {
+    // AppModal's default overlay is `justifyContent: 'center'` with an inset
+    // wrapper that has NO explicit height — correct for small confirm-style
+    // dialogs, but wrong for a full-screen map: a child `flex:1` map has
+    // nothing to flex into inside a shrink-to-fit centered dialog, so it
+    // collapses to near-zero height. Confirmed on-device: GeoShapeWidget's
+    // map rendered invisible, with Accept/Cancel buttons floating mid-screen
+    // instead of pinned to the bottom of a full-screen map view.
+    const { getByTestId } = await render(
+      <AppModal visible testID="modal-root" fullScreen>
+        <View testID="full-screen-child" style={{ flex: 1 }} />
+      </AppModal>,
+    );
+    const root = getByTestId('modal-root');
+    const rootStyle = Object.assign({}, ...[root.props.style].flat());
+    expect(rootStyle.justifyContent).not.toBe('center');
+    expect(rootStyle.padding).toBeUndefined();
+  });
 });
 
 describe('BottomSheet', () => {

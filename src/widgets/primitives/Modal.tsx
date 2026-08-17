@@ -22,6 +22,15 @@ export interface AppModalProps {
   style?: ViewStyle;
   children?: React.ReactNode;
   animationType?: ModalProps['animationType'];
+  /**
+   * Opt out of the centered-dialog overlay (justifyContent: 'center' +
+   * shrink-to-fit inset with padding) in favor of an unbounded flex:1
+   * container that fills the whole screen edge-to-edge. Use for content
+   * that itself needs the full screen (e.g. a full-screen map) — a child
+   * `flex:1` has nothing to flex into inside the default centered dialog
+   * (which has no explicit height), so it collapses to near-zero height.
+   */
+  fullScreen?: boolean;
 }
 
 export function AppModal({
@@ -31,6 +40,7 @@ export function AppModal({
   style,
   children,
   animationType = 'fade',
+  fullScreen = false,
 }: AppModalProps) {
   return (
     <Modal
@@ -39,8 +49,11 @@ export function AppModal({
       animationType={animationType}
       onRequestClose={onRequestClose}
     >
-      <View testID={testID} style={[styles.overlay, style]}>
-        <View style={styles.inset}>{children}</View>
+      <View
+        testID={testID}
+        style={[fullScreen ? styles.fullScreenOverlay : styles.overlay, style]}
+      >
+        {fullScreen ? children : <View style={styles.inset}>{children}</View>}
       </View>
     </Modal>
   );
@@ -58,5 +71,9 @@ const styles = StyleSheet.create({
   inset: {
     width: '100%',
     padding: tokens.spacing.md,
+  },
+  fullScreenOverlay: {
+    flex: 1,
+    backgroundColor: 'black',
   },
 });

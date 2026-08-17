@@ -274,6 +274,8 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
         visible={modalVisible}
         onRequestClose={handleCancel}
         testID="geo-shape-modal"
+        fullScreen
+        animationType="slide"
       >
         <View style={styles.modalContent}>
           <View style={styles.mapContainer}>

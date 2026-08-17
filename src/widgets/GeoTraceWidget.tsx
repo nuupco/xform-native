@@ -255,6 +255,8 @@ export function GeoTraceWidget({ nodeRef, store, appearance: _appearance }: GeoT
         visible={modalVisible}
         onRequestClose={handleCancel}
         testID="geo-trace-modal"
+        fullScreen
+        animationType="slide"
       >
         <View style={styles.modalContent}>
           <View style={styles.mapContainer}>

@@ -265,6 +265,8 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
         visible={modalVisible}
         onRequestClose={handleCancel}
         testID="geo-map-modal"
+        fullScreen
+        animationType="slide"
       >
         <View style={styles.modalContent}>
           <View style={styles.mapContainer}>
