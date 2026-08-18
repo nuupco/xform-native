@@ -28,9 +28,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { tokens } from '../../tokens/tokens';
-import type { Theme } from '../../theme/ThemeContext';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme, defaultTheme, type Theme } from '../../theme/ThemeContext';
 
 export type SelectionControl = 'radio' | 'checkbox';
 
@@ -44,7 +42,7 @@ export interface SelectionIndicatorProps {
 }
 
 /** `primaryContainer` at 40% alpha — selected SelectionRow's tinted background (decision 3). */
-export function selectedRowBackground(t: Theme = tokens): string {
+export function selectedRowBackground(t: Theme = defaultTheme): string {
   // 40% alpha in hex is 0x66 (102/255 ≈ 0.4).
   return `${t.color.roles.primaryContainer}66`;
 }
