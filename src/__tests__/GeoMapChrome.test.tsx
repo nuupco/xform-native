@@ -17,10 +17,16 @@ import {
   PrewarmStatusPill,
   GeoActionBar,
 } from '../widgets/primitives/GeoMapChrome';
+import { ThemeProvider } from '../theme/ThemeContext';
+import { tokens } from '../tokens/tokens';
 
 afterEach(async () => {
   await cleanup();
 });
+
+function flatten(style: unknown): Record<string, unknown> {
+  return Object.assign({}, ...(Array.isArray(style) ? style.flat(Infinity) : [style]).filter(Boolean));
+}
 
 describe('GeoMapChrome', () => {
   it('renders its children inside the overlay container', async () => {
@@ -57,6 +63,28 @@ describe('MapActionButton', () => {
     });
     expect(onPress).not.toHaveBeenCalled();
   });
+
+  it('is a 48dp roles.surface-elevated circle with an onSurface icon (PR15 restyle)', async () => {
+    await render(<MapActionButton icon="⊙" onPress={() => {}} testID="action-btn" />);
+    const style = flatten(screen.getByTestId('action-btn').props.style);
+    expect(style.width).toBe(48);
+    expect(style.height).toBe(48);
+    expect(style.borderRadius).toBe(24);
+    // elevationStyle mixes surface+primary; verify the theme override reaches
+    // the surface-tinted background rather than the old flat rgba(0,0,0,0.5).
+    expect(style.backgroundColor).not.toBe('rgba(0,0,0,0.5)');
+    const iconStyle = flatten(screen.getByText('⊙').props.style);
+    expect(iconStyle.color).toBe(tokens.color.roles.onSurface);
+  });
+
+  it('keeps rendering inside a ThemeProvider (theme reaches the primitive)', async () => {
+    await render(
+      <ThemeProvider theme={{ color: { primary: '#7B2CBF' } }}>
+        <MapActionButton icon="⊙" onPress={() => {}} testID="action-btn" />
+      </ThemeProvider>,
+    );
+    expect(screen.getByTestId('action-btn')).toBeTruthy();
+  });
 });
 
 describe('GpsStatusPill', () => {
@@ -78,6 +106,15 @@ describe('GpsStatusPill', () => {
   it('shows the error copy', async () => {
     await render(<GpsStatusPill status="error" />);
     expect(screen.getByText('No se pudo obtener la ubicación')).toBeTruthy();
+  });
+
+  it('renders as a pill with Campo surface/onSurface roles (PR15 restyle)', async () => {
+    await render(<GpsStatusPill status="tracking" accuracyM={4.2} testID="gps-pill" />);
+    const pillStyle = flatten(screen.getByTestId('gps-pill').props.style);
+    expect(pillStyle.borderRadius).toBe(tokens.radius.pill);
+    expect(pillStyle.backgroundColor).toBe(tokens.color.roles.surface);
+    const textStyle = flatten(screen.getByText('GPS ±4.2 m').props.style);
+    expect(textStyle.color).toBe(tokens.color.roles.onSurface);
   });
 });
 
@@ -108,6 +145,13 @@ describe('PrewarmStatusPill', () => {
   it('shows the error copy', async () => {
     await render(<PrewarmStatusPill status="error" testID="prewarm-status" />);
     expect(screen.getByText('No se pudieron descargar los mapas')).toBeTruthy();
+  });
+
+  it('renders as a pill with Campo surface/onSurface roles (PR15 restyle)', async () => {
+    await render(<PrewarmStatusPill status="running" testID="prewarm-status" />);
+    const pillStyle = flatten(screen.getByTestId('prewarm-status').props.style);
+    expect(pillStyle.borderRadius).toBe(tokens.radius.pill);
+    expect(pillStyle.backgroundColor).toBe(tokens.color.roles.surface);
   });
 });
 
@@ -200,5 +244,30 @@ describe('GeoActionBar', () => {
       fireEvent.press(screen.getByTestId('accept-btn'));
     });
     expect(accept).not.toHaveBeenCalled();
+  });
+
+  it('renders Accept/Cancel via PressableButton with primary/error tones (PR15 restyle)', async () => {
+    await render(
+      <GeoActionBar
+        undo={{ onPress: () => {}, testID: 'undo-btn' }}
+        addPoint={{ onPress: () => {}, testID: 'add-point-btn' }}
+        accept={{ onPress: () => {}, testID: 'accept-btn' }}
+        cancel={{ onPress: () => {}, testID: 'cancel-btn' }}
+      />,
+    );
+    const accept = screen.getByTestId('accept-btn');
+    const cancel = screen.getByTestId('cancel-btn');
+    expect(accept.props.accessibilityRole).toBe('button');
+    expect(cancel.props.accessibilityRole).toBe('button');
+    const acceptStyle = flatten(
+      typeof accept.props.style === 'function' ? accept.props.style({ pressed: false }) : accept.props.style,
+    );
+    const cancelStyle = flatten(
+      typeof cancel.props.style === 'function' ? cancel.props.style({ pressed: false }) : cancel.props.style,
+    );
+    expect(acceptStyle.backgroundColor).toBe(tokens.color.roles.primary);
+    expect(cancelStyle.backgroundColor).toBe(tokens.color.roles.error);
+    expect(screen.getByText('Accept')).toBeTruthy();
+    expect(screen.getByText('Cancel')).toBeTruthy();
   });
 });

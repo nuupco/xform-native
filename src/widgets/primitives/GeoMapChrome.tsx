@@ -2,89 +2,92 @@
  * GeoMapChrome — shared map overlay chrome extracted from GeoPointWidget,
  * GeoTraceWidget, and GeoShapeWidget (design: Phase 3, decision 8).
  *
- * This PR is a BEHAVIOR-NEUTRAL EXTRACTION ONLY: every visual value here
- * (colors, sizes, positions, copy) is copied verbatim from the three widgets'
- * near-identical style blocks. The M3-themed look (surface/elevation/onSurface)
- * described in the design doc's target state ships in the *next* PR (PR15) —
- * do not restyle here.
+ * PR14 shipped a behavior-neutral extraction (raw `tokens`, flat
+ * `rgba(0,0,0,*)` overlays). This PR (PR15) applies the target Campo/M3 look:
+ * `MapActionButton` becomes a 48dp `roles.surface` circle at elevation 3 with
+ * an `onSurface` icon (via `elevationStyle`); `GpsStatusPill`/
+ * `PrewarmStatusPill` become `radius.pill` chips using `roles.surface`/
+ * `roles.onSurface` with a 1px `outlineVariant` border for legibility over
+ * variable map imagery, replacing the ad hoc `rgba(0,0,0,0.55)` scrim);
+ * `GeoActionBar`'s Undo/Add-point/Accept/Cancel slots now render through the
+ * shared `PressableButton` primitive instead of raw `Pressable` +
+ * hardcoded colors. Every existing testID, `useGeoGps` interaction, and
+ * prewarm/accept/undo/add-point LOGIC is untouched — visual chrome only.
  */
 import { ActivityIndicator, Pressable, Text, View, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
-import { tokens } from '../../tokens/tokens';
+import { useThemedStyles, useTheme, type Theme } from '../../theme/ThemeContext';
+import { elevationStyle } from '../../theme/elevationStyle';
+import { PressableButton } from './PressableButton';
 import { SafeAreaBottom } from './SafeAreaBottom';
 
 export type GpsStatus = 'idle' | 'requesting' | 'acquiring' | 'tracking' | 'denied' | 'error';
 export type PrewarmStatus = 'idle' | 'running' | 'done' | 'cap' | 'error';
 
-const styles = StyleSheet.create({
-  mapContainer: {
-    flex: 1,
-    width: '100%',
-    borderRadius: tokens.radius.md,
-    overflow: 'hidden',
-  },
-  actionButton: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: tokens.color.text,
-    fontSize: tokens.font.sm,
-  },
-  statusOverlay: {
-    position: 'absolute',
-    bottom: tokens.spacing.sm,
-    left: tokens.spacing.sm,
-    right: tokens.spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.spacing.xs,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.xs,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: tokens.font.sm,
-  },
-  prewarmStatusOverlay: {
-    position: 'absolute',
-    bottom: tokens.spacing.sm + 44,
-    left: tokens.spacing.sm,
-    right: tokens.spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.xs,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: tokens.spacing.sm,
-  },
-  button: {
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-  },
-  acceptButton: {
-    backgroundColor: tokens.color.primary,
-    flex: 1,
-  },
-  cancelButton: {
-    backgroundColor: tokens.color.error,
-    flex: 1,
-  },
-  undoButton: {
-    backgroundColor: tokens.color.surface,
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-});
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    mapContainer: {
+      flex: 1,
+      width: '100%',
+      borderRadius: t.radius.md,
+      overflow: 'hidden',
+    },
+    actionButton: {
+      position: 'absolute',
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...elevationStyle(t, 3),
+    },
+    actionButtonDisabled: {
+      opacity: t.disabled.contentOpacity,
+    },
+    buttonText: {
+      color: t.color.roles.onSurface,
+      ...t.typography.labelLarge,
+    },
+    statusOverlay: {
+      position: 'absolute',
+      bottom: t.spacing.sm,
+      left: t.spacing.sm,
+      right: t.spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.xs,
+      backgroundColor: t.color.roles.surface,
+      borderRadius: t.radius.pill,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.xs,
+      borderWidth: 1,
+      borderColor: t.color.roles.outlineVariant,
+    },
+    statusText: {
+      color: t.color.roles.onSurface,
+      ...t.typography.bodySmall,
+    },
+    prewarmStatusOverlay: {
+      position: 'absolute',
+      bottom: t.spacing.sm + 44,
+      left: t.spacing.sm,
+      right: t.spacing.sm,
+      backgroundColor: t.color.roles.surface,
+      borderRadius: t.radius.pill,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.xs,
+      borderWidth: 1,
+      borderColor: t.color.roles.outlineVariant,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      gap: t.spacing.sm,
+    },
+    flexSlot: {
+      flex: 1,
+    },
+  });
+}
 
 export interface GeoMapChromeProps {
   children: ReactNode;
@@ -92,6 +95,7 @@ export interface GeoMapChromeProps {
 
 /** Positioned overlay container wrapping the map canvas (mapContainer). */
 export function GeoMapChrome({ children }: GeoMapChromeProps) {
+  const styles = useThemedStyles(createStyles);
   return <View style={styles.mapContainer}>{children}</View>;
 }
 
@@ -101,19 +105,19 @@ export interface MapActionButtonProps {
   disabled?: boolean;
   testID?: string;
   /**
-   * Extraction-only positioning escape hatch: the recenter/prewarm buttons
-   * currently stack at different `top` offsets. The themed PR15 primitive
-   * may replace this with a variant prop; for now the call sites pass the
-   * exact same absolute-position values used before extraction.
+   * Positioning escape hatch: the recenter/prewarm buttons stack at
+   * different `top` offsets. Call sites pass the exact absolute-position
+   * values used before extraction/restyle.
    */
   style?: any;
 }
 
 export function MapActionButton({ icon, onPress, disabled, testID, style }: MapActionButtonProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.actionButton, style]}
+      style={[styles.actionButton, disabled && styles.actionButtonDisabled, style]}
       testID={testID}
       disabled={disabled}
     >
@@ -129,6 +133,7 @@ export interface GpsStatusPillProps {
 }
 
 export function GpsStatusPill({ status, accuracyM, testID }: GpsStatusPillProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.statusOverlay} pointerEvents="none" testID={testID}>
       {(status === 'requesting' || status === 'acquiring') && (
@@ -153,10 +158,11 @@ export interface PrewarmStatusPillProps {
 }
 
 export function PrewarmStatusPill({ status, testID }: PrewarmStatusPillProps) {
+  const styles = useThemedStyles(createStyles);
   if (status === 'idle') return null;
   return (
-    <View style={styles.prewarmStatusOverlay} pointerEvents="none">
-      <Text style={styles.statusText} testID={testID}>
+    <View style={styles.prewarmStatusOverlay} pointerEvents="none" testID={testID}>
+      <Text style={styles.statusText}>
         {status === 'running'
           ? 'Descargando mapas sin conexión…'
           : status === 'cap'
@@ -183,42 +189,55 @@ export interface GeoActionBarProps {
 }
 
 export function GeoActionBar({ undo, addPoint, accept, cancel }: GeoActionBarProps) {
+  const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
   return (
     <SafeAreaBottom style={styles.buttonRow}>
       {undo && (
-        <Pressable
+        <PressableButton
+          label="Undo"
           onPress={undo.onPress}
-          style={[styles.button, styles.undoButton]}
+          variant="text"
+          tone="secondary"
           testID={undo.testID}
-        >
-          <Text style={styles.buttonText}>Undo</Text>
-        </Pressable>
+          theme={theme}
+        />
       )}
       {addPoint && (
-        <Pressable
-          onPress={addPoint.disabled ? undefined : addPoint.onPress}
-          style={[styles.button, styles.undoButton, addPoint.disabled && styles.buttonDisabled]}
+        <PressableButton
+          label={addPoint.label ?? 'Agregar punto'}
+          onPress={addPoint.onPress}
+          variant="filled"
+          tone="primary"
           disabled={addPoint.disabled}
           testID={addPoint.testID}
-        >
-          <Text style={styles.buttonText}>{addPoint.label ?? 'Agregar punto'}</Text>
-        </Pressable>
+          theme={theme}
+        />
       )}
-      <Pressable
-        onPress={accept.disabled ? undefined : accept.onPress}
-        style={[styles.button, styles.acceptButton, accept.disabled && styles.buttonDisabled]}
-        disabled={accept.disabled}
-        testID={accept.testID}
-      >
-        <Text style={styles.buttonText}>Accept</Text>
-      </Pressable>
-      <Pressable
-        onPress={cancel.onPress}
-        style={[styles.button, styles.cancelButton]}
-        testID={cancel.testID}
-      >
-        <Text style={styles.buttonText}>Cancel</Text>
-      </Pressable>
+      <View style={styles.flexSlot}>
+        <PressableButton
+          label="Accept"
+          onPress={accept.onPress}
+          variant="filled"
+          tone="primary"
+          fullWidth
+          disabled={accept.disabled}
+          testID={accept.testID}
+          theme={theme}
+        />
+      </View>
+      <View style={styles.flexSlot}>
+        <PressableButton
+          label="Cancel"
+          onPress={cancel.onPress}
+          variant="filled"
+          tone="error"
+          fullWidth
+          disabled={cancel.disabled}
+          testID={cancel.testID}
+          theme={theme}
+        />
+      </View>
     </SafeAreaBottom>
   );
 }

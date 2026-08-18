@@ -19,10 +19,6 @@ const RAW_IMPORT = /from\s+['"](\.\.\/)+tokens\/tokens['"]/;
 // LongWidget/IntWidget/DecimalWidget (PR2) are already migrated and
 // therefore intentionally absent from this list.
 const KNOWN_UNMIGRATED: string[] = [
-  'GeoPointWidget.tsx',
-  'GeoShapeWidget.tsx',
-  'GeoTraceWidget.tsx',
-  'primitives/GeoMapChrome.tsx',
   'primitives/PressableButton.tsx',
   'primitives/Icon.tsx',
   'primitives/SelectionRow.tsx',

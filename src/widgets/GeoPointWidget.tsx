@@ -21,7 +21,7 @@ import {
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { AppModal } from './primitives/Modal';
-import { tokens } from '../tokens/tokens';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { useGeoGps } from './primitives/useGeoGps';
 import {
   GeoMapChrome,
@@ -118,6 +118,7 @@ export interface GeoPointWidgetProps {
 }
 
 export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoPointWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   const geo = getGeoModule();
   const resolved = store.adapter.resolveValue(nodeRef);
   const nodeState = store.adapter.getNodeState(nodeRef);
@@ -339,71 +340,70 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.spacing.sm,
-  },
-  label: {
-    fontSize: tokens.font.sm,
-    color: tokens.color.text,
-  },
-  // Confirmed on-device: the trigger used a surface-colored button, whose
-  // backgroundColor (tokens.color.surface, #F5F5F5) is the SAME color the
-  // host app uses for its page background — zero contrast made the button
-  // render as plain unstyled text. Use the primary color (matching the
-  // modal's own Accept button) so it reads as an actionable button.
-  openButton: {
-    padding: tokens.spacing.sm,
-    borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.primary,
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: tokens.spacing.md,
-  },
-  openButtonText: {
-    color: '#fff',
-    fontSize: tokens.font.sm,
-    fontWeight: '600',
-  },
-  modalContent: {
-    flex: 1,
-    width: '100%',
-    gap: tokens.spacing.md,
-  },
-  map: {
-    flex: 1,
-    width: '100%',
-  },
-  pin: {
-    width: 20,
-    height: 20,
-    backgroundColor: tokens.color.error,
-    borderRadius: 10,
-  },
-  gpsDotOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(33,150,243,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#2196F3',
-  },
-  gpsDotInner: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: '#2196F3',
-  },
-  // Position-only overrides layered onto GeoMapChrome's MapActionButton
-  // (extraction-only escape hatch — see GeoMapChrome.tsx docblock).
-  recenterButtonPosition: {
-    top: tokens.spacing.sm,
-    right: tokens.spacing.sm,
-  },
-  prewarmButtonPosition: {
-    top: tokens.spacing.sm + 44,
-    right: tokens.spacing.sm,
-  },
-});
+// Live-GPS marker uses `roles.tertiary` — a role distinct from the
+// tapped-pin's `roles.error`, so the two marker kinds stay visually
+// distinguishable after moving off the old hardcoded red/blue pair.
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: {
+      gap: t.spacing.sm,
+    },
+    label: {
+      ...t.typography.mono,
+      color: t.color.roles.onSurface,
+    },
+    openButton: {
+      padding: t.spacing.sm,
+      borderRadius: t.radius.sm,
+      backgroundColor: t.color.roles.primary,
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      paddingHorizontal: t.spacing.md,
+    },
+    openButtonText: {
+      color: t.color.roles.onPrimary,
+      ...t.typography.labelLarge,
+    },
+    modalContent: {
+      flex: 1,
+      width: '100%',
+      gap: t.spacing.md,
+    },
+    map: {
+      flex: 1,
+      width: '100%',
+    },
+    pin: {
+      width: 20,
+      height: 20,
+      backgroundColor: t.color.roles.error,
+      borderRadius: 10,
+    },
+    gpsDotOuter: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: t.color.roles.tertiaryContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: t.color.roles.tertiary,
+    },
+    gpsDotInner: {
+      width: 9,
+      height: 9,
+      borderRadius: 4.5,
+      backgroundColor: t.color.roles.tertiary,
+    },
+    // Position-only overrides layered onto GeoMapChrome's MapActionButton
+    // (see GeoMapChrome.tsx docblock).
+    recenterButtonPosition: {
+      top: t.spacing.sm,
+      right: t.spacing.sm,
+    },
+    prewarmButtonPosition: {
+      top: t.spacing.sm + 44,
+      right: t.spacing.sm,
+    },
+  });
+}
