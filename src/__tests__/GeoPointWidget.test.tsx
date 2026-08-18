@@ -277,6 +277,89 @@ describe('GeoPointWidget', () => {
   });
 });
 
+describe('GeoPointWidget offline tile layer', () => {
+  it('renders the offline raster layer above the online satellite layer', async () => {
+    const { Layer } = require('@maplibre/maplibre-react-native');
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    expect(screen.getByTestId('maplibre-raster-source-esri-offline')).toBeTruthy();
+    const calls = (Layer as jest.Mock).mock.calls.map(([p]: any[]) => p);
+    const satellite = calls.find((p) => p.id === 'esri-satellite-layer');
+    const offline = calls.find((p) => p.id === 'esri-offline-layer');
+    expect(satellite?.layerIndex).toBe(1);
+    expect(offline?.layerIndex).toBe(2);
+  });
+});
+
+describe('GeoPointWidget offline tile prewarm', () => {
+  it('renders a prewarm button and shows success status on completion', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    expect(screen.getByTestId('geo-prewarm-button')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-prewarm-button'));
+    });
+    expect(mockGeo.preWarmSatelliteTiles).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(screen.getByText('Mapas descargados para uso sin conexión')).toBeTruthy();
+  });
+
+  it('shows a cap-reached status message when the tile cap is hit', async () => {
+    mockGeo.preWarmSatelliteTiles.mockResolvedValueOnce({
+      downloaded: 10,
+      skipped: 0,
+      capReached: true,
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-prewarm-button'));
+    });
+    expect(screen.getByText('Límite de almacenamiento alcanzado')).toBeTruthy();
+  });
+
+  it('shows an error status message when prewarm fails', async () => {
+    mockGeo.preWarmSatelliteTiles.mockRejectedValueOnce(new Error('network error'));
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-prewarm-button'));
+    });
+    expect(screen.getByText('No se pudieron descargar los mapas')).toBeTruthy();
+  });
+});
+
 describe('GeoPointWidget readonly mode', () => {
   it('shows coordinates but no Open Map button when readonly', async () => {
     const store = new FormSessionStore(

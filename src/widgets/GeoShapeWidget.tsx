@@ -104,6 +104,24 @@ const ESRI_MAX_ZOOM = 17;
 const DEFAULT_CENTER: [number, number] = [-99.1332, 19.4326];
 const MIN_POINTS = 3;
 
+// Offline tile pre-warm: fixed ~2km half-box around the current fix (fallback:
+// first vertex), zooms 12-17 (see design's "Prewarm bbox" decision).
+const PREWARM_HALF_BOX_DEG = 0.018;
+const PREWARM_MIN_ZOOM = 12;
+const PREWARM_MAX_ZOOM = 17;
+
+type PrewarmStatus = 'idle' | 'running' | 'done' | 'cap' | 'error';
+
+function computePrewarmBBox(center: [number, number]): [number, number, number, number] {
+  const [lon, lat] = center;
+  return [
+    lon - PREWARM_HALF_BOX_DEG,
+    lat - PREWARM_HALF_BOX_DEG,
+    lon + PREWARM_HALF_BOX_DEG,
+    lat + PREWARM_HALF_BOX_DEG,
+  ];
+}
+
 export interface GeoShapeWidgetProps {
   nodeRef: NodeRef;
   store: FormSessionStore;
@@ -166,6 +184,28 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
   const handleRecenter = useCallback(() => {
     gps.recenter();
   }, [gps]);
+
+  const [prewarmStatus, setPrewarmStatus] = useState<PrewarmStatus>('idle');
+
+  const handlePrewarm = useCallback(async () => {
+    const first = vertices[0];
+    const center: [number, number] = currentPoint
+      ? [currentPoint.lon, currentPoint.lat]
+      : first
+        ? [first.lon, first.lat]
+        : DEFAULT_CENTER;
+    setPrewarmStatus('running');
+    try {
+      const result = await geo.preWarmSatelliteTiles(
+        computePrewarmBBox(center),
+        PREWARM_MIN_ZOOM,
+        PREWARM_MAX_ZOOM,
+      );
+      setPrewarmStatus(result?.capReached ? 'cap' : 'done');
+    } catch {
+      setPrewarmStatus('error');
+    }
+  }, [currentPoint, vertices, geo]);
 
   const handleAccept = useCallback(() => {
     if (vertices.length >= MIN_POINTS) {
@@ -262,18 +302,27 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
                 <MapLibre.Layer id="esri-satellite-layer" type="raster" layerIndex={1} />
               </MapLibre.RasterSource>
 
+              <MapLibre.RasterSource
+                id="esri-offline"
+                tiles={[geo.SATELLITE_TILE_URI_TEMPLATE]}
+                tileSize={256}
+                maxzoom={ESRI_MAX_ZOOM}
+              >
+                <MapLibre.Layer id="esri-offline-layer" type="raster" layerIndex={2} />
+              </MapLibre.RasterSource>
+
               {shapeGeoJSON && (
                 <MapLibre.GeoJSONSource id="shape" data={shapeGeoJSON}>
                   <MapLibre.Layer
                     id="shape-fill-layer"
                     type="fill"
-                    layerIndex={2}
+                    layerIndex={3}
                     paint={{ 'fill-color': 'rgba(0,150,136,0.3)', 'fill-outline-color': '#009688' }}
                   />
                   <MapLibre.Layer
                     id="shape-line-layer"
                     type="line"
-                    layerIndex={3}
+                    layerIndex={4}
                     paint={{ 'line-color': '#009688', 'line-width': 3 }}
                   />
                 </MapLibre.GeoJSONSource>
@@ -303,6 +352,15 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
               <Text style={styles.buttonText}>⊙</Text>
             </Pressable>
 
+            <Pressable
+              onPress={handlePrewarm}
+              style={styles.prewarmButton}
+              testID="geo-shape-prewarm-button"
+              disabled={prewarmStatus === 'running'}
+            >
+              <Text style={styles.buttonText}>⤓</Text>
+            </Pressable>
+
             <View style={styles.statusOverlay} pointerEvents="none">
               {(gps.status === 'requesting' || gps.status === 'acquiring') && (
                 <ActivityIndicator size="small" />
@@ -317,6 +375,20 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
                       : 'Adquiriendo señal GPS…'}
               </Text>
             </View>
+
+            {prewarmStatus !== 'idle' && (
+              <View style={styles.prewarmStatusOverlay} pointerEvents="none">
+                <Text style={styles.statusText} testID="geo-shape-prewarm-status">
+                  {prewarmStatus === 'running'
+                    ? 'Descargando mapas sin conexión…'
+                    : prewarmStatus === 'cap'
+                      ? 'Límite de almacenamiento alcanzado'
+                      : prewarmStatus === 'error'
+                        ? 'No se pudieron descargar los mapas'
+                        : 'Mapas descargados para uso sin conexión'}
+                </Text>
+              </View>
+            )}
           </View>
 
           <SafeAreaBottom style={styles.buttonRow}>
@@ -471,6 +543,28 @@ const styles = StyleSheet.create({
   statusText: {
     color: '#fff',
     fontSize: tokens.font.sm,
+  },
+  // Stacked directly under the recenter button, same size/style — functional
+  // "download tiles for offline use" trigger, no visual redesign.
+  prewarmButton: {
+    position: 'absolute',
+    top: tokens.spacing.sm + 44,
+    right: tokens.spacing.sm,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  prewarmStatusOverlay: {
+    position: 'absolute',
+    bottom: tokens.spacing.sm + 44,
+    left: tokens.spacing.sm,
+    right: tokens.spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: tokens.radius.sm,
+    padding: tokens.spacing.xs,
   },
   buttonRow: {
     flexDirection: 'row',
