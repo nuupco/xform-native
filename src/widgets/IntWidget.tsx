@@ -6,11 +6,13 @@
  * `-` rather than truncating/rejecting silently.
  */
 
+import { useState } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
 import { useDraftValue } from './useDraftValue';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { createFieldStyles } from './primitives/fieldStyles';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -20,8 +22,26 @@ export interface IntWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  const f = createFieldStyles(t);
+  return StyleSheet.create({
+    container: {
+      marginVertical: t.spacing.xs,
+    },
+    input: {
+      ...f.field,
+      ...f.fieldNumeric,
+      textAlign: 'left',
+    },
+    focused: f.fieldFocused,
+    readonly: f.fieldDisabled,
+  });
+}
+
 export function IntWidget({ nodeRef, store, appearance }: IntWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   useFormSession(store);
+  const [focused, setFocused] = useState(false);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const value = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('int', 'input', appearance);
@@ -50,32 +70,24 @@ export function IntWidget({ nodeRef, store, appearance }: IntWidgetProps) {
     <View style={styles.container}>
       <TextInput
         testID="int-input"
-        style={[styles.input, isReadonly && styles.readonly]}
+        style={[
+          styles.input,
+          focused && !isReadonly && styles.focused,
+          isReadonly && styles.readonly,
+        ]}
         value={draft.value}
         onChangeText={draft.onChangeText}
         editable={!isReadonly}
         keyboardType="number-pad"
-        onFocus={draft.onFocus}
-        onBlur={draft.onBlur}
+        onFocus={() => {
+          setFocused(true);
+          draft.onFocus();
+        }}
+        onBlur={() => {
+          setFocused(false);
+          draft.onBlur();
+        }}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: tokens.spacing.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    backgroundColor: tokens.color.background,
-  },
-  readonly: {
-    backgroundColor: tokens.color.surface,
-  },
-});
