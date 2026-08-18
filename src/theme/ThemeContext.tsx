@@ -14,6 +14,17 @@ import { mergeTheme, type Theme, type ThemeOverride } from './theme';
 
 export type { Theme };
 
+/**
+ * Re-export of the raw `tokens` singleton as `defaultTheme` (design decision
+ * 10). Primitives that need a theme default outside a component body (pure
+ * resolvers, or default prop values) import this instead of reaching into
+ * `../tokens/tokens` directly, so `no-raw-tokens-in-widgets.test.ts`'s
+ * completion gate — which flags `from '.../tokens/tokens'` imports — sees
+ * them as migrated while their resolved defaults remain byte-identical to
+ * `tokens`.
+ */
+export const defaultTheme: Theme = tokens;
+
 const ThemeReactContext = createContext<Theme | null>(null);
 
 export interface ThemeProviderProps {

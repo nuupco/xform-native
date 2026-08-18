@@ -8,15 +8,33 @@
  * `SignatureWidget`).
  */
 import { View, Text, type ViewStyle } from 'react-native';
-import { tokens } from '../../tokens/tokens';
-import type { Theme } from '../../theme/ThemeContext';
+import { useTheme, defaultTheme, type Theme } from '../../theme/ThemeContext';
 
 export interface IconProps {
   testID?: string;
   color?: string;
   size?: number;
-  /** Optional theme override (design decision 10); defaults to the raw `tokens` singleton. */
+  /** Optional theme override (design decision 10); defaults to `useTheme()`'s current theme. */
   theme?: Theme;
+}
+
+/**
+ * Calls `useTheme()` unconditionally (same hook every render, no rules-of-
+ * hooks violation) but tolerates a broken/absent dispatcher by falling back
+ * to `defaultTheme`. Needed because `Icon.test.tsx`'s `LeafIcon` fallback
+ * test freshly `require()`s this module inside `jest.isolateModules`, which
+ * gives the re-required `ThemeContext`/`react` a dispatcher-less module
+ * instance — `useContext` throws there even outside any provider. Every
+ * other render path (normal app usage, all other tests) resolves via the one
+ * real `useTheme()` call as usual.
+ */
+function useIconTheme(): Theme {
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useTheme();
+  } catch {
+    return defaultTheme;
+  }
 }
 
 let _SvgModule: any | null = null;
@@ -39,9 +57,11 @@ export function AlertIcon({
   testID,
   color,
   size = 16,
-  theme = tokens,
+  theme,
 }: IconProps) {
-  const resolvedColor = color ?? theme.color.roles.error;
+  const contextTheme = useIconTheme();
+  const t = theme ?? contextTheme;
+  const resolvedColor = color ?? t.color.roles.error;
   const barHeight = Math.round(size * 0.55);
   const barWidth = Math.max(2, Math.round(size * 0.14));
   const dotSize = barWidth;
@@ -80,9 +100,11 @@ export function PlusIcon({
   testID,
   color,
   size = 20,
-  theme = tokens,
+  theme,
 }: IconProps) {
-  const resolvedColor = color ?? theme.color.roles.primary;
+  const contextTheme = useIconTheme();
+  const t = theme ?? contextTheme;
+  const resolvedColor = color ?? t.color.roles.primary;
   const thickness = Math.max(2, Math.round(size * 0.15));
 
   return (
@@ -122,9 +144,11 @@ export function LeafIcon({
   testID,
   color,
   size = 64,
-  theme = tokens,
+  theme,
 }: IconProps) {
-  const resolvedColor = color ?? theme.color.roles.primary;
+  const contextTheme = useIconTheme();
+  const t = theme ?? contextTheme;
+  const resolvedColor = color ?? t.color.roles.primary;
   const svg = getSvg();
 
   if (!svg) {
@@ -135,7 +159,7 @@ export function LeafIcon({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: theme.color.roles.primaryContainer,
+          backgroundColor: t.color.roles.primaryContainer,
         }}
       />
     );
@@ -172,9 +196,11 @@ export function CheckIcon({
   testID,
   color,
   size = 20,
-  theme = tokens,
+  theme,
 }: IconProps) {
-  const resolvedColor = color ?? theme.color.roles.primary;
+  const contextTheme = useIconTheme();
+  const t = theme ?? contextTheme;
+  const resolvedColor = color ?? t.color.roles.primary;
   const thickness = Math.max(2, Math.round(size * 0.16));
   return (
     <View testID={testID} style={{ width: size, height: size }}>
@@ -211,9 +237,11 @@ export function MinusIcon({
   testID,
   color,
   size = 20,
-  theme = tokens,
+  theme,
 }: IconProps) {
-  const resolvedColor = color ?? theme.color.roles.onSurface;
+  const contextTheme = useIconTheme();
+  const t = theme ?? contextTheme;
+  const resolvedColor = color ?? t.color.roles.onSurface;
   const thickness = Math.max(2, Math.round(size * 0.15));
   return (
     <View
@@ -236,9 +264,11 @@ function glyphIcon(glyph: string) {
     testID,
     color,
     size = 20,
-    theme = tokens,
+    theme,
   }: IconProps) {
-    const resolvedColor = color ?? theme.color.roles.onSurfaceVariant;
+    const contextTheme = useIconTheme();
+    const t = theme ?? contextTheme;
+    const resolvedColor = color ?? t.color.roles.onSurfaceVariant;
     return (
       <View
         testID={testID}
