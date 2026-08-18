@@ -125,6 +125,12 @@ export type { Hex, RoleSet } from './theme/derive';
 export type { TypographyRole, Typography } from './tokens/typography';
 export type { ElevationLevel, Elevation } from './tokens/elevation';
 
+// campo-phase2-pr1: style/component primitives (elevationStyle, PressableButton)
+export { elevationStyle } from './theme/elevationStyle';
+export type { ElevationLevel as ElevationStyleLevel } from './theme/elevationStyle';
+export { PressableButton } from './widgets/primitives/PressableButton';
+export type { PressableButtonProps } from './widgets/primitives/PressableButton';
+
 // form-composition-slots: optional render-prop overrides for nav/error/group (D6)
 export type {
   FormSlots,
