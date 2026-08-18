@@ -26,7 +26,9 @@
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { createFieldStyles } from './primitives/fieldStyles';
+import { MinusIcon, PlusIcon } from './primitives/Icon';
 import { resolveVariant } from './appearance';
 import { BottomSheet } from './primitives/BottomSheet';
 import type { NodeRef } from '../adapter/FormAdapter';
@@ -52,6 +54,7 @@ export function RangeWidget({
   end = 10,
   step = 1,
 }: RangeWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   useFormSession(store);
   const [pickerOpen, setPickerOpen] = useState(false);
   const nodeState = store.adapter.getNodeState(nodeRef);
@@ -145,12 +148,14 @@ export function RangeWidget({
           accessibilityLabel="Decrease value"
           disabled={isReadonly}
         >
-          <Text style={styles.stepButtonText}>−</Text>
+          <MinusIcon testID="range-decrement-icon" />
         </Pressable>
 
         {!isNoTicks && (
           <View testID="range-value-display" style={styles.valueContainer}>
-            <Text style={styles.valueText}>{String(currentValue)}</Text>
+            <Text testID="range-value-text" style={styles.valueText}>
+              {String(currentValue)}
+            </Text>
           </View>
         )}
 
@@ -161,79 +166,72 @@ export function RangeWidget({
           accessibilityLabel="Increase value"
           disabled={isReadonly}
         >
-          <Text style={styles.stepButtonText}>+</Text>
+          <PlusIcon testID="range-increment-icon" />
         </Pressable>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: tokens.spacing.xs,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-  },
-  stepperVertical: {
-    flexDirection: 'column',
-  },
-  stepButton: {
-    width: 40,
-    height: 40,
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: tokens.color.background,
-  },
-  disabled: {
-    backgroundColor: tokens.color.surface,
-    borderColor: tokens.color.surface,
-  },
-  stepButtonText: {
-    fontSize: tokens.font.lg,
-    color: tokens.color.text,
-    fontWeight: 'bold',
-  },
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  valueContainer: {
-    minWidth: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  valueText: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-  },
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  pickerTrigger: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    height: 44,
-    justifyContent: 'center',
-    backgroundColor: tokens.color.background,
-    alignSelf: 'flex-start',
-    minWidth: 80,
-  },
-  pickerTriggerText: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    textAlign: 'center',
-  },
-  pickerOption: {
-    paddingVertical: tokens.spacing.md,
-    paddingHorizontal: tokens.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.color.surface,
-  },
-  pickerOptionText: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    textAlign: 'center',
-  },
-});
+function createStyles(t: Theme) {
+  const f = createFieldStyles(t);
+  return StyleSheet.create({
+    container: {
+      marginVertical: t.spacing.xs,
+    },
+    stepper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      gap: t.spacing.sm,
+    },
+    stepperVertical: {
+      flexDirection: 'column',
+    },
+    stepButton: {
+      width: 48,
+      height: 48,
+      borderWidth: 1,
+      borderColor: t.color.roles.outline,
+      borderRadius: t.radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.color.roles.surface,
+    },
+    disabled: {
+      opacity: t.disabled.contentOpacity,
+    },
+    // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
+    valueContainer: {
+      minWidth: 60,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    valueText: {
+      ...t.typography.mono,
+      color: t.color.roles.onSurface,
+    },
+    // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
+    pickerTrigger: {
+      ...f.field,
+      height: 48,
+      justifyContent: 'center',
+      alignSelf: 'flex-start',
+      minWidth: 80,
+    },
+    pickerTriggerText: {
+      ...f.fieldNumeric,
+      textAlign: 'center',
+    },
+    pickerOption: {
+      paddingVertical: t.spacing.md,
+      paddingHorizontal: t.spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: t.color.roles.outlineVariant,
+    },
+    pickerOptionText: {
+      ...f.fieldText,
+      textAlign: 'center',
+    },
+  });
+}
