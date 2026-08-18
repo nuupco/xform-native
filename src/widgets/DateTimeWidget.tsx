@@ -11,11 +11,26 @@
  * Display: YYYY-MM-DDTHH:MM (UTC).
  */
 
+import { useState } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
+import { useTheme, useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { createFieldStyles } from './primitives/fieldStyles';
+import { CalendarIcon } from './primitives/Icon';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
+
+function createStyles(t: Theme) {
+  const f = createFieldStyles(t);
+  return StyleSheet.create({
+    container: { marginVertical: t.spacing.xs },
+    row: f.fieldRow,
+    input: { ...f.field, ...f.fieldNumeric, flex: 1 },
+    focused: f.fieldFocused,
+    readonly: f.fieldDisabled,
+    pickerAffordance: f.fieldAffordance,
+  });
+}
 
 export interface DateTimeWidgetProps {
   nodeRef: NodeRef;
@@ -45,6 +60,9 @@ function parseDateTimeInput(text: string): Date | null {
 }
 
 export function DateTimeWidget({ nodeRef, store, appearance: _appearance }: DateTimeWidgetProps) {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const [focused, setFocused] = useState(false);
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const value = store.adapter.resolveValue(nodeRef);
@@ -67,36 +85,32 @@ export function DateTimeWidget({ nodeRef, store, appearance: _appearance }: Date
 
   return (
     <View style={styles.container}>
-      <TextInput
-        testID="datetime-input"
-        style={[styles.input, isReadonly && styles.readonly]}
-        value={displayValue}
-        onChangeText={handleChange}
-        editable={!isReadonly}
-        placeholder="YYYY-MM-DDTHH:MM"
-        keyboardType="default"
-        maxLength={16}
-        autoCapitalize="none"
-      />
+      <View style={styles.row}>
+        <TextInput
+          testID="datetime-input"
+          style={[
+            styles.input,
+            focused && styles.focused,
+            isReadonly && styles.readonly,
+          ]}
+          value={displayValue}
+          onChangeText={handleChange}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          editable={!isReadonly}
+          placeholder="YYYY-MM-DDTHH:MM"
+          placeholderTextColor={theme.color.roles.onSurfaceVariant}
+          keyboardType="default"
+          maxLength={16}
+          autoCapitalize="none"
+        />
+        {/* Affordance slot reserved for the native date+time picker (out of
+            scope for PR5 — native picker wiring for Time/DateTime is
+            confirmed deferred; see design doc). */}
+        <View style={styles.pickerAffordance}>
+          <CalendarIcon testID="datetime-picker-icon" color={theme.color.roles.primary} theme={theme} />
+        </View>
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: tokens.spacing.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    backgroundColor: tokens.color.background,
-  },
-  readonly: {
-    backgroundColor: tokens.color.surface,
-    color: tokens.color.text,
-  },
-});

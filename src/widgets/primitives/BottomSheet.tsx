@@ -7,7 +7,8 @@
  */
 
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { tokens } from '../../tokens/tokens';
+import { useThemedStyles, type Theme } from '../../theme/ThemeContext';
+import { elevationStyle } from '../../theme/elevationStyle';
 
 export interface BottomSheetProps {
   visible: boolean;
@@ -25,7 +26,40 @@ export interface BottomSheetProps {
 // internal scroll.
 const PANEL_MAX_HEIGHT_PERCENT = '75%';
 
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    keyboardAvoiding: {
+      flex: 1,
+    },
+    overlay: {
+      flex: 1,
+      backgroundColor: t.color.roles.scrim,
+      justifyContent: 'flex-end',
+    },
+    // design decision 11: surface + elevation 3 + radius.xl top corners.
+    panel: {
+      ...elevationStyle(t, 3, { direction: 'up' }),
+      backgroundColor: t.color.roles.surface,
+      borderTopLeftRadius: t.radius.xl,
+      borderTopRightRadius: t.radius.xl,
+      paddingHorizontal: t.spacing.lg,
+      paddingTop: t.spacing.md,
+      paddingBottom: t.spacing.xl,
+      maxHeight: PANEL_MAX_HEIGHT_PERCENT,
+    },
+    dragHandle: {
+      alignSelf: 'center',
+      width: 32,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: t.color.roles.outlineVariant,
+      marginBottom: t.spacing.sm,
+    },
+  });
+}
+
 export function BottomSheet({ visible, onClose, children, testID }: BottomSheetProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <Modal
       visible={visible}
@@ -56,6 +90,10 @@ export function BottomSheet({ visible, onClose, children, testID }: BottomSheetP
             underneath and close the sheet — an acceptable trade-off. */}
         <Pressable style={styles.overlay} onPress={onClose}>
           <View style={styles.panel} testID={testID}>
+            <View
+              testID={testID ? `${testID}-drag-handle` : undefined}
+              style={styles.dragHandle}
+            />
             <ScrollView
               testID={testID ? `${testID}-scroll` : undefined}
               keyboardShouldPersistTaps="handled"
@@ -68,23 +106,3 @@ export function BottomSheet({ visible, onClose, children, testID }: BottomSheetP
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  keyboardAvoiding: {
-    flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  panel: {
-    backgroundColor: tokens.color.background,
-    borderTopLeftRadius: tokens.radius.lg,
-    borderTopRightRadius: tokens.radius.lg,
-    paddingHorizontal: tokens.spacing.lg,
-    paddingTop: tokens.spacing.md,
-    paddingBottom: tokens.spacing.xl,
-    maxHeight: PANEL_MAX_HEIGHT_PERCENT,
-  },
-});
