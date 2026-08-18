@@ -3,12 +3,20 @@
  *
  * Gated on react-native-svg (optional peer dep). Falls back to
  * UnsupportedWidget when the dep is absent at runtime.
+ *
+ * Theming (Phase 3, design doc per-widget mapping table): the canvas is an
+ * svg drawing surface, not a `MediaCaptureCard` preview, so it keeps its own
+ * themed styles (`roles.surface` when editable for ink contrast,
+ * `roles.surfaceVariant` when readonly, stroke color from `roles.onSurface`).
+ * Only the action row (Clear/Save) reuses `PressableButton` directly — the
+ * same primitive `MediaCaptureCard` itself wraps for its own action row
+ * (decision 7, "(action row only)" annotation) — rather than force-fitting
+ * the whole canvas-based widget into `MediaCaptureCard`'s empty/captured/
+ * active preview shape, which doesn't model a live drawing surface.
  */
 import { useCallback, useRef, useState } from 'react';
 import {
   View,
-  Text,
-  Pressable,
   PanResponder,
   StyleSheet,
   type GestureResponderEvent,
@@ -16,7 +24,8 @@ import {
 } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
-import { tokens } from '../tokens/tokens';
+import { useThemedStyles, useTheme, type Theme } from '../theme/ThemeContext';
+import { PressableButton } from './primitives/PressableButton';
 
 let _SvgModule: any | null = null;
 let _svgLoaded: boolean | undefined;
@@ -45,13 +54,43 @@ export interface SignatureWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: { gap: t.spacing.sm },
+    canvas: {
+      height: 200,
+      borderWidth: 1,
+      borderColor: t.color.roles.outline,
+      borderRadius: t.radius.sm,
+      backgroundColor: t.color.roles.surface,
+    },
+    canvasReadonly: {
+      height: 200,
+      borderWidth: 1,
+      borderColor: t.color.roles.outline,
+      borderRadius: t.radius.sm,
+      backgroundColor: t.color.roles.surfaceVariant,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      gap: t.spacing.sm,
+    },
+  });
+}
+
 export function SignatureWidget({ nodeRef, store }: SignatureWidgetProps) {
+  // Theming (D2): useThemedStyles MUST stay the first statement, before the
+  // peer-dependency gating early return below, to preserve hook-order
+  // stability (select-widgets-hook-order invariant).
+  const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
   const svg = getSvg();
   const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const currentPath = useRef<string[]>([]);
+  const strokeColor = theme.color.roles.onSurface;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -88,7 +127,7 @@ export function SignatureWidget({ nodeRef, store }: SignatureWidgetProps) {
         if (pathStr.length === 0) return;
         setStrokes((prev) => [
           ...prev,
-          { path: pathStr, color: '#000000', width: 2 },
+          { path: pathStr, color: strokeColor, width: 2 },
         ]);
         currentPath.current = [];
       },
@@ -141,53 +180,20 @@ export function SignatureWidget({ nodeRef, store }: SignatureWidgetProps) {
       </View>
       {!readonly && (
         <View style={styles.buttonRow}>
-          <Pressable
+          <PressableButton
+            label="Clear"
             onPress={handleClear}
-            style={styles.button}
+            variant="text"
             testID="signature-clear-button"
-          >
-            <Text style={styles.buttonText}>Clear</Text>
-          </Pressable>
-          <Pressable
+          />
+          <PressableButton
+            label="Save"
             onPress={handleExport}
-            style={[styles.button, styles.exportButton]}
+            variant="filled"
             testID="signature-export-button"
-          >
-            <Text style={styles.buttonText}>Save</Text>
-          </Pressable>
+          />
         </View>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { gap: tokens.spacing.sm },
-  canvas: {
-    height: 200,
-    borderWidth: 1,
-    borderColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-    backgroundColor: '#ffffff',
-  },
-  canvasReadonly: {
-    height: 200,
-    borderWidth: 1,
-    borderColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-    backgroundColor: '#f0f0f0',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: tokens.spacing.sm,
-  },
-  button: {
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-  },
-  exportButton: {
-    backgroundColor: tokens.color.primary,
-  },
-  buttonText: { color: tokens.color.text, fontSize: tokens.font.sm },
-});
