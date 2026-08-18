@@ -6,7 +6,7 @@
 
 import { View, Text, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -17,6 +17,7 @@ export interface UncastWidgetProps {
 }
 
 export function UncastWidget({ nodeRef, store }: UncastWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   useFormSession(store);
   const value = store.adapter.resolveValue(nodeRef);
   const displayValue = value != null ? String(value) : '';
@@ -28,15 +29,17 @@ export function UncastWidget({ nodeRef, store }: UncastWidgetProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: tokens.spacing.md,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-    marginVertical: tokens.spacing.xs,
-  },
-  value: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-  },
-});
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: {
+      padding: t.spacing.md,
+      backgroundColor: t.color.roles.surfaceVariant,
+      borderRadius: t.radius.sm,
+      marginVertical: t.spacing.xs,
+    },
+    value: {
+      ...t.typography.mono,
+      color: t.color.roles.onSurfaceVariant,
+    },
+  });
+}
