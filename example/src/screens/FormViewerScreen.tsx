@@ -15,7 +15,6 @@ import {
   FormSessionStore,
   createFormStore,
   createCancellableFormLoad,
-  ThemeProvider,
   useFormSession,
   type WidgetOverride,
   type XFormWidgetProps,
@@ -50,15 +49,6 @@ function HighlightedNoteWidget({ nodeRef, store }: XFormWidgetProps) {
 const demoWidgetOverrides: readonly WidgetOverride[] = [
   { match: { controlType: 'input', appearance: 'note' }, Widget: HighlightedNoteWidget },
 ];
-
-// 2. Custom theme: shift the primary color away from the default blue used
-// everywhere else in the app, so the difference is visible on every widget
-// that reads useTheme()/useThemedStyles() instead of the standalone tokens.
-const demoTheme = {
-  color: {
-    primary: '#7b2cbf',
-  },
-};
 
 // 4. Custom validator: for `note` controls (harmless additive check) — this
 // demonstrates composing on top of defaultValidate() rather than a real
@@ -358,14 +348,12 @@ export function FormViewerScreen() {
         )}
         {!loading && !error && store && (
           <View style={styles.form}>
-            <ThemeProvider theme={demoTheme}>
-              <Form
-                store={store}
-                widgets={demoWidgetOverrides}
-                slots={demoFormSlots}
-                validators={demoValidatorOverrides}
-              />
-            </ThemeProvider>
+            <Form
+              store={store}
+              widgets={demoWidgetOverrides}
+              slots={demoFormSlots}
+              validators={demoValidatorOverrides}
+            />
           </View>
         )}
       </View>
