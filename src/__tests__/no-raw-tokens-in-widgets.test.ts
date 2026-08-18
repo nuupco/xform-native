@@ -14,22 +14,20 @@ import { join } from 'node:path';
 const WIDGETS_DIR = join(__dirname, '..', 'widgets');
 const RAW_IMPORT = /from\s+['"](\.\.\/)+tokens\/tokens['"]/;
 
-// Seeded with the 23 not-yet-migrated widgets + 4 primitives (design doc,
-// "Verified current state"). StringWidget and ImageWidget are already
-// migrated and therefore intentionally absent from this list.
+// Seeded with the not-yet-migrated widgets + 4 primitives (design doc,
+// "Verified current state"). StringWidget and ImageWidget (Phase 2/PR1) and
+// LongWidget/IntWidget/DecimalWidget (PR2) are already migrated and
+// therefore intentionally absent from this list.
 const KNOWN_UNMIGRATED: string[] = [
   'AudioWidget.tsx',
   'BarcodeWidget.tsx',
   'BooleanWidget.tsx',
   'DateTimeWidget.tsx',
   'DateWidget.tsx',
-  'DecimalWidget.tsx',
   'FileWidget.tsx',
   'GeoPointWidget.tsx',
   'GeoShapeWidget.tsx',
   'GeoTraceWidget.tsx',
-  'IntWidget.tsx',
-  'LongWidget.tsx',
   'NoteWidget.tsx',
   'RangeWidget.tsx',
   'RankWidget.tsx',
