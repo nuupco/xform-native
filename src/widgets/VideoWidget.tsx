@@ -4,17 +4,22 @@
  * Gated on expo-camera (optional peer dep). Falls back to
  * UnsupportedWidget when the dep is absent at runtime.
  * Playback uses expo-av Video component (already an optional peer dep).
+ *
+ * Restyle (design decision 7, per-widget mapping table, PR12): chrome moves
+ * onto `MediaCaptureCard`. The live camera preview (while recording) and the
+ * video player (while playing back) are neither of MediaCaptureCard's
+ * icon/title/hint slots — following BarcodeWidget's precedent (PR11), both
+ * render through `state:'captured'` + `preview` as a generic "custom
+ * content" region. Camera/video preview keep the fixed 240x180 size,
+ * upgraded to `radius.md` per the mapping table (was `radius.sm`).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
-import { tokens } from '../tokens/tokens';
+import { MediaCaptureCard } from './primitives/MediaCaptureCard';
+import { VideoIcon } from './primitives/Icon';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 
 let _CameraModule: any | null = null;
 let _cameraLoaded: boolean | undefined;
@@ -52,7 +57,21 @@ export interface VideoWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    preview: {
+      width: 240,
+      height: 180,
+      borderRadius: t.radius.md,
+      backgroundColor: t.color.roles.surfaceVariant,
+    },
+  });
+}
+
 export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWidgetProps) {
+  // Theming (D2): useThemedStyles MUST stay the first statement, before the
+  // peer-dependency gating early return below.
+  const styles = useThemedStyles(createStyles);
   const camera = getCameraModule();
   const av = getAvModule();
   const resolved = store.adapter.resolveValue(nodeRef);
@@ -145,112 +164,76 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
   const { CameraView } = camera;
   const { Video } = av || {};
 
-  return (
-    <View style={styles.container} testID="video-widget">
-      {isPlaying && storedUri && Video ? (
-        <View style={styles.playerContainer}>
-          <Video
-            source={{ uri: storedUri }}
-            style={styles.video}
-            resizeMode="contain"
-            shouldPlay
-            testID="video-player"
-          />
-          <Pressable
-            onPress={handleClosePlayer}
-            style={[styles.button, styles.stopButton]}
-            testID="video-close-player-button"
-          >
-            <Text style={styles.buttonText}>Close</Text>
-          </Pressable>
-        </View>
-      ) : isRecording ? (
-        <View style={styles.recordingContainer}>
-          <CameraView
-            ref={cameraRef}
-            style={styles.camera}
-            testID="video-camera-view"
-          />
-          <View style={styles.buttonRow}>
-            <Pressable
-              onPress={handleStop}
-              disabled={readonly}
-              style={[styles.button, styles.stopButton, readonly && styles.buttonDisabled]}
-              testID="video-stop-button"
-            >
-              <Text style={styles.buttonText}>Stop</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleCancel}
-              disabled={readonly}
-              style={[styles.button, readonly && styles.buttonDisabled]}
-              testID="video-cancel-button"
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </Pressable>
+  if (isPlaying && storedUri && Video) {
+    return (
+      <MediaCaptureCard
+        testID="video-widget"
+        state="captured"
+        icon={<VideoIcon />}
+        title="No video recorded"
+        disabled={readonly}
+        preview={
+          <View style={styles.preview}>
+            <Video
+              source={{ uri: storedUri }}
+              style={styles.preview}
+              resizeMode="contain"
+              shouldPlay
+              testID="video-player"
+            />
           </View>
-        </View>
-      ) : storedUri ? (
-        <View style={styles.buttonRow}>
-          <Pressable
-            onPress={handlePlay}
-            disabled={readonly}
-            style={[styles.button, readonly && styles.buttonDisabled]}
-            testID="video-play-button"
-          >
-            <Text style={styles.buttonText}>Play</Text>
-          </Pressable>
-          <Pressable
-            onPress={handleRecord}
-            disabled={readonly}
-            style={[styles.button, readonly && styles.buttonDisabled]}
-            testID="video-record-button"
-          >
-            <Text style={styles.buttonText}>Record</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <Pressable
-          onPress={handleRecord}
-          disabled={readonly}
-          style={[styles.button, readonly && styles.buttonDisabled]}
-          testID="video-record-button"
-        >
-          <Text style={styles.buttonText}>Record</Text>
-        </Pressable>
-      )}
-    </View>
+        }
+        actions={[
+          { label: 'Close', onPress: handleClosePlayer, tone: 'error', testID: 'video-close-player-button' },
+        ]}
+      />
+    );
+  }
+
+  if (isRecording) {
+    return (
+      <MediaCaptureCard
+        testID="video-widget"
+        state="captured"
+        icon={<VideoIcon />}
+        title="No video recorded"
+        disabled={readonly}
+        preview={
+          <CameraView ref={cameraRef} style={styles.preview} testID="video-camera-view" />
+        }
+        actions={[
+          { label: 'Stop', onPress: handleStop, tone: 'error', testID: 'video-stop-button' },
+          { label: 'Cancel', onPress: handleCancel, testID: 'video-cancel-button' },
+        ]}
+      />
+    );
+  }
+
+  if (storedUri) {
+    return (
+      <MediaCaptureCard
+        testID="video-widget"
+        state="captured"
+        icon={<VideoIcon />}
+        title="No video recorded"
+        disabled={readonly}
+        preview={<VideoIcon />}
+        actions={[
+          { label: 'Play', onPress: handlePlay, testID: 'video-play-button' },
+          { label: 'Record', onPress: handleRecord, testID: 'video-record-button' },
+        ]}
+      />
+    );
+  }
+
+  return (
+    <MediaCaptureCard
+      testID="video-widget"
+      state="empty"
+      icon={<VideoIcon />}
+      title="No video recorded"
+      disabled={readonly}
+      actions={[{ label: 'Record', onPress: handleRecord, testID: 'video-record-button' }]}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: { gap: tokens.spacing.sm },
-  recordingContainer: { gap: tokens.spacing.sm },
-  playerContainer: { gap: tokens.spacing.sm },
-  camera: {
-    width: 240,
-    height: 180,
-    borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.surface,
-  },
-  video: {
-    width: 240,
-    height: 180,
-    borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.surface,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: tokens.spacing.sm,
-  },
-  button: {
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-  },
-  stopButton: {
-    backgroundColor: tokens.color.error,
-  },
-  buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: tokens.color.text, fontSize: tokens.font.sm },
-});

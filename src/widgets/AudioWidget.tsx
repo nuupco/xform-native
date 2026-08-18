@@ -3,17 +3,23 @@
  *
  * Gated on expo-av (optional peer dep). Falls back to
  * UnsupportedWidget when the dep is absent at runtime.
+ *
+ * Restyle (design decision 7, per-widget mapping table, PR12): chrome moves
+ * onto `MediaCaptureCard`. `state:'captured'` has no natural preview for
+ * audio (no visual media), so — following BarcodeWidget's precedent (PR11)
+ * of reusing the `preview` slot as a generic "custom content" region — the
+ * "recording exists" case renders a `MicIcon` + label through `preview`
+ * while it still surfaces the Play action. `active` covers the
+ * in-progress-recording state (`MicIcon` pulsing via `recordingPulse`,
+ * `Stop` action with `tone:'error'`).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { Animated, Text, StyleSheet } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
-import { tokens } from '../tokens/tokens';
+import { MediaCaptureCard } from './primitives/MediaCaptureCard';
+import { MicIcon } from './primitives/Icon';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 
 let _AudioModule: any | null = null;
 let _avLoaded: boolean | undefined;
@@ -36,7 +42,16 @@ export interface AudioWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    savedReadout: { ...t.typography.bodyMedium, color: t.color.roles.onSurface },
+  });
+}
+
 export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWidgetProps) {
+  // Theming (D2): useThemedStyles MUST stay the first statement, before the
+  // peer-dependency gating early return below.
+  const styles = useThemedStyles(createStyles);
   const av = getAudioModule();
   const resolved = store.adapter.resolveValue(nodeRef);
   const storedUri: string | null =
@@ -47,6 +62,20 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
   const [isRecording, setIsRecording] = useState(false);
   const recordingRef = useRef<any>(null);
   const soundRef = useRef<any>(null);
+
+  // Recording pulse — one-shot opacity dip (not a repeating loop: the global
+  // `Animated.timing` jest stub resolves `start()` synchronously, which would
+  // recurse forever through `Animated.loop`, see PR7's gotcha). Mirrors
+  // RankWidget's lift animation shape: animate to a value on state change.
+  const pulseOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.timing(pulseOpacity, {
+      toValue: isRecording ? 0.5 : 1,
+      duration: isRecording ? 500 : 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isRecording, pulseOpacity]);
 
   const handleRecord = useCallback(async () => {
     if (!av || readonly) return;
@@ -109,50 +138,52 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
     return <UnsupportedWidget dataType="binary" />;
   }
 
+  if (isRecording) {
+    return (
+      <MediaCaptureCard
+        testID="audio-widget"
+        state="active"
+        icon={
+          <Animated.View testID="audio-recording-pulse" style={{ opacity: pulseOpacity }}>
+            <MicIcon />
+          </Animated.View>
+        }
+        title="Recording…"
+        disabled={readonly}
+        actions={[
+          { label: 'Stop', onPress: handleStop, tone: 'error', testID: 'audio-stop-button' },
+        ]}
+      />
+    );
+  }
+
+  if (storedUri) {
+    return (
+      <MediaCaptureCard
+        testID="audio-widget"
+        state="captured"
+        icon={<MicIcon />}
+        title="Recording saved"
+        disabled={readonly}
+        preview={
+          <>
+            <MicIcon />
+            <Text style={styles.savedReadout}>Recording saved</Text>
+          </>
+        }
+        actions={[{ label: 'Play', onPress: handlePlay, testID: 'audio-play-button' }]}
+      />
+    );
+  }
+
   return (
-    <View style={styles.container} testID="audio-widget">
-      {isRecording ? (
-        <Pressable
-          onPress={handleStop}
-          disabled={readonly}
-          style={[styles.button, styles.stopButton, readonly && styles.buttonDisabled]}
-          testID="audio-stop-button"
-        >
-          <Text style={styles.buttonText}>Stop</Text>
-        </Pressable>
-      ) : storedUri ? (
-        <Pressable
-          onPress={handlePlay}
-          disabled={readonly}
-          style={[styles.button, readonly && styles.buttonDisabled]}
-          testID="audio-play-button"
-        >
-          <Text style={styles.buttonText}>Play</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={handleRecord}
-          disabled={readonly}
-          style={[styles.button, readonly && styles.buttonDisabled]}
-          testID="audio-record-button"
-        >
-          <Text style={styles.buttonText}>Record</Text>
-        </Pressable>
-      )}
-    </View>
+    <MediaCaptureCard
+      testID="audio-widget"
+      state="empty"
+      icon={<MicIcon />}
+      title="No recording"
+      disabled={readonly}
+      actions={[{ label: 'Record', onPress: handleRecord, testID: 'audio-record-button' }]}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: { gap: tokens.spacing.sm },
-  button: {
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-  },
-  stopButton: {
-    backgroundColor: tokens.color.error,
-  },
-  buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: tokens.color.text, fontSize: tokens.font.sm },
-});
