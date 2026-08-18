@@ -12,7 +12,28 @@ import {
   type ViewStyle,
   type ModalProps,
 } from 'react-native';
-import { tokens } from '../../tokens/tokens';
+import { useThemedStyles, type Theme } from '../../theme/ThemeContext';
+
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
+    // Edge inset lives on an inner wrapper so the centering node carries no padding.
+    overlay: {
+      flex: 1,
+      backgroundColor: t.color.roles.scrim,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    inset: {
+      width: '100%',
+      padding: t.spacing.md,
+    },
+    fullScreenOverlay: {
+      flex: 1,
+      backgroundColor: 'black',
+    },
+  });
+}
 
 export interface AppModalProps {
   visible: boolean;
@@ -42,6 +63,7 @@ export function AppModal({
   animationType = 'fade',
   fullScreen = false,
 }: AppModalProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <Modal
       visible={visible}
@@ -58,22 +80,3 @@ export function AppModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  // Edge inset lives on an inner wrapper so the centering node carries no padding.
-  overlay: {
-    flex: 1,
-    backgroundColor: `rgba(0,0,0,0.45)`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inset: {
-    width: '100%',
-    padding: tokens.spacing.md,
-  },
-  fullScreenOverlay: {
-    flex: 1,
-    backgroundColor: 'black',
-  },
-});

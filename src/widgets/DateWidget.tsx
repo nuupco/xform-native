@@ -24,12 +24,26 @@
  */
 
 import { useState, useEffect } from 'react';
-import { View, TextInput, Pressable, Text, StyleSheet } from 'react-native';
+import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
+import { useTheme, useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { createFieldStyles } from './primitives/fieldStyles';
+import { CalendarIcon } from './primitives/Icon';
 import { resolveVariant } from './appearance';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
+
+function createStyles(t: Theme) {
+  const f = createFieldStyles(t);
+  return StyleSheet.create({
+    container: { marginVertical: t.spacing.xs },
+    row: f.fieldRow,
+    input: { ...f.field, ...f.fieldNumeric, flex: 1 },
+    focused: f.fieldFocused,
+    readonly: f.fieldDisabled,
+    pickerButton: f.fieldAffordance,
+  });
+}
 
 let _DateTimePicker: any | null = null;
 let _pickerLoaded: boolean | undefined;
@@ -135,6 +149,9 @@ function parseYearInput(text: string): Date | null {
 }
 
 export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const [focused, setFocused] = useState(false);
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const value = store.adapter.resolveValue(nodeRef);
@@ -217,11 +234,18 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
       <View style={styles.row}>
         <TextInput
           testID="date-input"
-          style={[styles.input, styles.inputFlex, isReadonly && styles.readonly]}
+          style={[
+            styles.input,
+            focused && styles.focused,
+            isReadonly && styles.readonly,
+          ]}
           value={text}
           onChangeText={handleChange}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           editable={!isReadonly}
           placeholder={placeholder}
+          placeholderTextColor={theme.color.roles.onSurfaceVariant}
           keyboardType="numeric"
           maxLength={maxLength}
           autoCapitalize="none"
@@ -233,7 +257,7 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
             disabled={isReadonly}
             style={[styles.pickerButton, isReadonly && styles.readonly]}
           >
-            <Text>📅</Text>
+            <CalendarIcon testID="date-picker-icon" color={theme.color.roles.primary} theme={theme} />
           </Pressable>
         )}
       </View>
@@ -248,37 +272,3 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: tokens.spacing.xs,
-  },
-  row: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: tokens.spacing.sm,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    backgroundColor: tokens.color.background,
-  },
-  inputFlex: {
-    flex: 1,
-  },
-  pickerButton: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.background,
-  },
-  readonly: {
-    backgroundColor: tokens.color.surface,
-    color: tokens.color.text,
-  },
-});
