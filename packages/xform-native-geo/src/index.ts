@@ -54,3 +54,59 @@ Object.defineProperty(module.exports, 'Location', {
   enumerable: true,
   configurable: true,
 });
+
+// Tile-cache API is lazily re-exported too: it requires `expo-file-system/legacy`,
+// another optional peer dep, and must not be evaluated until actually used.
+let _tileCache: any = undefined;
+
+function loadTileCache(): any {
+  if (_tileCache === undefined) {
+    try {
+      _tileCache = require('./SatelliteTileCache');
+    } catch {
+      _tileCache = null;
+    }
+  }
+  if (!_tileCache) throw new Error('expo-file-system not installed');
+  return _tileCache;
+}
+
+Object.defineProperty(module.exports, 'SATELLITE_TILE_URI_TEMPLATE', {
+  get() {
+    return loadTileCache().SATELLITE_TILE_URI_TEMPLATE;
+  },
+  enumerable: true,
+  configurable: true,
+});
+
+Object.defineProperty(module.exports, 'MAX_CACHED_TILES', {
+  get() {
+    return loadTileCache().MAX_CACHED_TILES;
+  },
+  enumerable: true,
+  configurable: true,
+});
+
+Object.defineProperty(module.exports, 'estimateSatelliteTileCount', {
+  get() {
+    return loadTileCache().estimateSatelliteTileCount;
+  },
+  enumerable: true,
+  configurable: true,
+});
+
+Object.defineProperty(module.exports, 'preWarmSatelliteTiles', {
+  get() {
+    return loadTileCache().preWarmSatelliteTiles;
+  },
+  enumerable: true,
+  configurable: true,
+});
+
+Object.defineProperty(module.exports, 'clearSatelliteTileCache', {
+  get() {
+    return loadTileCache().clearSatelliteTileCache;
+  },
+  enumerable: true,
+  configurable: true,
+});

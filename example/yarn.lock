@@ -1974,6 +1974,13 @@ expo-keep-awake@~56.0.3:
   resolved "https://registry.yarnpkg.com/expo-keep-awake/-/expo-keep-awake-56.0.3.tgz#88991b4859c77af73cf68c500839a18fe5d8febe"
   integrity sha512-CLMJXtEiMKknD3Rpm8CRwE6ZJUzu2yCEmRk1sgfHAJ1zIbuEWY3dpPDubtsnuzWm+2k6Sru+yaFbYsvPWmTiBA==
 
+expo-location@~56.0.24:
+  version "56.0.24"
+  resolved "https://registry.yarnpkg.com/expo-location/-/expo-location-56.0.24.tgz#1154dd41ca671ea65dbd50bf999fc8c7ef2fb8cf"
+  integrity sha512-ZSrqs1yoMfyovJdWQPluAxHp27FUhsGxA/PiduVk9Uz1w3ScLFJpRmOU0yUkGRCAfAnAzkaxWcemEBmOGqexmA==
+  dependencies:
+    "@expo/image-utils" "^0.10.4"
+
 expo-modules-autolinking@~56.0.22:
   version "56.0.22"
   resolved "https://registry.yarnpkg.com/expo-modules-autolinking/-/expo-modules-autolinking-56.0.22.tgz#7eec0c3bd4de3ec817856c4521708641c8b4e16e"
