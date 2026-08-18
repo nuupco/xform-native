@@ -29,7 +29,6 @@ const KNOWN_UNMIGRATED: string[] = [
   'RangeWidget.tsx',
   'RankWidget.tsx',
   'SelectMultiWidget.tsx',
-  'SelectOneWidget.tsx',
   'SignatureWidget.tsx',
   'UncastWidget.tsx',
   'UnsupportedWidget.tsx',
