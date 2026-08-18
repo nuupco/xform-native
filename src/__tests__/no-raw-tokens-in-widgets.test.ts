@@ -20,8 +20,6 @@ const RAW_IMPORT = /from\s+['"](\.\.\/)+tokens\/tokens['"]/;
 // therefore intentionally absent from this list.
 const KNOWN_UNMIGRATED: string[] = [
   'AudioWidget.tsx',
-  'BarcodeWidget.tsx',
-  'FileWidget.tsx',
   'GeoPointWidget.tsx',
   'GeoShapeWidget.tsx',
   'GeoTraceWidget.tsx',

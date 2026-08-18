@@ -5,17 +5,11 @@
  * UnsupportedWidget when the dep is absent at runtime.
  */
 import { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  Image,
-  StyleSheet,
-  type ImageSourcePropType,
-} from 'react-native';
+import { Text, Image, StyleSheet, type ImageSourcePropType } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { MediaCaptureCard } from './primitives/MediaCaptureCard';
 
 let _ImagePicker: any | null = null;
 let _pickerLoaded: boolean | undefined;
@@ -40,24 +34,12 @@ export interface ImageWidgetProps {
 
 function createStyles(t: Theme) {
   return StyleSheet.create({
-    container: { gap: t.spacing.sm },
     thumbnail: {
       width: 120,
       height: 120,
       borderRadius: t.radius.sm,
-      backgroundColor: t.color.surface,
+      backgroundColor: t.color.roles.surfaceVariant,
     },
-    buttonRow: {
-      flexDirection: 'row' as const,
-      gap: t.spacing.sm,
-    },
-    button: {
-      padding: t.spacing.sm,
-      backgroundColor: t.color.surface,
-      borderRadius: t.radius.sm,
-    },
-    buttonDisabled: { opacity: 0.4 },
-    buttonText: { color: t.color.text, fontSize: t.font.sm },
   });
 }
 
@@ -112,34 +94,27 @@ export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWi
   }
 
   return (
-    <View style={styles.container} testID="image-widget">
-      {source && (
-        <Image
-          source={source}
-          style={styles.thumbnail}
-          testID="image-thumbnail"
-          accessibilityLabel="Selected image"
-        />
-      )}
-      <View style={styles.buttonRow}>
-        <Pressable
-          onPress={handleCamera}
-          disabled={readonly}
-          style={[styles.button, readonly && styles.buttonDisabled]}
-          testID="image-camera-button"
-        >
-          <Text style={styles.buttonText}>Take Photo</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleLibrary}
-          disabled={readonly}
-          style={[styles.button, readonly && styles.buttonDisabled]}
-          testID="image-library-button"
-        >
-          <Text style={styles.buttonText}>Pick from Library</Text>
-        </Pressable>
-      </View>
-    </View>
+    <MediaCaptureCard
+      testID="image-widget"
+      state={source ? 'captured' : 'empty'}
+      icon={<Text>📷</Text>}
+      title="No photo yet"
+      disabled={readonly}
+      preview={
+        source && (
+          <Image
+            source={source}
+            style={styles.thumbnail}
+            testID="image-thumbnail"
+            accessibilityLabel="Selected image"
+          />
+        )
+      }
+      actions={[
+        { label: 'Take Photo', onPress: handleCamera, testID: 'image-camera-button' },
+        { label: 'Pick from Library', onPress: handleLibrary, testID: 'image-library-button' },
+      ]}
+    />
   );
 }
 

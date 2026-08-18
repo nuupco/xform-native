@@ -5,17 +5,23 @@
  * UnsupportedWidget when the dep is absent at runtime.
  *
  * Value shape: string (barcode content)
+ *
+ * Deviation note (PR11): `MediaCaptureCard`'s `state:'captured'` slot is the
+ * only one that renders arbitrary child content (via `preview`); `'active'`
+ * only renders icon/title/hint. This widget needs an arbitrary custom
+ * region for two distinct things that are not literally "captured" media —
+ * the live `CameraView` + reticle overlay while scanning, and the scanned
+ * value readout once a value exists. Both are rendered through `state:
+ * 'captured'` + `preview`, reusing that slot as a generic "custom content"
+ * region rather than expanding MediaCaptureCard's API. `state:'empty'` is
+ * used only for the true empty case (no value, not scanning).
  */
 import { useCallback, useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
-import { tokens } from '../tokens/tokens';
+import { MediaCaptureCard } from './primitives/MediaCaptureCard';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 
 let _cameraModule: any | null = null;
 let _cameraLoaded: boolean | undefined;
@@ -38,7 +44,36 @@ export interface BarcodeWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    readonlyContainer: { gap: t.spacing.sm },
+    valueReadout: { ...t.typography.mono, color: t.color.roles.onSurface },
+    cameraStack: { position: 'relative' },
+    camera: {
+      width: 240,
+      height: 180,
+      borderRadius: t.radius.sm,
+      backgroundColor: t.color.roles.surfaceVariant,
+    },
+    reticleOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    reticleBox: {
+      width: 200,
+      height: 100,
+      borderWidth: 2,
+      borderColor: t.color.roles.primary,
+      borderRadius: t.radius.sm,
+    },
+  });
+}
+
 export function BarcodeWidget({ nodeRef, store, appearance: _appearance }: BarcodeWidgetProps) {
+  // Theming (D2): useThemedStyles MUST stay the first statement, before the
+  // peer-dependency gating early return below.
+  const styles = useThemedStyles(createStyles);
   const camera = getCameraModule();
   const resolved = store.adapter.resolveValue(nodeRef);
   const nodeState = store.adapter.getNodeState(nodeRef);
@@ -86,74 +121,48 @@ export function BarcodeWidget({ nodeRef, store, appearance: _appearance }: Barco
 
   if (readonly) {
     return (
-      <View style={styles.container} testID="barcode-readonly">
-        <Text style={styles.label}>{value || 'No barcode scanned'}</Text>
+      <View style={styles.readonlyContainer} testID="barcode-readonly">
+        <Text style={styles.valueReadout}>{value || 'No barcode scanned'}</Text>
       </View>
     );
   }
 
+  if (scanning) {
+    return (
+      <MediaCaptureCard
+        testID="barcode-widget"
+        state="captured"
+        icon={<Text>📷</Text>}
+        title="No barcode scanned"
+        actions={[]}
+        preview={
+          <View style={styles.cameraStack}>
+            <CameraView
+              style={styles.camera}
+              onBarcodeScanned={handleBarcodeScanned}
+              testID="barcode-camera"
+            />
+            <View style={styles.reticleOverlay} pointerEvents="none">
+              <View style={styles.reticleBox} />
+            </View>
+          </View>
+        }
+      />
+    );
+  }
+
   return (
-    <View style={styles.container} testID="barcode-widget">
-      {scanning ? (
-        <View style={styles.scannerContainer}>
-          <CameraView
-            style={styles.camera}
-            onBarcodeScanned={handleBarcodeScanned}
-            testID="barcode-camera"
-          />
-        </View>
-      ) : (
-        <>
-          <Text style={styles.label}>
-            {value || 'No barcode scanned'}
-          </Text>
-          {value ? (
-            <Pressable
-              onPress={handleRescan}
-              style={styles.button}
-              testID="barcode-rescan-button"
-            >
-              <Text style={styles.buttonText}>Re-scan</Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              onPress={handleScanPress}
-              style={styles.button}
-              testID="barcode-scan-button"
-            >
-              <Text style={styles.buttonText}>Scan Barcode</Text>
-            </Pressable>
-          )}
-        </>
-      )}
-    </View>
+    <MediaCaptureCard
+      testID="barcode-widget"
+      state={value ? 'captured' : 'empty'}
+      icon={<Text>📷</Text>}
+      title="No barcode scanned"
+      preview={<Text style={styles.valueReadout}>{value}</Text>}
+      actions={
+        value
+          ? [{ label: 'Re-scan', onPress: handleRescan, testID: 'barcode-rescan-button' }]
+          : [{ label: 'Scan Barcode', onPress: handleScanPress, testID: 'barcode-scan-button' }]
+      }
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.spacing.sm,
-  },
-  label: {
-    fontSize: tokens.font.sm,
-    color: tokens.color.text,
-  },
-  button: {
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-  },
-  buttonText: {
-    color: tokens.color.text,
-    fontSize: tokens.font.sm,
-  },
-  scannerContainer: {
-    gap: tokens.spacing.sm,
-  },
-  camera: {
-    width: 240,
-    height: 180,
-    borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.surface,
-  },
-});
