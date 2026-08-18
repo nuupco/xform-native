@@ -9,12 +9,14 @@
   ],
   "peerDependencies": {
     "@maplibre/maplibre-react-native": ">=11.0.0",
+    "expo-file-system": "*",
     "expo-location": "*",
     "react": "*",
     "react-native": "*"
   },
   "peerDependenciesMeta": {
     "@maplibre/maplibre-react-native": { "optional": false },
+    "expo-file-system": { "optional": false },
     "expo-location": { "optional": false }
   },
   "keywords": ["xform", "geo", "maplibre", "odk"],

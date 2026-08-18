@@ -7,6 +7,13 @@ module.exports = () => ({
   userInterfaceStyle: 'light',
   plugins: [
     'expo-secure-store',
+    [
+      'expo-location',
+      {
+        locationAlwaysAndWhenInUsePermission:
+          'Esta app usa tu ubicación para capturar la geolocalización de las preguntas del formulario.',
+      },
+    ],
   ],
   ios: {
     supportsTablet: true,
@@ -17,5 +24,6 @@ module.exports = () => ({
       backgroundColor: '#ffffff',
     },
     package: 'org.nuup.xformnative.example',
+    permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'],
   },
 });
