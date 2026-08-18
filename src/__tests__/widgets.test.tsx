@@ -242,18 +242,47 @@ describe('LongWidget', () => {
 // ---------------------------------------------------------------------------
 
 describe('BooleanWidget', () => {
-  it('renders with current boolean value (switch)', async () => {
+  it('renders SegmentedButton with Sí selected when value is true', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/flag',
       dataType: 'boolean',
       value: true,
     });
     await render(<BooleanWidget nodeRef={ref} store={store} />);
-    const sw = screen.getByTestId('boolean-switch');
-    expect(sw.props.value).toBe(true);
+    expect(screen.getByTestId('boolean-switch')).toBeTruthy();
+    const yes = screen.getByTestId('boolean-switch-segment-true');
+    const no = screen.getByTestId('boolean-switch-segment-false');
+    expect(yes.props.accessibilityState.selected).toBe(true);
+    expect(no.props.accessibilityState.selected).toBe(false);
   });
 
-  it('calls answerQuestion with boolean on toggle', async () => {
+  it('renders SegmentedButton with No selected when value is false', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/flag',
+      dataType: 'boolean',
+      value: false,
+    });
+    await render(<BooleanWidget nodeRef={ref} store={store} />);
+    const yes = screen.getByTestId('boolean-switch-segment-true');
+    const no = screen.getByTestId('boolean-switch-segment-false');
+    expect(yes.props.accessibilityState.selected).toBe(false);
+    expect(no.props.accessibilityState.selected).toBe(true);
+  });
+
+  it('renders neither segment selected when value is unanswered', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/flag',
+      dataType: 'boolean',
+      value: null,
+    });
+    await render(<BooleanWidget nodeRef={ref} store={store} />);
+    const yes = screen.getByTestId('boolean-switch-segment-true');
+    const no = screen.getByTestId('boolean-switch-segment-false');
+    expect(yes.props.accessibilityState.selected).toBe(false);
+    expect(no.props.accessibilityState.selected).toBe(false);
+  });
+
+  it('calls answerQuestion(true) when Sí is tapped', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/flag',
       dataType: 'boolean',
@@ -261,11 +290,23 @@ describe('BooleanWidget', () => {
     });
     const spy = jest.spyOn(store, 'answerQuestion');
     await render(<BooleanWidget nodeRef={ref} store={store} />);
-    fireEvent(screen.getByTestId('boolean-switch'), 'valueChange', true);
+    fireEvent.press(screen.getByTestId('boolean-switch-segment-true'));
     expect(spy).toHaveBeenCalledWith(ref, true);
   });
 
-  it('disables switch when readonly', async () => {
+  it('calls answerQuestion(false) when No is tapped', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/flag',
+      dataType: 'boolean',
+      value: true,
+    });
+    const spy = jest.spyOn(store, 'answerQuestion');
+    await render(<BooleanWidget nodeRef={ref} store={store} />);
+    fireEvent.press(screen.getByTestId('boolean-switch-segment-false'));
+    expect(spy).toHaveBeenCalledWith(ref, false);
+  });
+
+  it('disables segments when readonly', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/flag',
       dataType: 'boolean',
@@ -273,7 +314,7 @@ describe('BooleanWidget', () => {
       readonly: true,
     });
     await render(<BooleanWidget nodeRef={ref} store={store} />);
-    expect(screen.getByTestId('boolean-switch').props.disabled).toBe(true);
+    expect(screen.getByTestId('boolean-switch-segment-true').props.accessibilityState.disabled).toBe(true);
   });
 
   it('does not render its own required indicator (Form.tsx owns it)', async () => {

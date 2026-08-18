@@ -21,7 +21,6 @@ const RAW_IMPORT = /from\s+['"](\.\.\/)+tokens\/tokens['"]/;
 const KNOWN_UNMIGRATED: string[] = [
   'AudioWidget.tsx',
   'BarcodeWidget.tsx',
-  'BooleanWidget.tsx',
   'DateTimeWidget.tsx',
   'DateWidget.tsx',
   'FileWidget.tsx',
@@ -35,7 +34,6 @@ const KNOWN_UNMIGRATED: string[] = [
   'SelectOneWidget.tsx',
   'SignatureWidget.tsx',
   'TimeWidget.tsx',
-  'TriggerWidget.tsx',
   'UncastWidget.tsx',
   'UnsupportedWidget.tsx',
   'VideoWidget.tsx',
