@@ -5,15 +5,10 @@
  * UnsupportedWidget when the dep is absent at runtime.
  */
 import { useCallback } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { Text } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
-import { tokens } from '../tokens/tokens';
+import { MediaCaptureCard } from './primitives/MediaCaptureCard';
 
 let _DocPicker: any | null = null;
 let _docLoaded: boolean | undefined;
@@ -54,26 +49,13 @@ export function FileWidget({ nodeRef, store, appearance: _appearance }: FileWidg
   }
 
   return (
-    <View style={styles.container} testID="file-widget">
-      <Pressable
-        onPress={handlePick}
-        disabled={readonly}
-        style={[styles.button, readonly && styles.buttonDisabled]}
-        testID="file-pick-button"
-      >
-        <Text style={styles.buttonText}>Pick File</Text>
-      </Pressable>
-    </View>
+    <MediaCaptureCard
+      testID="file-widget"
+      state="empty"
+      icon={<Text>📎</Text>}
+      title="No file selected"
+      disabled={readonly}
+      actions={[{ label: 'Pick File', onPress: handlePick, testID: 'file-pick-button' }]}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: { gap: tokens.spacing.sm },
-  button: {
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-  },
-  buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: tokens.color.text, fontSize: tokens.font.sm },
-});
