@@ -5,13 +5,18 @@
  *   selectMulti value = readonly string[] (array of selected tokens).
  *   store.answerQuestion receives string[] directly.
  *
- * Variants (ADR-3 selectMulti):
- *   default      → checkbox list (Pressable per option)
- *   minimal      → bottom-sheet dropdown with checkboxes
- *   columns      → multi-column FlatList with numColumns={2}
- *   columns-pack → compact multi-column FlatList
- *   autocomplete → same as minimal-autocomplete (trigger + BottomSheet search)
- *   likert       → horizontal row of labeled checkbox Pressables
+ * Variants (ADR-3 selectMulti, 6 render branches — resolveVariant untouched):
+ *   default      → checkbox list, SelectionRow (control:'checkbox')
+ *   minimal      → bottom-sheet dropdown, SelectionRow rows
+ *   autocomplete → minimal + a filled pill search bar (SearchIcon) on top
+ *                  ("search" appearance alias resolves here)
+ *   likert       → horizontal row of SelectionRow cells (density: 'likert')
+ *   columns      → multi-column FlatList, SelectionRow (default density)
+ *   columns-pack → compact multi-column FlatList, SelectionRow (density: 'pack')
+ *
+ * Spec (SelectMulti Widget requirement): reuses the SelectOne row pattern
+ * with a square checkbox (radius sm) instead of a circle, and shows an
+ * "N seleccionadas" counter (labelMedium/onSurfaceVariant) above the list.
  */
 
 import { useState, useMemo } from 'react';
@@ -24,8 +29,11 @@ import {
   TextInput,
 } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { createFieldStyles } from './primitives/fieldStyles';
+import { SelectionRow } from './primitives/SelectionRow';
+import { SearchIcon } from './primitives/Icon';
 import { BottomSheet } from './primitives/BottomSheet';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
@@ -36,7 +44,64 @@ export interface SelectMultiWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  const f = createFieldStyles(t);
+  return StyleSheet.create({
+    container: {
+      marginVertical: t.spacing.xs,
+    },
+    counter: {
+      ...t.typography.labelMedium,
+      color: t.color.roles.onSurfaceVariant,
+      marginBottom: t.spacing.xs,
+    },
+    dropdownTrigger: {
+      ...f.field,
+    },
+    dropdownTriggerText: {
+      ...f.fieldText,
+    },
+    // Search bar (spec: fixed filled search bar, magnifying-glass icon, pill radius)
+    searchBar: {
+      ...f.fieldRow,
+      paddingHorizontal: t.spacing.md,
+      marginBottom: t.spacing.xs,
+    },
+    searchInput: {
+      ...f.field,
+      ...f.fieldText,
+      flex: 1,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.color.roles.surfaceVariant,
+      borderWidth: 0,
+    },
+    // likert
+    likertRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'flex-start',
+      marginVertical: t.spacing.sm,
+    },
+    // columns
+    columnsCell: {
+      flex: 1,
+      margin: 4,
+      minWidth: '40%',
+    },
+    columnsPackCell: {
+      flex: 1,
+      margin: 2,
+      minWidth: '40%',
+    },
+  });
+}
+
+function selectedCountLabel(n: number): string {
+  return n === 1 ? '1 seleccionada' : `${n} seleccionadas`;
+}
+
 export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const choices = store.adapter.getChoices(nodeRef);
@@ -80,6 +145,12 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     store.answerQuestion(nodeRef, next);
   }
 
+  const counter = (
+    <Text testID="select-multi-counter" style={styles.counter}>
+      {selectedCountLabel(selections.length)}
+    </Text>
+  );
+
   if (variant === 'minimal') {
     const selectedLabels = choices
       .filter((c) => selections.includes(c.value))
@@ -87,6 +158,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
       .join(', ');
     return (
       <View style={styles.container}>
+        {counter}
         <Pressable
           testID="select-multi-dropdown-trigger"
           style={styles.dropdownTrigger}
@@ -98,24 +170,16 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
           </Text>
         </Pressable>
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-multi-sheet">
-          {choices.map((choice, index) => {
-            const isSelected = selections.includes(choice.value);
-            return (
-              <Pressable
-                key={`${choice.value}__${index}`}
-                testID={`select-multi-sheet-option-${choice.value}`}
-                style={[styles.option, isSelected && styles.optionSelected]}
-                onPress={() => handleToggle(choice.value)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.optionLabel}>{choice.label ?? choice.value}</Text>
-              </Pressable>
-            );
-          })}
+          {choices.map((choice, index) => (
+            <SelectionRow
+              key={`${choice.value}__${index}`}
+              testID={`select-multi-sheet-option-${choice.value}`}
+              control="checkbox"
+              selected={selections.includes(choice.value)}
+              label={choice.label ?? choice.value}
+              onPress={() => handleToggle(choice.value)}
+            />
+          ))}
         </BottomSheet>
       </View>
     );
@@ -128,6 +192,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
       .join(', ');
     return (
       <View style={styles.container}>
+        {counter}
         <Pressable
           testID="select-multi-dropdown-trigger"
           style={styles.dropdownTrigger}
@@ -139,32 +204,27 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
           </Text>
         </Pressable>
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-multi-sheet">
-          <TextInput
-            testID="select-multi-minimal-autocomplete-search"
-            style={styles.autocompleteInput}
-            value={query}
-            onChangeText={setQuery}
-            editable={!isReadonly}
-            placeholder="Search…"
-          />
-          {filtered.map((choice, index) => {
-            const isSelected = selections.includes(choice.value);
-            return (
-              <Pressable
-                key={`${choice.value}__${index}`}
-                testID={`select-multi-sheet-option-${choice.value}`}
-                style={[styles.option, isSelected && styles.optionSelected]}
-                onPress={() => handleToggle(choice.value)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.optionLabel}>{choice.label ?? choice.value}</Text>
-              </Pressable>
-            );
-          })}
+          <View style={styles.searchBar}>
+            <SearchIcon testID="select-multi-search-icon" />
+            <TextInput
+              testID="select-multi-minimal-autocomplete-search"
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              editable={!isReadonly}
+              placeholder="Search…"
+            />
+          </View>
+          {filtered.map((choice, index) => (
+            <SelectionRow
+              key={`${choice.value}__${index}`}
+              testID={`select-multi-sheet-option-${choice.value}`}
+              control="checkbox"
+              selected={selections.includes(choice.value)}
+              label={choice.label ?? choice.value}
+              onPress={() => handleToggle(choice.value)}
+            />
+          ))}
         </BottomSheet>
       </View>
     );
@@ -173,25 +233,20 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
   if (variant === 'likert') {
     return (
       <View style={styles.container}>
+        {counter}
         <View testID="select-multi-likert-container" style={styles.likertRow}>
-          {choices.map((choice, index) => {
-            const isSelected = selections.includes(choice.value);
-            return (
-              <Pressable
-                key={`${choice.value}__${index}`}
-                testID={`select-multi-likert-option-${choice.value}`}
-                style={styles.likertCell}
-                onPress={() => handleToggle(choice.value)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <Text style={styles.likertLabel}>{choice.label ?? choice.value}</Text>
-                <View style={[styles.likertCheckbox, isSelected && styles.likertCheckboxSelected]}>
-                  {isSelected && <Text style={styles.likertCheckmark}>✓</Text>}
-                </View>
-              </Pressable>
-            );
-          })}
+          {choices.map((choice, index) => (
+            <SelectionRow
+              key={`${choice.value}__${index}`}
+              testID={`select-multi-likert-option-${choice.value}`}
+              control="checkbox"
+              density="likert"
+              selected={selections.includes(choice.value)}
+              label={choice.label ?? choice.value}
+              disabled={isReadonly}
+              onPress={() => handleToggle(choice.value)}
+            />
+          ))}
         </View>
       </View>
     );
@@ -200,28 +255,24 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
   if (variant === 'columns') {
     return (
       <View style={styles.container}>
+        {counter}
         <FlatList
           testID="select-multi-columns-list"
           data={choices}
           keyExtractor={(item, index) => `${item.value}__${index}`}
           numColumns={2}
-          renderItem={({ item }) => {
-            const isSelected = selections.includes(item.value);
-            return (
-              <Pressable
+          renderItem={({ item }) => (
+            <View style={styles.columnsCell}>
+              <SelectionRow
                 testID={`select-multi-columns-option-${item.value}`}
-                style={[styles.columnsOption, isSelected && styles.columnsOptionSelected]}
+                control="checkbox"
+                selected={selections.includes(item.value)}
+                label={item.label ?? item.value}
+                disabled={isReadonly}
                 onPress={() => handleToggle(item.value)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.columnsOptionLabel}>{item.label ?? item.value}</Text>
-              </Pressable>
-            );
-          }}
+              />
+            </View>
+          )}
         />
       </View>
     );
@@ -230,28 +281,25 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
   if (variant === 'columns-pack') {
     return (
       <View style={styles.container}>
+        {counter}
         <FlatList
           testID="select-multi-columns-pack-list"
           data={choices}
           keyExtractor={(item, index) => `${item.value}__${index}`}
           numColumns={2}
-          renderItem={({ item }) => {
-            const isSelected = selections.includes(item.value);
-            return (
-              <Pressable
+          renderItem={({ item }) => (
+            <View style={styles.columnsPackCell}>
+              <SelectionRow
                 testID={`select-multi-columns-pack-option-${item.value}`}
-                style={[styles.columnsPackOption, isSelected && styles.columnsPackOptionSelected]}
+                control="checkbox"
+                density="pack"
+                selected={selections.includes(item.value)}
+                label={item.label ?? item.value}
+                disabled={isReadonly}
                 onPress={() => handleToggle(item.value)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <View style={[styles.checkboxSmall, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Text style={styles.checkmarkSmall}>✓</Text>}
-                </View>
-                <Text style={styles.columnsPackOptionLabel}>{item.label ?? item.value}</Text>
-              </Pressable>
-            );
-          }}
+              />
+            </View>
+          )}
         />
       </View>
     );
@@ -260,177 +308,18 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
   // default (checkbox list) — fallback for unrecognized variants
   return (
     <View style={styles.container}>
-      {choices.map((choice, index) => {
-        const isSelected = selections.includes(choice.value);
-        return (
-          <Pressable
-            key={`${choice.value}__${index}`}
-            testID={`select-multi-option-${choice.value}`}
-            style={[styles.option, isSelected && styles.optionSelected]}
-            onPress={() => handleToggle(choice.value)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-          >
-            <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-              {isSelected && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <Text style={styles.optionLabel}>{choice.label ?? choice.value}</Text>
-          </Pressable>
-        );
-      })}
+      {counter}
+      {choices.map((choice, index) => (
+        <SelectionRow
+          key={`${choice.value}__${index}`}
+          testID={`select-multi-option-${choice.value}`}
+          control="checkbox"
+          selected={selections.includes(choice.value)}
+          label={choice.label ?? choice.value}
+          disabled={isReadonly}
+          onPress={() => handleToggle(choice.value)}
+        />
+      ))}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: tokens.spacing.xs,
-  },
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 40,
-    marginVertical: 2,
-    borderRadius: tokens.radius.sm,
-  },
-  optionSelected: {
-    backgroundColor: tokens.color.surface,
-  },
-  optionLabel: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    marginLeft: tokens.spacing.sm,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxSelected: {
-    borderColor: tokens.color.primary,
-    backgroundColor: tokens.color.primary,
-  },
-  checkmark: {
-    color: tokens.color.background,
-    fontSize: tokens.font.sm,
-    fontWeight: 'bold',
-  },
-  dropdownTrigger: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.background,
-  },
-  dropdownTriggerText: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-  },
-  // likert
-  likertRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-    marginVertical: tokens.spacing.sm,
-  },
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  likertCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    minWidth: 64,
-  },
-  likertLabel: {
-    fontSize: tokens.font.sm,
-    color: tokens.color.text,
-    textAlign: 'center',
-    marginBottom: tokens.spacing.xs,
-  },
-  likertCheckbox: {
-    width: 18,
-    height: 18,
-    borderWidth: 2,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  likertCheckboxSelected: {
-    borderColor: tokens.color.primary,
-    backgroundColor: tokens.color.primary,
-  },
-  likertCheckmark: {
-    color: tokens.color.background,
-    fontSize: tokens.font.xs,
-    fontWeight: 'bold',
-  },
-  // autocomplete (used by both 'autocomplete' and 'minimal-autocomplete',
-  // rendered inside BottomSheet's own bounded/scrollable content)
-  autocompleteInput: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    backgroundColor: tokens.color.background,
-    marginBottom: tokens.spacing.xs,
-  },
-  // columns
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  columnsOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-    margin: 4,
-    borderRadius: tokens.radius.sm,
-    minWidth: '40%',
-  },
-  columnsOptionSelected: {
-    backgroundColor: tokens.color.surface,
-  },
-  columnsOptionLabel: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    marginLeft: tokens.spacing.sm,
-  },
-  // columns-pack
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  columnsPackOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 32,
-    margin: 2,
-    borderRadius: tokens.radius.sm,
-    minWidth: '40%',
-  },
-  columnsPackOptionSelected: {
-    backgroundColor: tokens.color.surface,
-  },
-  columnsPackOptionLabel: {
-    fontSize: tokens.font.sm,
-    color: tokens.color.text,
-    marginLeft: tokens.spacing.xs,
-  },
-  checkboxSmall: {
-    width: 14,
-    height: 14,
-    borderWidth: 2,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkmarkSmall: {
-    color: tokens.color.background,
-    fontSize: tokens.font.xs,
-    fontWeight: 'bold',
-  },
-});

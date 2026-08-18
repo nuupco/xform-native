@@ -18,7 +18,7 @@ import type { ControlType } from '@nuup/ts-rosa';
 import type { SelectChoice } from '@nuup/ts-rosa';
 
 afterEach(async () => {
-  jest.restoreAllMocks();
+  jest.clearAllMocks();
   await cleanup();
 });
 
