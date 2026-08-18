@@ -19,8 +19,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { tokens } from '../../tokens/tokens';
-import type { Theme } from '../../theme/ThemeContext';
+import { useTheme, defaultTheme, type Theme } from '../../theme/ThemeContext';
 
 export type PressableButtonVariant = 'filled' | 'text';
 export type PressableButtonTone = 'primary' | 'secondary' | 'error';
@@ -34,7 +33,7 @@ export interface PressableButtonProps {
   disabled?: boolean;
   fullWidth?: boolean;
   testID?: string;
-  /** Optional theme override (design decision 10); defaults to the raw `tokens` singleton. */
+  /** Optional theme override (design decision 10); defaults to `useTheme()`'s current theme. */
   theme?: Theme;
 }
 
@@ -48,7 +47,7 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 /** `roles.primary` at 12% alpha — the Android ripple color for every variant/tone. */
-export function androidRippleColor(t: Theme = tokens): string {
+export function androidRippleColor(t: Theme = defaultTheme): string {
   return hexToRgba(t.color.roles.primary, 0.12);
 }
 
@@ -56,7 +55,7 @@ export function androidRippleColor(t: Theme = tokens): string {
 export function resolveButtonBackground(
   variant: PressableButtonVariant,
   tone: PressableButtonTone,
-  t: Theme = tokens
+  t: Theme = defaultTheme
 ): string | undefined {
   if (variant !== 'filled') return undefined;
   if (tone === 'secondary') return t.color.roles.secondary;
@@ -68,7 +67,7 @@ export function resolveButtonBackground(
 export function resolveButtonTextColor(
   variant: PressableButtonVariant,
   tone: PressableButtonTone,
-  t: Theme = tokens
+  t: Theme = defaultTheme
 ): string {
   if (variant !== 'filled') {
     return tone === 'error' ? t.color.roles.error : t.color.roles.primary;
@@ -90,7 +89,7 @@ export interface ContainerStyleOpts {
 
 /** Pure container-style resolver — same matrix the component's `style` fn uses. */
 export function resolveContainerStyle(opts: ContainerStyleOpts): ViewStyle {
-  const t = opts.theme ?? tokens;
+  const t = opts.theme ?? defaultTheme;
   const bg = resolveButtonBackground(opts.variant, opts.tone, t);
   return {
     height: opts.height,
@@ -108,7 +107,7 @@ export function resolveContentStyle(
   variant: PressableButtonVariant,
   tone: PressableButtonTone,
   disabled: boolean,
-  t: Theme = tokens
+  t: Theme = defaultTheme
 ): TextStyle {
   return {
     fontSize: t.font.md,
@@ -127,8 +126,10 @@ export function PressableButton({
   disabled = false,
   fullWidth = false,
   testID,
-  theme = tokens,
+  theme,
 }: PressableButtonProps) {
+  const contextTheme = useTheme();
+  const t = theme ?? contextTheme;
   return (
     <Pressable
       testID={testID}
@@ -136,7 +137,7 @@ export function PressableButton({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
-      android_ripple={{ color: androidRippleColor(theme) }}
+      android_ripple={{ color: androidRippleColor(t) }}
       style={({ pressed }) =>
         resolveContainerStyle({
           variant,
@@ -145,11 +146,11 @@ export function PressableButton({
           fullWidth,
           pressed,
           platformOS: Platform.OS,
-          theme,
+          theme: t,
         })
       }
     >
-      <Text style={resolveContentStyle(variant, tone, disabled, theme)}>
+      <Text style={resolveContentStyle(variant, tone, disabled, t)}>
         {label}
       </Text>
     </Pressable>

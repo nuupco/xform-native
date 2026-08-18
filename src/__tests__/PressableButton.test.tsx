@@ -14,6 +14,7 @@ import {
   hexToRgba,
 } from '../widgets/primitives/PressableButton';
 import { tokens } from '../tokens/tokens';
+import { ThemeProvider } from '../theme/ThemeContext';
 
 afterEach(async () => {
   await cleanup();
@@ -239,5 +240,23 @@ describe('PressableButton (component behavior)', () => {
       ? Object.assign({}, ...node.props.style)
       : node.props.style;
     expect(flat.backgroundColor).toBe(tokens.color.roles.error);
+  });
+
+  it('a host ThemeProvider primary override reaches the button without an explicit theme prop (design decision 10)', async () => {
+    await render(
+      <ThemeProvider theme={{ color: { primary: '#7B2CBF' } }}>
+        <PressableButton
+          label="Siguiente"
+          onPress={() => {}}
+          testID="btn-themed"
+        />
+      </ThemeProvider>
+    );
+    const node = screen.getByTestId('btn-themed');
+    const flat = Array.isArray(node.props.style)
+      ? Object.assign({}, ...node.props.style)
+      : node.props.style;
+    expect(flat.backgroundColor).toBe('#7B2CBF');
+    expect(flat.backgroundColor).not.toBe(tokens.color.roles.primary);
   });
 });

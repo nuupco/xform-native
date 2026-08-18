@@ -22,6 +22,7 @@ import {
   GripIcon,
 } from '../widgets/primitives/Icon';
 import { tokens } from '../tokens/tokens';
+import { ThemeProvider } from '../theme/ThemeContext';
 
 afterEach(async () => {
   await cleanup();
@@ -143,5 +144,16 @@ describe('Phase 3 icon expansion (decision 9 + 10) — View/Text composition onl
     const overrideJson = JSON.stringify(overrideResult.toJSON());
     expect(overrideJson).toContain('#7B2CBF');
     expect(overrideJson).not.toContain(tokens.color.roles.primary);
+  });
+
+  it('a host ThemeProvider primary override reaches CheckIcon without an explicit theme prop (design decision 10)', async () => {
+    const themedResult = await render(
+      <ThemeProvider theme={{ color: { primary: '#7B2CBF' } }}>
+        <CheckIcon testID="check-themed" />
+      </ThemeProvider>
+    );
+    const themedJson = JSON.stringify(themedResult.toJSON());
+    expect(themedJson).toContain('#7B2CBF');
+    expect(themedJson).not.toContain(tokens.color.roles.primary);
   });
 });

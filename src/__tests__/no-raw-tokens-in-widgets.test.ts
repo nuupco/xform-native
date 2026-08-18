@@ -2,11 +2,15 @@
  * Completion gate — "zero widgets on raw tokens" (design: shrinking
  * KNOWN_UNMIGRATED allowlist, tasks 1.6/12.1).
  *
- * Runs from PR1 onward. It currently PASSES because every listed file is
- * still on the raw `tokens` singleton (nothing is migrated yet). Each later
- * PR removes its migrated file(s) from `KNOWN_UNMIGRATED`; PR16 empties the
- * array and un-skips the second `it`, which is this phase's objective exit
- * criterion.
+ * PR16 (the final Phase 3 slice) emptied `KNOWN_UNMIGRATED` — the last three
+ * entries (`primitives/PressableButton.tsx`, `primitives/Icon.tsx`,
+ * `primitives/SelectionRow.tsx`) moved their `tokens`-as-default-value reads
+ * to `defaultTheme` (re-exported from `theme/ThemeContext`, itself `= tokens`)
+ * and their components now call `useTheme()` so a host `ThemeProvider`
+ * override reaches them without callers passing `theme` explicitly (design
+ * decision 10). Zero `src/widgets/**\/*.tsx` file imports the raw
+ * `tokens/tokens` module anymore — this is the phase's objective exit
+ * criterion, asserted by the un-skipped `it` below.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,15 +18,9 @@ import { join } from 'node:path';
 const WIDGETS_DIR = join(__dirname, '..', 'widgets');
 const RAW_IMPORT = /from\s+['"](\.\.\/)+tokens\/tokens['"]/;
 
-// Seeded with the not-yet-migrated widgets + 4 primitives (design doc,
-// "Verified current state"). StringWidget and ImageWidget (Phase 2/PR1) and
-// LongWidget/IntWidget/DecimalWidget (PR2) are already migrated and
-// therefore intentionally absent from this list.
-const KNOWN_UNMIGRATED: string[] = [
-  'primitives/PressableButton.tsx',
-  'primitives/Icon.tsx',
-  'primitives/SelectionRow.tsx',
-];
+// Emptied by the final Phase 3 task (PR16). Any name re-added here would be
+// an open migration / regression.
+const KNOWN_UNMIGRATED: string[] = [];
 
 function walk(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -56,7 +54,7 @@ describe('no-raw-tokens-in-widgets (Phase 3 completion gate)', () => {
 
   // Un-skipped and emptied only by the final Phase 3 task (12.1 / PR16) —
   // the objective exit criterion for the whole migration.
-  it.skip('the migration is complete', () => {
+  it('the migration is complete', () => {
     expect(KNOWN_UNMIGRATED).toEqual([]);
   });
 });
