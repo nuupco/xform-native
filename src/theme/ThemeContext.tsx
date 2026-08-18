@@ -10,14 +10,14 @@
  */
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { tokens } from '../tokens/tokens';
-import { mergeTheme, type Theme, type DeepPartial } from './theme';
+import { mergeTheme, type Theme, type ThemeOverride } from './theme';
 
 export type { Theme };
 
 const ThemeReactContext = createContext<Theme | null>(null);
 
 export interface ThemeProviderProps {
-  theme?: DeepPartial<Theme>;
+  theme?: ThemeOverride;
   children: ReactNode;
 }
 
