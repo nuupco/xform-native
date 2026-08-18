@@ -190,6 +190,126 @@ describe('GeoTraceWidget', () => {
   });
 });
 
+describe('GeoTraceWidget GPS vertex capture', () => {
+  it('add-point button is disabled with no GPS fix yet', async () => {
+    const mockGeo = require('@nuup/xform-native-geo');
+    mockGeo.Location.getLastKnownPositionAsync.mockResolvedValueOnce(null);
+    mockGeo.Location.watchPositionAsync.mockImplementationOnce(
+      () => new Promise(() => {}),
+    );
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    expect(
+      screen.getByTestId('geo-trace-add-point-button').props.accessibilityState?.disabled,
+    ).toBe(true);
+  });
+
+  it('adds a vertex at the current GPS fix on press', async () => {
+    const mockGeo = require('@nuup/xform-native-geo');
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-add-point-button'));
+    });
+    expect(screen.getByTestId('geo-trace-pin-0')).toBeTruthy();
+    mockGeo.Location.__triggerWatch({
+      coords: { latitude: 20.1, longitude: -100.1, altitude: 50, accuracy: 8 },
+    });
+  });
+
+  it('undo removes a vertex added via the GPS button', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-add-point-button'));
+    });
+    expect(screen.getByTestId('geo-trace-pin-0')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-undo-button'));
+    });
+    expect(screen.queryByTestId('geo-trace-pin-0')).toBeNull();
+  });
+
+  it('two GPS-button presses plus Accept serializes 2 points', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const answerSpy = jest.spyOn(store, 'answerQuestion');
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-add-point-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-add-point-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-accept-button'));
+    });
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    const committed = answerSpy.mock.calls[0]![1] as string;
+    expect(committed.split(';')).toHaveLength(2);
+  });
+
+  it('recenter button flies the camera to the current position', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-recenter-button'));
+    });
+    expect(screen.getByTestId('geo-trace-recenter-button')).toBeTruthy();
+  });
+
+  it('shows permission-denied status text when GPS permission is denied', async () => {
+    const mockGeo = require('@nuup/xform-native-geo');
+    mockGeo.Location.requestForegroundPermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoTraceWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-trace-open-map-button'));
+    });
+    expect(screen.getByText('Sin permiso de ubicación')).toBeTruthy();
+  });
+});
+
 describe('GeoTraceWidget readonly mode', () => {
   it('shows label but no button when readonly', async () => {
     const store = makeStore('19.4326 -99.1332 0 5; 19.5000 -99.2000 0 5', true);
