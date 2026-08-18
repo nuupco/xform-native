@@ -14,9 +14,23 @@
 import { useState, useEffect } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
+import { useTheme, useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { createFieldStyles } from './primitives/fieldStyles';
+import { ClockIcon } from './primitives/Icon';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
+
+function createStyles(t: Theme) {
+  const f = createFieldStyles(t);
+  return StyleSheet.create({
+    container: { marginVertical: t.spacing.xs },
+    row: f.fieldRow,
+    input: { ...f.field, ...f.fieldNumeric, flex: 1 },
+    focused: f.fieldFocused,
+    readonly: f.fieldDisabled,
+    pickerAffordance: f.fieldAffordance,
+  });
+}
 
 export interface TimeWidgetProps {
   nodeRef: NodeRef;
@@ -56,6 +70,9 @@ function maskTimeDigits(text: string): string {
 }
 
 export function TimeWidget({ nodeRef, store, appearance: _appearance }: TimeWidgetProps) {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const [focused, setFocused] = useState(false);
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const value = store.adapter.resolveValue(nodeRef);
@@ -89,36 +106,34 @@ export function TimeWidget({ nodeRef, store, appearance: _appearance }: TimeWidg
 
   return (
     <View style={styles.container}>
-      <TextInput
-        testID="time-input"
-        style={[styles.input, isReadonly && styles.readonly]}
-        value={text}
-        onChangeText={handleChange}
-        editable={!isReadonly}
-        placeholder="HH:MM"
-        keyboardType="numeric"
-        maxLength={5}
-        autoCapitalize="none"
-      />
+      <View style={styles.row}>
+        <TextInput
+          testID="time-input"
+          style={[
+            styles.input,
+            focused && styles.focused,
+            isReadonly && styles.readonly,
+          ]}
+          value={text}
+          onChangeText={handleChange}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          editable={!isReadonly}
+          placeholder="HH:MM"
+          placeholderTextColor={theme.color.roles.onSurfaceVariant}
+          keyboardType="numeric"
+          maxLength={5}
+          autoCapitalize="none"
+        />
+        {/* Affordance slot reserved for the native time picker (out of scope
+            for PR5 — see design doc's "Open Decisions Carried Forward":
+            "Time/DateTime native picker wiring: confirmed out of scope for
+            PR5"). Rendered as a non-interactive icon so the trigger field's
+            visual language matches Date/DateTime ahead of that wiring. */}
+        <View style={styles.pickerAffordance}>
+          <ClockIcon testID="time-picker-icon" color={theme.color.roles.primary} theme={theme} />
+        </View>
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: tokens.spacing.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    backgroundColor: tokens.color.background,
-  },
-  readonly: {
-    backgroundColor: tokens.color.surface,
-    color: tokens.color.text,
-  },
-});
