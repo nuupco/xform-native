@@ -7,10 +7,11 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, ScrollView, Text, StyleSheet } from 'react-native';
+import { AnswerResult, refToString } from '@nuup/ts-rosa';
 import { useFormSession } from '../store/useFormSession';
 import { resolveWidget, useWidgetOverrides, type WidgetOverride } from '../widgets/registry';
-import { tokens } from '../tokens/tokens';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import type { FormSessionStore } from '../store/FormSessionStore';
 import {
   BofSurface,
@@ -18,7 +19,10 @@ import {
   ConstraintSurface,
   RequiredSurface,
   LabelHint,
+  RepeatPromptCard,
+  WidgetErrorFallback,
 } from './surfaces';
+import { NavRow } from './NavRow';
 import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 import { renderSlot, type FormSlots } from './slots';
 import {
@@ -29,6 +33,22 @@ import {
   type ValidatorOverride,
 } from './validation';
 
+/**
+ * Best-effort human-readable field name for `WidgetErrorFallback` (spec R7).
+ * Production refs are real `TreeReference`s (`refToString` handles them);
+ * the in-repo test fixture (`makeFakeSession`) uses plain path strings
+ * directly as `ref`, which `refToString` cannot parse — fall back to the
+ * raw value in that case so the fallback still shows a useful identifier.
+ */
+function fieldNameOf(ref: unknown): string {
+  if (typeof ref === 'string') return ref;
+  try {
+    return refToString(ref as Parameters<typeof refToString>[0]);
+  } catch {
+    return String(ref);
+  }
+}
+
 export interface FormProps {
   store: FormSessionStore;
   /** Additive (widget-registry, D5): frozen at mount, wins tie-break over context entries. */
@@ -37,9 +57,20 @@ export interface FormProps {
   slots?: FormSlots;
   /** Additive (form-validation-hooks, D7/D8): frozen at mount, wins tie-break over context entries. */
   validators?: readonly ValidatorOverride[];
+  /** Additive (design decision 7): forwarded to BofSurface/EofSurface subtitle; omitted → subtitle hidden. */
+  formTitle?: string;
+  formVersion?: string;
 }
 
-export function Form({ store, widgets: widgetsProp, slots, validators: validatorsProp }: FormProps) {
+export function Form({
+  store,
+  widgets: widgetsProp,
+  slots,
+  validators: validatorsProp,
+  formTitle,
+  formVersion,
+}: FormProps) {
+  const styles = useThemedStyles(createStyles);
   const snapshot = useFormSession(store);
   const contextOverrides = useWidgetOverrides();
   // Freeze overrides at mount (design data-flow): context first, then the
@@ -99,6 +130,26 @@ export function Form({ store, widgets: widgetsProp, slots, validators: validator
     setAdvanceBlocked(null);
   }, [event.kind, eventIndex]);
 
+  // EofSurface answered/skipped summary (design decision 8): a form-local
+  // record of this session's navigation path — not a "whole form" total,
+  // which FormAdapter has no capability to compute. Recorded each time the
+  // rendered event moves away from a 'question' event: 'answered' if the
+  // last committed answerQuestion result for that ref was OK, otherwise
+  // 'skipped' (never answered, or answered with a still-invalid value).
+  const progressRef = useRef<Map<number, 'answered' | 'skipped'>>(new Map());
+  const prevQuestionRef = useRef<{ ref: unknown; index: number } | null>(null);
+  useEffect(() => {
+    const prev = prevQuestionRef.current;
+    if (prev && prev.index !== eventIndex) {
+      const lastResult = store.lastAnswerResult;
+      const wasAnswered =
+        lastResult !== null && lastResult.ref === prev.ref && lastResult.result === AnswerResult.OK;
+      progressRef.current.set(prev.index, wasAnswered ? 'answered' : 'skipped');
+    }
+    prevQuestionRef.current = event.kind === 'question' ? { ref: event.ref, index: event.index } : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventIndex, event.kind]);
+
   const handleNext = useCallback(() => {
     directionRef.current = 'forward';
     const ev = store.adapter.getCurrentEvent();
@@ -149,9 +200,16 @@ export function Form({ store, widgets: widgetsProp, slots, validators: validator
     const ev = event;
     switch (ev.kind) {
       case 'bof':
-        return <BofSurface onStart={handleNext} />;
-      case 'eof':
-        return <EofSurface />;
+        return <BofSurface onStart={handleNext} formTitle={formTitle} formVersion={formVersion} />;
+      case 'eof': {
+        let answered = 0;
+        let skipped = 0;
+        for (const outcome of progressRef.current.values()) {
+          if (outcome === 'answered') answered += 1;
+          else skipped += 1;
+        }
+        return <EofSurface answeredCount={answered} skippedCount={skipped} />;
+      }
       case 'question': {
         const nodeState = store.adapter.getNodeState(ev.ref);
         const { Widget } = resolveWidget(
@@ -174,29 +232,23 @@ export function Form({ store, widgets: widgetsProp, slots, validators: validator
             : {};
         return (
           <View collapsable={false}>
-            <LabelHint label={ev.label} hint={ev.hint} />
-            {nodeState.required && (
-              <Text testID="required-indicator" style={styles.required}>
-                *
-              </Text>
-            )}
-            <WidgetErrorBoundary
-              key={ev.index}
-              fallback={
-                <View style={styles.errorFallback} testID="widget-error-fallback">
-                  <Text style={styles.errorFallbackText}>
-                    This question could not be displayed.
-                  </Text>
-                </View>
-              }
+            <LabelHint label={ev.label} hint={ev.hint} required={nodeState.required} />
+            <View
+              style={advanceBlocked != null ? styles.widgetSlotError : undefined}
+              collapsable={false}
             >
-              <Widget
-                nodeRef={ev.ref}
-                store={store}
-                appearance={ev.appearance}
-                {...rangeProps}
-              />
-            </WidgetErrorBoundary>
+              <WidgetErrorBoundary
+                key={ev.index}
+                fallback={<WidgetErrorFallback fieldName={fieldNameOf(ev.ref)} />}
+              >
+                <Widget
+                  nodeRef={ev.ref}
+                  store={store}
+                  appearance={ev.appearance}
+                  {...rangeProps}
+                />
+              </WidgetErrorBoundary>
+            </View>
             {advanceBlocked &&
               renderSlot(slots?.renderError, {
                 block: advanceBlocked,
@@ -238,9 +290,7 @@ export function Form({ store, widgets: widgetsProp, slots, validators: validator
         return (
           <View collapsable={false}>
             <LabelHint label={ev.label} hint={null} />
-            <TouchableOpacity onPress={handleCreateRepeat} testID="prompt-continue" activeOpacity={0.7}>
-              <Text>Continue</Text>
-            </TouchableOpacity>
+            <RepeatPromptCard label={ev.label ?? ''} onPress={handleCreateRepeat} />
           </View>
         );
       default:
@@ -269,66 +319,36 @@ export function Form({ store, widgets: widgetsProp, slots, validators: validator
         renderSlot(slots?.renderNavigation, {
           onBack: handleBack,
           onNext: handleNext,
-          defaultElement: (
-            <View style={styles.navRow} collapsable={false}>
-              <TouchableOpacity
-                onPress={handleBack}
-                testID="nav-back"
-                style={styles.navButton}
-              >
-                <Text>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleNext}
-                testID="nav-next"
-                style={styles.navButton}
-              >
-                <Text>Next</Text>
-              </TouchableOpacity>
-            </View>
-          ),
+          defaultElement: <NavRow onBack={handleBack} onNext={handleNext} />,
         })}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentScroll: {
-    flex: 1,
-  },
-  contentScrollInner: {
-    padding: tokens.spacing.md,
-    flexGrow: 1,
-  },
-  navRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: tokens.spacing.md,
-  },
-  navButton: {
-    paddingHorizontal: tokens.spacing.lg,
-    paddingVertical: tokens.spacing.md,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  required: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
-  },
-  errorFallback: {
-    padding: tokens.spacing.md,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.md,
-    borderWidth: 1,
-    borderColor: tokens.color.error,
-  },
-  errorFallbackText: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
-  },
-});
+// `isLastStep` is intentionally NOT wired here (design decision 9): FormAdapter
+// has no non-mutating lookahead to detect "next step is eof" without a real
+// stepForward() call, which would fire the auto-skip effect and bump version —
+// a behavior change out of this phase's appearance-only scope. NavRow's own
+// `variant:'finish'` rendering is fully built/tested (PR2); Eof already shows
+// the gold "Finalizar" treatment on its own Finish button. This is a
+// documented follow-up, not an oversight.
+
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    contentScroll: {
+      flex: 1,
+    },
+    contentScrollInner: {
+      padding: t.spacing.md,
+      flexGrow: 1,
+    },
+    widgetSlotError: {
+      borderWidth: 2,
+      borderColor: t.color.roles.error,
+      borderRadius: t.radius.md,
+    },
+  });
+}

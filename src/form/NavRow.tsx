@@ -47,7 +47,7 @@ export function NavRow({ onBack, onNext, isLastStep, backDisabled, nextDisabled 
       <View testID="nav-row" style={styles.row} collapsable={false}>
         <PressableButton
           testID="nav-back"
-          label="Back"
+          label="Atrás"
           variant="text"
           onPress={onBack}
           disabled={backDisabled}
@@ -55,7 +55,7 @@ export function NavRow({ onBack, onNext, isLastStep, backDisabled, nextDisabled 
         />
         <PressableButton
           testID="nav-next"
-          label={isLastStep ? 'Finalizar' : 'Next'}
+          label={isLastStep ? 'Finalizar' : 'Siguiente'}
           variant="filled"
           tone={isLastStep ? 'secondary' : 'primary'}
           onPress={onNext}
