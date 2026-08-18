@@ -144,6 +144,14 @@ export type {
   SegmentedButtonOption,
 } from './widgets/primitives/SegmentedButton';
 
+// campo-phase3-pr10: MediaCaptureCard primitive (no widget consumes it yet)
+export { MediaCaptureCard } from './widgets/primitives/MediaCaptureCard';
+export type {
+  MediaCaptureCardProps,
+  MediaCaptureCardState,
+  MediaCaptureCardAction,
+} from './widgets/primitives/MediaCaptureCard';
+
 // form-composition-slots: optional render-prop overrides for nav/error/group (D6)
 export type {
   FormSlots,
