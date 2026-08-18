@@ -26,7 +26,6 @@ const KNOWN_UNMIGRATED: string[] = [
   'GeoShapeWidget.tsx',
   'GeoTraceWidget.tsx',
   'NoteWidget.tsx',
-  'RangeWidget.tsx',
   'SignatureWidget.tsx',
   'UncastWidget.tsx',
   'UnsupportedWidget.tsx',
