@@ -7,6 +7,7 @@ module.exports = () => ({
   userInterfaceStyle: 'light',
   plugins: [
     'expo-secure-store',
+    'expo-font',
     [
       'expo-location',
       {
