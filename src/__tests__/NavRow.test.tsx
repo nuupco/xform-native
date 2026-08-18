@@ -14,7 +14,7 @@ function flatten(node: any): Record<string, unknown> {
 describe('NavRow', () => {
   it('renders Next as filled/primary/48dp/radius.md by default', async () => {
     await render(<NavRow onBack={() => {}} onNext={() => {}} />);
-    expect(screen.getByText('Next')).toBeTruthy();
+    expect(screen.getByText('Siguiente')).toBeTruthy();
     const next = screen.getByTestId('nav-next');
     const flat = flatten(next);
     expect(flat.backgroundColor).toBe(tokens.color.roles.primary);
@@ -36,12 +36,12 @@ describe('NavRow', () => {
     const flat = flatten(back);
     expect(flat.backgroundColor).toBeUndefined();
     expect(flat.height).toBe(48);
-    expect(screen.getByText('Back')).toBeTruthy();
+    expect(screen.getByText('Atrás')).toBeTruthy();
   });
 
   it('disabled Next applies 38% content opacity without graying the row background', async () => {
     await render(<NavRow onBack={() => {}} onNext={() => {}} nextDisabled />);
-    const label = screen.getByText('Next');
+    const label = screen.getByText('Siguiente');
     const labelFlat = flatten(label);
     expect(labelFlat.opacity).toBe(tokens.disabled.contentOpacity);
     const next = screen.getByTestId('nav-next');
