@@ -405,6 +405,65 @@ describe('GeoShapeWidget ring-dedup regression', () => {
   });
 });
 
+describe('GeoShapeWidget offline tile layer', () => {
+  it('renders the offline raster layer and shifts fill/line layerIndex above it', async () => {
+    const { Layer } = require('@maplibre/maplibre-react-native');
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-map'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-map'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-map'));
+    });
+    expect(screen.getByTestId('maplibre-raster-source-esri-offline')).toBeTruthy();
+    const calls = (Layer as jest.Mock).mock.calls.map(([p]: any[]) => p);
+    const satellite = calls.find((p) => p.id === 'esri-satellite-layer');
+    const offline = calls.find((p) => p.id === 'esri-offline-layer');
+    const fill = calls.find((p) => p.id === 'shape-fill-layer');
+    const line = calls.find((p) => p.id === 'shape-line-layer');
+    expect(satellite?.layerIndex).toBe(1);
+    expect(offline?.layerIndex).toBe(2);
+    expect(fill?.layerIndex).toBe(3);
+    expect(line?.layerIndex).toBe(4);
+  });
+});
+
+describe('GeoShapeWidget offline tile prewarm', () => {
+  it('renders a prewarm button and shows success status on completion', async () => {
+    const mockGeo = require('@nuup/xform-native-geo');
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoShapeWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-open-map-button'));
+    });
+    expect(screen.getByTestId('geo-shape-prewarm-button')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-shape-prewarm-button'));
+    });
+    expect(mockGeo.preWarmSatelliteTiles).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(screen.getByText('Mapas descargados para uso sin conexión')).toBeTruthy();
+  });
+});
+
 describe('GeoShapeWidget readonly mode', () => {
   it('shows label but no button when readonly', async () => {
     const store = makeStore('19.4326 -99.1332 0 5; 19.5000 -99.2000 0 5', true);
