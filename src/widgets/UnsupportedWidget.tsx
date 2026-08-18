@@ -7,7 +7,7 @@
  */
 
 import { View, Text, StyleSheet } from 'react-native';
-import { tokens } from '../tokens/tokens';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import type { DataType } from '@nuup/ts-rosa';
 
 export interface UnsupportedWidgetProps {
@@ -15,6 +15,7 @@ export interface UnsupportedWidgetProps {
 }
 
 export function UnsupportedWidget({ dataType }: UnsupportedWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.container} testID="unsupported-widget">
       <Text style={styles.label}>Unsupported field type: {dataType}</Text>
@@ -22,16 +23,18 @@ export function UnsupportedWidget({ dataType }: UnsupportedWidgetProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: tokens.spacing.md,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.md,
-    borderWidth: 1,
-    borderColor: tokens.color.error,
-  },
-  label: {
-    color: tokens.color.error,
-    fontSize: tokens.font.sm,
-  },
-});
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: {
+      padding: t.spacing.md,
+      backgroundColor: t.color.roles.errorContainer,
+      borderRadius: t.radius.md,
+      borderWidth: 1,
+      borderColor: t.color.roles.error,
+    },
+    label: {
+      ...t.typography.bodySmall,
+      color: t.color.roles.onErrorContainer,
+    },
+  });
+}
