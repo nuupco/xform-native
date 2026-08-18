@@ -14,7 +14,7 @@ import { RankWidget } from '../widgets/RankWidget';
 import type { NodeRef } from '../adapter/FormAdapter';
 
 afterEach(async () => {
-  jest.restoreAllMocks();
+  jest.clearAllMocks();
   await cleanup();
 });
 

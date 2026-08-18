@@ -216,7 +216,9 @@ export function SelectionRow({
       onPress={disabled ? undefined : onPress}
       disabled={disabled}
       accessibilityRole={accessibilityRole ?? control}
-      accessibilityState={{ selected, disabled }}
+      accessibilityState={
+        control === 'checkbox' ? { checked: selected, disabled } : { selected, disabled }
+      }
     >
       <View style={contentStyle}>
         {children ?? (isLikert ? (
