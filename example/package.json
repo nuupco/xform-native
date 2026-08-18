@@ -14,7 +14,7 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@maplibre/maplibre-react-native": "11.3.6",
-    "@nuup/ts-rosa": "github:nuupco/ts-rosa#124c31d82bdaa334007114680476b560b945a2d6",
+    "@nuup/ts-rosa": "github:nuupco/ts-rosa#v0.1.8",
     "@nuup/xform-native": "file:../",
     "@nuup/xform-native-geo": "file:../packages/xform-native-geo",
     "@react-native-community/datetimepicker": "^9.1.0",
