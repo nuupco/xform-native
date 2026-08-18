@@ -43,6 +43,7 @@ const KNOWN_UNMIGRATED: string[] = [
   'primitives/Modal.tsx',
   'primitives/PressableButton.tsx',
   'primitives/Icon.tsx',
+  'primitives/SelectionRow.tsx',
 ];
 
 function walk(dir: string): string[] {
