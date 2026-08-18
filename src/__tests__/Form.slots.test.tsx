@@ -95,8 +95,8 @@ describe('Form — composition slots', () => {
 
     expect(screen.getByTestId('nav-back')).toBeTruthy();
     expect(screen.getByTestId('nav-next')).toBeTruthy();
-    expect(screen.getByText('Back')).toBeTruthy();
-    expect(screen.getByText('Next')).toBeTruthy();
+    expect(screen.getByText('Atrás')).toBeTruthy();
+    expect(screen.getByText('Siguiente')).toBeTruthy();
 
     await act(async () => {
       fireEvent.press(screen.getByTestId('nav-next'));

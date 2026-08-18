@@ -11,6 +11,7 @@ import { FormSessionStore } from '../store/FormSessionStore';
 import { makeFakeSession } from '../test-support/makeFakeSession';
 import { StringWidget } from '../widgets/StringWidget';
 import { ImageWidget } from '../widgets/ImageWidget';
+import { Form } from '../form/Form';
 import { ThemeProvider } from '../theme/ThemeContext';
 import { deriveRoleSet } from '../theme/derive';
 
@@ -115,6 +116,20 @@ describe('StringWidget — Campo tokens regression', () => {
     expect(input).toBeTruthy();
     // sanity: derivation used by the provider is deterministic
     expect(deriveRoleSet(OVERRIDE).base).toBe(OVERRIDE);
+  });
+});
+
+describe('Form chrome — Campo tokens regression (Phase 2 / PR3)', () => {
+  it('renders NavRow/ErrorBanner/LabelHint chrome without throwing under a primary override', async () => {
+    const { store } = makeStringStore();
+    await render(
+      <ThemeProvider theme={{ color: { primary: '#7B2CBF' } }}>
+        <Form store={store} />
+      </ThemeProvider>,
+    );
+    expect(screen.getByTestId('nav-back')).toBeTruthy();
+    expect(screen.getByTestId('nav-next')).toBeTruthy();
+    expect(screen.getByTestId('question-label')).toBeTruthy();
   });
 });
 
