@@ -12,7 +12,7 @@
  * inline-widget architecture (no WebView/bridge/Modal-hook layer — the
  * widget itself owns an inline modal driven by `store.answerQuestion`).
  */
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { UnsupportedWidget } from './UnsupportedWidget';
 import { AppModal } from './primitives/Modal';
 import { SafeAreaBottom } from './primitives/SafeAreaBottom';
 import { tokens } from '../tokens/tokens';
+import { useGeoGps } from './primitives/useGeoGps';
 
 interface Vertex {
   lat: number;
@@ -117,70 +118,23 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
 
   const [modalVisible, setModalVisible] = useState(false);
   const [vertices, setVertices] = useState<Vertex[]>(parseVertices(resolved));
-  const [currentPoint, setCurrentPoint] = useState<Vertex | null>(null);
 
   useEffect(() => {
     setVertices(parseVertices(resolved));
   }, [resolved]);
 
-  const mountedRef = useRef(true);
-  const watchRef = useRef<{ remove: () => void } | null>(null);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      watchRef.current?.remove();
-    };
-  }, []);
-
-  const stopWatch = useCallback(() => {
-    watchRef.current?.remove();
-    watchRef.current = null;
-  }, []);
-
-  const startWatching = useCallback(async () => {
-    if (!geo || readonly) return;
-    try {
-      const { status } = await geo.Location.requestForegroundPermissionsAsync();
-      if (!mountedRef.current || status !== 'granted') return;
-
-      const sub = await geo.Location.watchPositionAsync(
-        {
-          accuracy: geo.Location.Accuracy?.BestForNavigation,
-          timeInterval: 1000,
-          distanceInterval: 0,
-        },
-        (loc: any) => {
-          if (!mountedRef.current) return;
-          setCurrentPoint({
-            lat: loc.coords.latitude,
-            lon: loc.coords.longitude,
-            alt: loc.coords.altitude ?? 0,
-            acc: loc.coords.accuracy ?? 0,
-          });
-        },
-      );
-
-      if (!mountedRef.current) {
-        sub.remove();
-        return;
-      }
-      watchRef.current = sub;
-    } catch {
-      // GPS capture is best-effort
-    }
-  }, [geo, readonly]);
+  const gps = useGeoGps(geo, { enabled: !readonly });
+  const currentPoint = gps.currentPoint;
 
   const openMap = useCallback(() => {
     setModalVisible(true);
-    void startWatching();
-  }, [startWatching]);
+    void gps.start();
+  }, [gps]);
 
   const closeMap = useCallback(() => {
-    stopWatch();
+    gps.stop();
     setModalVisible(false);
-  }, [stopWatch]);
+  }, [gps]);
 
   const handleMapPress = useCallback(
     (event: any) => {
@@ -204,6 +158,15 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
     setVertices((prev) => prev.slice(0, -1));
   }, []);
 
+  const handleAddGpsPoint = useCallback(() => {
+    if (!currentPoint) return;
+    setVertices((prev) => [...prev, currentPoint]);
+  }, [currentPoint]);
+
+  const handleRecenter = useCallback(() => {
+    gps.recenter();
+  }, [gps]);
+
   const handleAccept = useCallback(() => {
     if (vertices.length >= MIN_POINTS) {
       store.answerQuestion(nodeRef, serializeVertices(closeRing(vertices)));
@@ -212,10 +175,9 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
   }, [vertices, nodeRef, store, closeMap]);
 
   const handleCancel = useCallback(() => {
-    stopWatch();
     setVertices(parseVertices(resolved));
     closeMap();
-  }, [resolved, closeMap, stopWatch]);
+  }, [resolved, closeMap]);
 
   if (!geo) {
     return <UnsupportedWidget dataType="geoshape" />;
@@ -286,7 +248,10 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
               onPress={handleMapPress}
               testID="geo-shape-map"
             >
-              <MapLibre.Camera initialViewState={{ center, zoom: 15 }} />
+              <MapLibre.Camera
+                ref={gps.cameraRef}
+                initialViewState={{ center, zoom: 15 }}
+              />
 
               <MapLibre.RasterSource
                 id="esri-satellite"
@@ -329,12 +294,29 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
               )}
             </MapLibre.Map>
 
-            {!currentPoint && (
-              <View style={styles.statusOverlay} pointerEvents="none">
+            <Pressable
+              onPress={handleRecenter}
+              style={styles.recenterButton}
+              testID="geo-shape-recenter-button"
+              disabled={!currentPoint}
+            >
+              <Text style={styles.buttonText}>⊙</Text>
+            </Pressable>
+
+            <View style={styles.statusOverlay} pointerEvents="none">
+              {(gps.status === 'requesting' || gps.status === 'acquiring') && (
                 <ActivityIndicator size="small" />
-                <Text style={styles.statusText}>Adquiriendo señal GPS…</Text>
-              </View>
-            )}
+              )}
+              <Text style={styles.statusText}>
+                {gps.status === 'denied'
+                  ? 'Sin permiso de ubicación'
+                  : gps.status === 'error'
+                    ? 'No se pudo obtener la ubicación'
+                    : gps.status === 'tracking' && currentPoint
+                      ? `GPS ±${currentPoint.acc.toFixed(1)} m`
+                      : 'Adquiriendo señal GPS…'}
+              </Text>
+            </View>
           </View>
 
           <SafeAreaBottom style={styles.buttonRow}>
@@ -347,6 +329,14 @@ export function GeoShapeWidget({ nodeRef, store, appearance: _appearance }: GeoS
                 <Text style={styles.buttonText}>Undo</Text>
               </Pressable>
             )}
+            <Pressable
+              onPress={currentPoint ? handleAddGpsPoint : undefined}
+              style={[styles.button, styles.undoButton, !currentPoint && styles.buttonDisabled]}
+              disabled={!currentPoint}
+              testID="geo-shape-add-point-button"
+            >
+              <Text style={styles.buttonText}>Agregar punto</Text>
+            </Pressable>
             <Pressable
               onPress={canAccept ? handleAccept : undefined}
               style={[styles.button, styles.acceptButton, !canAccept && styles.buttonDisabled]}
@@ -454,6 +444,17 @@ const styles = StyleSheet.create({
     height: 9,
     borderRadius: 4.5,
     backgroundColor: '#2196F3',
+  },
+  recenterButton: {
+    position: 'absolute',
+    top: tokens.spacing.sm,
+    right: tokens.spacing.sm,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statusOverlay: {
     position: 'absolute',

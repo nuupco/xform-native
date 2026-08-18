@@ -187,6 +187,63 @@ describe('GeoPointWidget', () => {
     expect(mockGeo.Location.watchPositionAsync).toHaveBeenCalled();
   });
 
+  it('REGRESSION: manual tap overrides live GPS on Accept', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const answerSpy = jest.spyOn(store, 'answerQuestion');
+    await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    // Live GPS fix lands (from the mock's synchronous watchPositionAsync callback)
+    // AND the surveyor taps the map to place a manual pin at a different spot.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-maplibre-map'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-accept-button'));
+    });
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    const committed = answerSpy.mock.calls[0]![1] as { lat: number; lon: number };
+    // The mock map-press fires lngLat [-99.2, 19.5]; the live GPS fix from the
+    // mock is lat 19.4326/lon -99.1332. The tapped point must win.
+    expect(mockGeo.Location.watchPositionAsync).toHaveBeenCalled();
+    expect(committed.lat).toBeCloseTo(19.5);
+    expect(committed.lon).toBeCloseTo(-99.2);
+  });
+
+  it('shows permission-denied status text (no spinner) when GPS permission is denied', async () => {
+    mockGeo.Location.requestForegroundPermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    expect(screen.getByText('Sin permiso de ubicación')).toBeTruthy();
+  });
+
+  it('shows live accuracy readout once a GPS fix lands', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    expect(screen.getByText(/±5(\.0)? m/)).toBeTruthy();
+  });
+
   it('unmounting mid-GPS-capture does not set state after unmount', async () => {
     const store = makeStore();
     store.stepForward();
