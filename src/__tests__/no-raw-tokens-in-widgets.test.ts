@@ -22,6 +22,7 @@ const KNOWN_UNMIGRATED: string[] = [
   'GeoPointWidget.tsx',
   'GeoShapeWidget.tsx',
   'GeoTraceWidget.tsx',
+  'primitives/GeoMapChrome.tsx',
   'primitives/PressableButton.tsx',
   'primitives/Icon.tsx',
   'primitives/SelectionRow.tsx',

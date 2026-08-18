@@ -17,14 +17,19 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { AppModal } from './primitives/Modal';
-import { SafeAreaBottom } from './primitives/SafeAreaBottom';
 import { tokens } from '../tokens/tokens';
 import { useGeoGps } from './primitives/useGeoGps';
+import {
+  GeoMapChrome,
+  MapActionButton,
+  GpsStatusPill,
+  PrewarmStatusPill,
+  GeoActionBar,
+} from './primitives/GeoMapChrome';
 
 interface GeoPoint {
   lat: number;
@@ -257,7 +262,7 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
         animationType="slide"
       >
         <View style={styles.modalContent}>
-          <View style={styles.mapContainer}>
+          <GeoMapChrome>
             <MapLibre.Map
               style={styles.map}
               mapStyle={OSM_STYLE}
@@ -302,80 +307,32 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
               )}
             </MapLibre.Map>
 
-            <Pressable
+            <MapActionButton
+              icon="⊙"
               onPress={handleRecenter}
-              style={styles.recenterButton}
+              style={styles.recenterButtonPosition}
               testID="geo-recenter-button"
               disabled={!currentPoint}
-            >
-              <Text style={styles.buttonText}>⊙</Text>
-            </Pressable>
+            />
 
-            <Pressable
+            <MapActionButton
+              icon="⤓"
               onPress={handlePrewarm}
-              style={styles.prewarmButton}
+              style={styles.prewarmButtonPosition}
               testID="geo-prewarm-button"
               disabled={prewarmStatus === 'running'}
-            >
-              <Text style={styles.buttonText}>⤓</Text>
-            </Pressable>
+            />
 
-            <View style={styles.statusOverlay} pointerEvents="none">
-              {(gps.status === 'requesting' || gps.status === 'acquiring') && (
-                <ActivityIndicator size="small" />
-              )}
-              <Text style={styles.statusText}>
-                {gps.status === 'denied'
-                  ? 'Sin permiso de ubicación'
-                  : gps.status === 'error'
-                    ? 'No se pudo obtener la ubicación'
-                    : gps.status === 'tracking' && currentPoint
-                      ? `GPS ±${currentPoint.acc.toFixed(1)} m`
-                      : 'Adquiriendo señal GPS…'}
-              </Text>
-            </View>
+            <GpsStatusPill status={gps.status} accuracyM={currentPoint?.acc} />
 
-            {prewarmStatus !== 'idle' && (
-              <View style={styles.prewarmStatusOverlay} pointerEvents="none">
-                <Text style={styles.statusText} testID="geo-prewarm-status">
-                  {prewarmStatus === 'running'
-                    ? 'Descargando mapas sin conexión…'
-                    : prewarmStatus === 'cap'
-                      ? 'Límite de almacenamiento alcanzado'
-                      : prewarmStatus === 'error'
-                        ? 'No se pudieron descargar los mapas'
-                        : 'Mapas descargados para uso sin conexión'}
-                </Text>
-              </View>
-            )}
-          </View>
+            <PrewarmStatusPill status={prewarmStatus} testID="geo-prewarm-status" />
+          </GeoMapChrome>
 
-          <SafeAreaBottom style={styles.buttonRow}>
-            {tappedPoint && (
-              <Pressable
-                onPress={handleUndo}
-                style={[styles.button, styles.undoButton]}
-                testID="geo-undo-button"
-              >
-                <Text style={styles.buttonText}>Undo</Text>
-              </Pressable>
-            )}
-            <Pressable
-              onPress={canAccept ? handleAccept : undefined}
-              style={[styles.button, styles.acceptButton, !canAccept && styles.buttonDisabled]}
-              disabled={!canAccept}
-              testID="geo-accept-button"
-            >
-              <Text style={styles.buttonText}>Accept</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleCancel}
-              style={[styles.button, styles.cancelButton]}
-              testID="geo-cancel-button"
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </Pressable>
-          </SafeAreaBottom>
+          <GeoActionBar
+            undo={tappedPoint ? { onPress: handleUndo, testID: 'geo-undo-button' } : undefined}
+            accept={{ onPress: handleAccept, disabled: !canAccept, testID: 'geo-accept-button' }}
+            cancel={{ onPress: handleCancel, testID: 'geo-cancel-button' }}
+          />
         </View>
       </AppModal>
     </View>
@@ -390,16 +347,7 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.sm,
     color: tokens.color.text,
   },
-  button: {
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-  },
-  buttonText: {
-    color: tokens.color.text,
-    fontSize: tokens.font.sm,
-  },
-  // Confirmed on-device: the trigger used styles.button, whose
+  // Confirmed on-device: the trigger used a surface-colored button, whose
   // backgroundColor (tokens.color.surface, #F5F5F5) is the SAME color the
   // host app uses for its page background — zero contrast made the button
   // render as plain unstyled text. Use the primary color (matching the
@@ -417,30 +365,10 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.sm,
     fontWeight: '600',
   },
-  acceptButton: {
-    backgroundColor: tokens.color.primary,
-    flex: 1,
-  },
-  cancelButton: {
-    backgroundColor: tokens.color.error,
-    flex: 1,
-  },
-  undoButton: {
-    backgroundColor: tokens.color.surface,
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
   modalContent: {
     flex: 1,
     width: '100%',
     gap: tokens.spacing.md,
-  },
-  mapContainer: {
-    flex: 1,
-    width: '100%',
-    borderRadius: tokens.radius.md,
-    overflow: 'hidden',
   },
   map: {
     flex: 1,
@@ -468,58 +396,14 @@ const styles = StyleSheet.create({
     borderRadius: 4.5,
     backgroundColor: '#2196F3',
   },
-  recenterButton: {
-    position: 'absolute',
+  // Position-only overrides layered onto GeoMapChrome's MapActionButton
+  // (extraction-only escape hatch — see GeoMapChrome.tsx docblock).
+  recenterButtonPosition: {
     top: tokens.spacing.sm,
     right: tokens.spacing.sm,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  statusOverlay: {
-    position: 'absolute',
-    bottom: tokens.spacing.sm,
-    left: tokens.spacing.sm,
-    right: tokens.spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.spacing.xs,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.xs,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: tokens.font.sm,
-  },
-  // Stacked directly under the recenter button, same size/style — functional
-  // "download tiles for offline use" trigger, no visual redesign (see design
-  // non-goals: MD3 restyle is explicitly shelved).
-  prewarmButton: {
-    position: 'absolute',
+  prewarmButtonPosition: {
     top: tokens.spacing.sm + 44,
     right: tokens.spacing.sm,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  prewarmStatusOverlay: {
-    position: 'absolute',
-    bottom: tokens.spacing.sm + 44,
-    left: tokens.spacing.sm,
-    right: tokens.spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.xs,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: tokens.spacing.sm,
   },
 });
