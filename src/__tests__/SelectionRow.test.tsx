@@ -101,6 +101,47 @@ describe('SelectionRow', () => {
     );
     expect(getByText('Custom content')).toBeTruthy();
   });
+
+  it('defaults to density "default" — 56dp min height, full-width stretch', async () => {
+    const { getByTestId } = await render(
+      <SelectionRow testID="row-1" control="radio" selected={false} label="Option A" onPress={() => {}} />
+    );
+    const row = flatten(getByTestId('row-1').props.style);
+    expect(row.minHeight).toBe(56);
+    expect(row.alignSelf).toBe('stretch');
+  });
+
+  it('density "pack" renders a shorter 40dp min-height row (SelectOne columns-pack)', async () => {
+    const { getByTestId } = await render(
+      <SelectionRow
+        testID="row-1"
+        control="radio"
+        selected={false}
+        label="Option A"
+        onPress={() => {}}
+        density="pack"
+      />
+    );
+    const row = flatten(getByTestId('row-1').props.style);
+    expect(row.minHeight).toBe(40);
+  });
+
+  it('density "likert" renders a compact, non-stretched cell (SelectOne likert row)', async () => {
+    const { getByTestId } = await render(
+      <SelectionRow
+        testID="row-1"
+        control="radio"
+        selected={false}
+        label="Option A"
+        onPress={() => {}}
+        density="likert"
+      />
+    );
+    const row = flatten(getByTestId('row-1').props.style);
+    expect(row.minHeight).toBe(48);
+    expect(row.minWidth).toBe(64);
+    expect(row.alignSelf).not.toBe('stretch');
+  });
 });
 
 describe('SelectionIndicator', () => {

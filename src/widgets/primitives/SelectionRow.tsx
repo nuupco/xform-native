@@ -130,6 +130,8 @@ export function SelectionIndicator({
   );
 }
 
+export type SelectionRowDensity = 'default' | 'pack' | 'likert';
+
 export interface SelectionRowProps {
   control: SelectionControl;
   selected: boolean;
@@ -140,6 +142,13 @@ export interface SelectionRowProps {
   accessibilityRole?: 'radio' | 'checkbox' | 'button';
   theme?: Theme;
   children?: React.ReactNode;
+  /**
+   * Row density (deferred from PR3, needed by SelectOne's compact variants —
+   * PR6): 'default' is the full-width 56dp row; 'pack' is a shorter 40dp row
+   * (SelectOne columns-pack); 'likert' is a compact, non-stretched cell with
+   * the label stacked above the indicator (SelectOne likert row).
+   */
+  density?: SelectionRowDensity;
 }
 
 /**
@@ -158,30 +167,47 @@ export function SelectionRow({
   accessibilityRole,
   theme,
   children,
+  density = 'default',
 }: SelectionRowProps) {
   const contextTheme = useTheme();
   const t = theme ?? contextTheme;
+  const isLikert = density === 'likert';
 
   const rowStyle: StyleProp<ViewStyle> = {
-    minHeight: 56,
-    alignSelf: 'stretch',
-    paddingHorizontal: t.spacing.md,
-    ...(selected ? { backgroundColor: selectedRowBackground(t) } : null),
+    ...(density === 'pack'
+      ? { minHeight: 40, alignSelf: 'stretch', paddingHorizontal: t.spacing.sm }
+      : isLikert
+        ? { minHeight: 48, minWidth: 64, paddingHorizontal: t.spacing.xs }
+        : { minHeight: 56, alignSelf: 'stretch', paddingHorizontal: t.spacing.md }),
+    ...(selected && !isLikert ? { backgroundColor: selectedRowBackground(t) } : null),
     ...(disabled ? { opacity: t.disabled.contentOpacity } : null),
   };
 
-  const contentStyle: ViewStyle = {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: t.spacing.sm,
-  };
+  const contentStyle: ViewStyle = isLikert
+    ? {
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: t.spacing.xs,
+      }
+    : {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: t.spacing.sm,
+      };
 
-  const labelStyle: TextStyle = {
-    ...t.typography.bodyLarge,
-    color: t.color.roles.onSurface,
-    flexShrink: 1,
-  };
+  const labelStyle: TextStyle = isLikert
+    ? {
+        ...t.typography.bodySmall,
+        color: t.color.roles.onSurface,
+        textAlign: 'center',
+      }
+    : {
+        ...t.typography.bodyLarge,
+        color: t.color.roles.onSurface,
+        flexShrink: 1,
+      };
 
   return (
     <Pressable
@@ -193,12 +219,17 @@ export function SelectionRow({
       accessibilityState={{ selected, disabled }}
     >
       <View style={contentStyle}>
-        {children ?? (
+        {children ?? (isLikert ? (
+          <>
+            {label !== undefined && <Text style={labelStyle}>{label}</Text>}
+            <SelectionIndicator control={control} selected={selected} theme={t} />
+          </>
+        ) : (
           <>
             <SelectionIndicator control={control} selected={selected} theme={t} />
             {label !== undefined && <Text style={labelStyle}>{label}</Text>}
           </>
-        )}
+        ))}
       </View>
     </Pressable>
   );
