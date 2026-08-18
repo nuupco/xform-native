@@ -139,7 +139,7 @@ describe('Form component', () => {
       values: {},
     });
     await render(<Form store={store} />);
-    expect(screen.getByText('Beginning of Form')).toBeTruthy();
+    expect(screen.getByText('Inicio del formulario')).toBeTruthy();
     expect(screen.getByTestId('bof-start-button')).toBeTruthy();
   });
 
@@ -192,7 +192,7 @@ describe('Form component', () => {
     });
     store.stepForward();
     await render(<Form store={store} />);
-    expect(screen.getByText('Form Complete')).toBeTruthy();
+    expect(screen.getByText('Formulario completo')).toBeTruthy();
   });
 
   it('blocks advance and shows constraint message on constraint violation', async () => {
@@ -743,7 +743,7 @@ describe('Form e2e cascade', () => {
   it('full navigation flow: bof → questions → eof', async () => {
     const store = makeRealStore(E2E_XML);
     await render(<Form store={store} />);
-    expect(screen.getByText('Beginning of Form')).toBeTruthy();
+    expect(screen.getByText('Inicio del formulario')).toBeTruthy();
 
     await act(async () => {
       fireEvent.press(screen.getByTestId('bof-start-button'));
@@ -777,7 +777,7 @@ describe('Form e2e cascade', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('nav-next'));
     });
-    expect(screen.getByText('Form Complete')).toBeTruthy();
+    expect(screen.getByText('Formulario completo')).toBeTruthy();
   });
 
   it('relevance skip: field hidden when age &lt; 18', async () => {
@@ -990,7 +990,7 @@ describe('Form e2e — repeat-instance-creation (T4)', () => {
     });
 
     // No instance created — moved on to end of form.
-    expect(screen.getByText('Form Complete')).toBeTruthy();
+    expect(screen.getByText('Formulario completo')).toBeTruthy();
   });
 });
 
@@ -1143,7 +1143,7 @@ describe('Form — REQ-3 auto-skip unlabeled groups', () => {
       values: {},
     });
     await render(<Form store={store} />);
-    expect(screen.getByText('Beginning of Form')).toBeTruthy();
+    expect(screen.getByText('Inicio del formulario')).toBeTruthy();
   });
 
   it('scenario 6: consecutive unlabeled groups skipped forward in one navigation action', async () => {
@@ -1226,7 +1226,7 @@ describe('Form — REQ-3 auto-skip unlabeled groups', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('nav-back'));
     });
-    expect(screen.getByText('Beginning of Form')).toBeTruthy();
+    expect(screen.getByText('Inicio del formulario')).toBeTruthy();
     // One explicit stepBackward (q1 -> g1) + one auto-skip stepBackward
     // (g1 -> bof) = 2. No further backward step is attempted past bof.
     expect(spy).toHaveBeenCalledTimes(2);

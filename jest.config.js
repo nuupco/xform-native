@@ -16,6 +16,7 @@ module.exports = {
       },
     ],
   },
+  setupFiles: ['<rootDir>/src/test-support/animatedNativeDriverStub.ts'],
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@nuup/|test-renderer)/)',
   ],
