@@ -5,14 +5,19 @@
  *   selectOne value = string (a single choice token).
  *   store.answerQuestion receives the token string directly.
  *
- * Variants (ADR-3 selectOne):
- *   default      → radio-style list (Pressable per option)
- *   minimal      → bottom-sheet dropdown (BottomSheet primitive)
- *   likert       → horizontal row of labeled radio Pressables
- *   autocomplete → same as minimal-autocomplete (trigger + BottomSheet search)
- *   columns      → multi-column FlatList with numColumns={2}
- *   columns-pack → compact multi-column FlatList
- *   quick        → horizontal ScrollView of chip/tag Pressables
+ * Variants (ADR-3 selectOne, 7 render branches — resolveVariant untouched):
+ *   default      → radio-style list, SelectionRow (control:'radio')
+ *   minimal      → bottom-sheet dropdown (BottomSheet + SelectionRow rows)
+ *   autocomplete → minimal + a filled pill search bar (SearchIcon) on top
+ *                  of the BottomSheet's SelectionRow rows ("search" appearance
+ *                  alias resolves here — spec's "SelectOne search variant")
+ *   likert       → horizontal row of SelectionRow cells (density: 'likert')
+ *   columns      → multi-column FlatList, SelectionRow (default density)
+ *   columns-pack → compact multi-column FlatList, SelectionRow (density: 'pack')
+ *   quick        → horizontal ScrollView of chip/tag Pressables (unchanged
+ *                  chrome — a chip is not a row, kept off SelectionRow per
+ *                  the design doc's own per-widget key list: quickChip/
+ *                  quickChipSelected stay distinct from the row primitive)
  */
 
 import { useState, useMemo } from 'react';
@@ -26,8 +31,11 @@ import {
   TextInput,
 } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
 import { resolveVariant } from './appearance';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { createFieldStyles } from './primitives/fieldStyles';
+import { SelectionRow } from './primitives/SelectionRow';
+import { SearchIcon } from './primitives/Icon';
 import { BottomSheet } from './primitives/BottomSheet';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
@@ -39,7 +47,82 @@ export interface SelectOneWidgetProps {
   appearance?: string | null;
 }
 
+function createStyles(t: Theme) {
+  const f = createFieldStyles(t);
+  return StyleSheet.create({
+    container: {
+      marginVertical: t.spacing.xs,
+    },
+    dropdownTrigger: {
+      ...f.field,
+    },
+    dropdownTriggerText: {
+      ...f.fieldText,
+    },
+    // Search bar (spec: "SelectOne Widget (incl. search variant) ... fixed
+    // filled search bar with magnifying-glass icon, pill radius, on top").
+    searchBar: {
+      ...f.fieldRow,
+      paddingHorizontal: t.spacing.md,
+      marginBottom: t.spacing.xs,
+    },
+    searchInput: {
+      ...f.field,
+      ...f.fieldText,
+      flex: 1,
+      borderRadius: t.radius.pill,
+      backgroundColor: t.color.roles.surfaceVariant,
+      borderWidth: 0,
+    },
+    // likert
+    likertRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'flex-start',
+      marginVertical: t.spacing.sm,
+    },
+    // columns
+    columnsCell: {
+      flex: 1,
+      margin: 4,
+      minWidth: '40%',
+    },
+    columnsPackCell: {
+      flex: 1,
+      margin: 2,
+      minWidth: '40%',
+    },
+    // quick (unchanged chrome — chip design, not a SelectionRow)
+    quickRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 44,
+    },
+    quickChip: {
+      paddingVertical: t.spacing.xs,
+      paddingHorizontal: t.spacing.md,
+      marginHorizontal: t.spacing.xs,
+      borderRadius: t.radius.lg,
+      borderWidth: 1,
+      borderColor: t.color.roles.outline,
+      backgroundColor: t.color.roles.surface,
+    },
+    quickChipSelected: {
+      backgroundColor: t.color.roles.primary,
+      borderColor: t.color.roles.primary,
+    },
+    quickChipLabel: {
+      ...t.typography.bodyLarge,
+      color: t.color.roles.onSurface,
+    },
+    quickChipLabelSelected: {
+      color: t.color.roles.onPrimary,
+    },
+  });
+}
+
 export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const choices = store.adapter.getChoices(nodeRef);
@@ -85,14 +168,14 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
         </Pressable>
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-one-sheet">
           {choices.map((choice, index) => (
-            <Pressable
+            <SelectionRow
               key={`${choice.value}__${index}`}
               testID={`select-one-option-${choice.value}`}
-              style={styles.option}
+              control="radio"
+              selected={choice.value === currentValue}
+              label={choice.label ?? choice.value}
               onPress={() => handleSelect(choice.value)}
-            >
-              <Text style={styles.optionLabel}>{choice.label ?? choice.value}</Text>
-            </Pressable>
+            />
           ))}
         </BottomSheet>
       </View>
@@ -114,23 +197,26 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           </Text>
         </Pressable>
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-one-sheet">
-          <TextInput
-            testID="select-one-minimal-autocomplete-search"
-            style={styles.autocompleteInput}
-            value={query}
-            onChangeText={setQuery}
-            editable={!isReadonly}
-            placeholder="Search…"
-          />
+          <View style={styles.searchBar}>
+            <SearchIcon testID="select-one-search-icon" />
+            <TextInput
+              testID="select-one-minimal-autocomplete-search"
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              editable={!isReadonly}
+              placeholder="Search…"
+            />
+          </View>
           {filtered.map((choice, index) => (
-            <Pressable
+            <SelectionRow
               key={`${choice.value}__${index}`}
               testID={`select-one-option-${choice.value}`}
-              style={styles.option}
+              control="radio"
+              selected={choice.value === currentValue}
+              label={choice.label ?? choice.value}
               onPress={() => handleSelect(choice.value)}
-            >
-              <Text style={styles.optionLabel}>{choice.label ?? choice.value}</Text>
-            </Pressable>
+            />
           ))}
         </BottomSheet>
       </View>
@@ -141,22 +227,18 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
     return (
       <View style={styles.container}>
         <View testID="select-one-likert-container" style={styles.likertRow}>
-          {choices.map((choice, index) => {
-            const isSelected = choice.value === currentValue;
-            return (
-              <Pressable
-                key={`${choice.value}__${index}`}
-                testID={`select-one-likert-option-${choice.value}`}
-                style={styles.likertCell}
-                onPress={() => handleSelect(choice.value)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <Text style={styles.likertLabel}>{choice.label ?? choice.value}</Text>
-                <View style={[styles.likertRadio, isSelected && styles.likertRadioSelected]} />
-              </Pressable>
-            );
-          })}
+          {choices.map((choice, index) => (
+            <SelectionRow
+              key={`${choice.value}__${index}`}
+              testID={`select-one-likert-option-${choice.value}`}
+              control="radio"
+              density="likert"
+              selected={choice.value === currentValue}
+              label={choice.label ?? choice.value}
+              disabled={isReadonly}
+              onPress={() => handleSelect(choice.value)}
+            />
+          ))}
         </View>
       </View>
     );
@@ -170,21 +252,18 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           data={choices}
           keyExtractor={(item, index) => `${item.value}__${index}`}
           numColumns={2}
-          renderItem={({ item }) => {
-            const isSelected = item.value === currentValue;
-            return (
-              <Pressable
+          renderItem={({ item }) => (
+            <View style={styles.columnsCell}>
+              <SelectionRow
                 testID={`select-one-columns-option-${item.value}`}
-                style={[styles.columnsOption, isSelected && styles.columnsOptionSelected]}
+                control="radio"
+                selected={item.value === currentValue}
+                label={item.label ?? item.value}
+                disabled={isReadonly}
                 onPress={() => handleSelect(item.value)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <View style={[styles.radio, isSelected && styles.radioSelected]} />
-                <Text style={styles.columnsOptionLabel}>{item.label ?? item.value}</Text>
-              </Pressable>
-            );
-          }}
+              />
+            </View>
+          )}
         />
       </View>
     );
@@ -198,21 +277,19 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           data={choices}
           keyExtractor={(item, index) => `${item.value}__${index}`}
           numColumns={2}
-          renderItem={({ item }) => {
-            const isSelected = item.value === currentValue;
-            return (
-              <Pressable
+          renderItem={({ item }) => (
+            <View style={styles.columnsPackCell}>
+              <SelectionRow
                 testID={`select-one-columns-pack-option-${item.value}`}
-                style={[styles.columnsPackOption, isSelected && styles.columnsPackOptionSelected]}
+                control="radio"
+                density="pack"
+                selected={item.value === currentValue}
+                label={item.label ?? item.value}
+                disabled={isReadonly}
                 onPress={() => handleSelect(item.value)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-              >
-                <View style={[styles.radioSmall, isSelected && styles.radioSelected]} />
-                <Text style={styles.columnsPackOptionLabel}>{item.label ?? item.value}</Text>
-              </Pressable>
-            );
-          }}
+              />
+            </View>
+          )}
         />
       </View>
     );
@@ -252,181 +329,17 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
   // default (radio-style) — fallback for unrecognized variants
   return (
     <View style={styles.container}>
-      {choices.map((choice, index) => {
-        const isSelected = choice.value === currentValue;
-        return (
-          <Pressable
-            key={`${choice.value}__${index}`}
-            testID={`select-one-option-${choice.value}`}
-            style={[styles.option, isSelected && styles.optionSelected]}
-            onPress={() => handleSelect(choice.value)}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: isSelected, disabled: isReadonly }}
-          >
-            <View style={[styles.radio, isSelected && styles.radioSelected]} />
-            <Text style={styles.optionLabel}>{choice.label ?? choice.value}</Text>
-          </Pressable>
-        );
-      })}
+      {choices.map((choice, index) => (
+        <SelectionRow
+          key={`${choice.value}__${index}`}
+          testID={`select-one-option-${choice.value}`}
+          control="radio"
+          selected={choice.value === currentValue}
+          label={choice.label ?? choice.value}
+          disabled={isReadonly}
+          onPress={() => handleSelect(choice.value)}
+        />
+      ))}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: tokens.spacing.xs,
-  },
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 40,
-    marginVertical: 2,
-    borderRadius: tokens.radius.sm,
-  },
-  optionSelected: {
-    backgroundColor: tokens.color.surface,
-  },
-  optionLabel: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    marginLeft: tokens.spacing.sm,
-  },
-  radio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: tokens.color.text,
-  },
-  radioSelected: {
-    borderColor: tokens.color.primary,
-    backgroundColor: tokens.color.primary,
-  },
-  dropdownTrigger: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    backgroundColor: tokens.color.background,
-  },
-  dropdownTriggerText: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-  },
-  // likert
-  likertRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-    marginVertical: tokens.spacing.sm,
-  },
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  likertCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    minWidth: 64,
-  },
-  likertLabel: {
-    fontSize: tokens.font.sm,
-    color: tokens.color.text,
-    textAlign: 'center',
-    marginBottom: tokens.spacing.xs,
-  },
-  likertRadio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: tokens.color.text,
-  },
-  likertRadioSelected: {
-    borderColor: tokens.color.primary,
-    backgroundColor: tokens.color.primary,
-  },
-  // autocomplete (used by both 'autocomplete' and 'minimal-autocomplete',
-  // rendered inside BottomSheet's own bounded/scrollable content)
-  autocompleteInput: {
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    borderRadius: tokens.radius.sm,
-    padding: tokens.spacing.sm,
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    backgroundColor: tokens.color.background,
-    marginBottom: tokens.spacing.xs,
-  },
-  // columns
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  columnsOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-    margin: 4,
-    borderRadius: tokens.radius.sm,
-    minWidth: '40%',
-  },
-  columnsOptionSelected: {
-    backgroundColor: tokens.color.surface,
-  },
-  columnsOptionLabel: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    marginLeft: tokens.spacing.sm,
-  },
-  // columns-pack
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  columnsPackOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 32,
-    margin: 2,
-    borderRadius: tokens.radius.sm,
-    minWidth: '40%',
-  },
-  columnsPackOptionSelected: {
-    backgroundColor: tokens.color.surface,
-  },
-  columnsPackOptionLabel: {
-    fontSize: tokens.font.sm,
-    color: tokens.color.text,
-    marginLeft: tokens.spacing.xs,
-  },
-  radioSmall: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: tokens.color.text,
-  },
-  // quick
-  // RN 0.85 Fabric: padding must not share a node with centering/minWidth (collapses Text)
-  quickRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-  },
-  quickChip: {
-    paddingVertical: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.md,
-    marginHorizontal: tokens.spacing.xs,
-    borderRadius: tokens.radius.lg,
-    borderWidth: 1,
-    borderColor: tokens.color.text,
-    backgroundColor: tokens.color.background,
-  },
-  quickChipSelected: {
-    backgroundColor: tokens.color.primary,
-    borderColor: tokens.color.primary,
-  },
-  quickChipLabel: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-  },
-  quickChipLabelSelected: {
-    color: tokens.color.background,
-  },
-});
