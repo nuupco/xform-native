@@ -99,12 +99,21 @@ describe('Form — WidgetErrorBoundary integration', () => {
 
     expect(screen.queryByText('Broken Question')).toBeTruthy();
     expect(screen.getByTestId('nav-next')).toBeTruthy();
+    expect(screen.getByTestId('nav-back')).toBeTruthy();
+    expect(screen.getByTestId('widget-error-fallback')).toBeTruthy();
+    expect(screen.getByText('Esta pregunta no se pudo mostrar')).toBeTruthy();
+    // refToString() renders the fake navigator's TreeReference for /data/bad
+    // as "data[0]/bad[0]" (index-qualified path segments) — this is the real
+    // production format, not a raw path string.
+    expect(screen.getByText('data[0]/bad[0]')).toBeTruthy();
 
     await act(async () => {
       fireEvent.press(screen.getByTestId('nav-next'));
     });
     expect(screen.getByText('Good Question')).toBeTruthy();
     expect(screen.getByTestId('string-input')).toBeTruthy();
+    expect(screen.getByTestId('nav-back')).toBeTruthy();
+    expect(screen.getByTestId('nav-next')).toBeTruthy();
     errorSpy.mockRestore();
   });
 });
