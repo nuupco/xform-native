@@ -131,6 +131,19 @@ export type { ElevationLevel as ElevationStyleLevel } from './theme/elevationSty
 export { PressableButton } from './widgets/primitives/PressableButton';
 export type { PressableButtonProps } from './widgets/primitives/PressableButton';
 
+// campo-phase3-pr3: SelectionRow/SelectionIndicator + SegmentedButton primitives
+export { SelectionRow, SelectionIndicator } from './widgets/primitives/SelectionRow';
+export type {
+  SelectionControl,
+  SelectionRowProps,
+  SelectionIndicatorProps,
+} from './widgets/primitives/SelectionRow';
+export { SegmentedButton } from './widgets/primitives/SegmentedButton';
+export type {
+  SegmentedButtonProps,
+  SegmentedButtonOption,
+} from './widgets/primitives/SegmentedButton';
+
 // form-composition-slots: optional render-prop overrides for nav/error/group (D6)
 export type {
   FormSlots,
