@@ -119,7 +119,11 @@ export type { XFormWidgetProps, WidgetOverride, PickWidgetArgs } from './widgets
 // form-theming: mount-time-only ThemeProvider over tokens.ts (D1/D2)
 export { ThemeProvider, useTheme, useThemedStyles } from './theme/ThemeContext';
 export { mergeTheme } from './theme/theme';
-export type { Theme } from './theme/theme';
+export type { Theme, ThemeOverride } from './theme/theme';
+export { mix, luminance, onColor, deriveRoleSet } from './theme/derive';
+export type { Hex, RoleSet } from './theme/derive';
+export type { TypographyRole, Typography } from './tokens/typography';
+export type { ElevationLevel, Elevation } from './tokens/elevation';
 
 // form-composition-slots: optional render-prop overrides for nav/error/group (D6)
 export type {
