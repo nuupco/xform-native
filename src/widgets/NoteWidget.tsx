@@ -7,7 +7,7 @@
 
 import { View, Text, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { tokens } from '../tokens/tokens';
+import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -18,6 +18,7 @@ export interface NoteWidgetProps {
 }
 
 export function NoteWidget({ nodeRef, store }: NoteWidgetProps) {
+  const styles = useThemedStyles(createStyles);
   useFormSession(store);
   const value = store.adapter.resolveValue(nodeRef);
   const text = value != null ? String(value) : '';
@@ -29,17 +30,18 @@ export function NoteWidget({ nodeRef, store }: NoteWidgetProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    paddingVertical: tokens.spacing.sm,
-    paddingHorizontal: tokens.spacing.md,
-    backgroundColor: tokens.color.surface,
-    borderRadius: tokens.radius.sm,
-    marginVertical: tokens.spacing.xs,
-  },
-  text: {
-    fontSize: tokens.font.md,
-    color: tokens.color.text,
-    fontStyle: 'italic',
-  },
-});
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: {
+      paddingVertical: t.spacing.sm,
+      paddingHorizontal: t.spacing.md,
+      backgroundColor: t.color.roles.secondaryContainer,
+      borderRadius: t.radius.md,
+      marginVertical: t.spacing.xs,
+    },
+    text: {
+      ...t.typography.bodyMedium,
+      color: t.color.roles.onSecondaryContainer,
+    },
+  });
+}
