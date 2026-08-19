@@ -24,6 +24,26 @@ import { encodeAnswer } from '../adapter/encodeAnswer';
 
 export type ScriptEventBof = { kind: 'bof' };
 export type ScriptEventEof = { kind: 'eof' };
+
+/**
+ * Fake ancestor-chain metadata (Phase 7 decision 15) — root→leaf order,
+ * one entry per ancestor `group`/`repeat`. Optional on every non-bof/eof
+ * script event. Powers the fake navigator's `resolvePath` so
+ * `createAdapter.getCurrentPath()` (and the corrected group/repeat label
+ * read) can be exercised without a real XForm.
+ *
+ * Caveat: `countRepeatInstances` (used by `getCurrentPath()` to compute a
+ * repeat ancestor's `total`) is the REAL ts-rosa function operating on the
+ * fake's (flat, single-level) tree — it will not find nested instances for
+ * a fake `repeat` ancestor, so `total` for a fake repeat ancestor is
+ * whatever that real function finds against the fake tree (typically 0)
+ * unless the test also builds a matching tree. Tests needing a real,
+ * dynamic repeat `total` should use the real engine instead.
+ */
+export type FakeAncestor =
+  | { kind: 'group'; ref: string; label: string | null }
+  | { kind: 'repeat'; ref: string; label: string | null; countExpr?: string | null };
+
 export type ScriptEventQuestion = {
   kind: 'question';
   ref: string; // XPath string for the ref
@@ -32,23 +52,27 @@ export type ScriptEventQuestion = {
   label: string | null;
   hint: string | null;
   appearance: string | null;
+  ancestors?: readonly FakeAncestor[];
 };
 export type ScriptEventGroup = {
   kind: 'group';
   ref: string;
   label: string | null;
   hint: string | null;
+  ancestors?: readonly FakeAncestor[];
 };
 export type ScriptEventRepeat = {
   kind: 'repeat';
   ref: string;
   label: string | null;
   multiplicity: number;
+  ancestors?: readonly FakeAncestor[];
 };
 export type ScriptEventPromptNewRepeat = {
   kind: 'prompt-new-repeat';
   ref: string;
   label: string | null;
+  ancestors?: readonly FakeAncestor[];
 };
 
 export type ScriptEvent =
@@ -254,8 +278,6 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
       const ev = events[pos >= 0 ? pos : cursor];
       if (ev === undefined) return null;
       if (ev.kind === 'bof' || ev.kind === 'eof') return null;
-      // For non-question events, return label from the script event (test-only)
-      const label = 'label' in ev ? ev.label : null;
       if (ev.kind === 'question') {
         const q = ev;
         return {
@@ -274,16 +296,89 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
           getSubstitutedHintText: () => q.hint,
         };
       }
+      // Phase 7 decision 4/15: mirror the real ts-rosa engine's
+      // getQuestionAtIndex, which returns null for a group/repeat/
+      // prompt-new-repeat leaf (`resolved.element.kind !== "question"` ⇒
+      // null). Non-question labels must be read via resolvePath instead —
+      // see below. Previously this branch faked a label for non-question
+      // events, which is exactly how the container-label bug survived
+      // undetected in the test suite (design "LATENT BUG" finding).
+      return null;
+    },
+
+    // Phase 7 decision 15: minimal resolvePath support so
+    // createAdapter's corrected group/repeat label read
+    // (`resolvePath(fi.path)?.element.labelText`) and `getCurrentPath()`
+    // have something real to call against the fake.
+    //
+    // Simplification: rather than walking a real FormDefinition.body by
+    // elementIndex (the fake has none), this resolves relative to the
+    // CURRENT cursor position's script event and its declared `ancestors`
+    // metadata (root→leaf), keyed by `path.length` rather than by content
+    // identity. This holds because createAdapter only ever calls
+    // `resolvePath` with the current event's own `fi.path`, or a prefix
+    // slice of that same array, within a single call — never with an
+    // unrelated FormIndex's path.
+    resolvePath(path: readonly FormIndexLevel[]): {
+      element: {
+        kind: 'question' | 'group' | 'repeat';
+        labelText: string | null;
+        countExpr: string | null;
+      };
+      parentChain: readonly {
+        kind: 'group' | 'repeat';
+        labelText: string | null;
+        countExpr: string | null;
+      }[];
+      ref: TreeReference;
+    } | null {
+      const ev = events[cursor];
+      if (ev === undefined || ev.kind === 'bof' || ev.kind === 'eof') return null;
+      const ancestors: readonly FakeAncestor[] =
+        'ancestors' in ev && ev.ancestors ? ev.ancestors : [];
+
+      // `fi.path`'s actual length is derived from parseXPath(ev.ref), which
+      // (unlike a real FormDefinition.body walk) includes every XPath
+      // segment, including the leading instance-root segment (e.g. 'data').
+      // `ancestors.length + 1` (ancestors + leaf) is therefore usually
+      // SHORTER than the real `fi.path` for this event by that fixed
+      // `offset`. Compute the offset once from the current event's own
+      // full path so ancestor-prefix lookups (`path.length < full`) still
+      // align correctly regardless of how many leading segments the ref
+      // string happens to carry.
+      const fullPath = formIndices[cursor];
+      const fullLength =
+        fullPath !== undefined && fullPath.kind === 'at' ? fullPath.path.length : ancestors.length + 1;
+      const offset = fullLength - (ancestors.length + 1);
+      if (path.length > fullLength || path.length < 1) return null;
+
+      const toElement = (a: FakeAncestor) => ({
+        kind: a.kind,
+        labelText: a.label,
+        countExpr: a.kind === 'repeat' ? (a.countExpr ?? null) : null,
+      });
+
+      if (path.length === fullLength) {
+        const leafElement =
+          ev.kind === 'question'
+            ? { kind: 'question' as const, labelText: ev.label, countExpr: null }
+            : ev.kind === 'group'
+              ? { kind: 'group' as const, labelText: ev.label, countExpr: null }
+              : { kind: 'repeat' as const, labelText: ev.label, countExpr: null };
+        return {
+          element: leafElement,
+          parentChain: ancestors.map(toElement),
+          ref: parseXPath(ev.ref),
+        };
+      }
+
+      const idx = path.length - 1 - offset;
+      const ancestor = ancestors[idx];
+      if (ancestor === undefined) return null;
       return {
-        getLabelInnerText: () => label as string | null,
-        getControlType: () => 'input',
-        getDataType: () => null,
-        getHintText: () => null,
-        getRangeBounds: () => null,
-        getAppearance: () => null,
-        getMediatype: () => null,
-        getQuestionText: () => label as string | null,
-        getSubstitutedHintText: () => null,
+        element: toElement(ancestor),
+        parentChain: ancestors.slice(0, idx).map(toElement),
+        ref: parseXPath(ancestor.ref),
       };
     },
   };
