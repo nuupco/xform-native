@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, Text, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { AnswerResult, refToString } from '@nuup/ts-rosa';
 import { useFormSession } from '../store/useFormSession';
 import { resolveWidget, useWidgetOverrides, type WidgetOverride } from '../widgets/registry';
@@ -23,6 +23,7 @@ import {
   WidgetErrorFallback,
 } from './surfaces';
 import { NavRow } from './NavRow';
+import { SectionIndicator } from './SectionIndicator';
 import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 import { renderSlot, type FormSlots } from './slots';
 import {
@@ -272,17 +273,16 @@ export function Form({
           ),
         });
       case 'repeat':
-        // ev.multiplicity is the 0-based index of the instance you're
-        // currently landing on, not a total count — landing on the first
-        // (auto-created) instance is multiplicity 0, so +1 to display it as
-        // "how many entries exist so far" instead of reading as "created
-        // nothing" when the engine actually created one correctly.
+        // The old "Entries: N" line (ev.multiplicity + 1) was deleted here
+        // (Phase 7 decision 14): it was English in an otherwise-Spanish UI,
+        // it was not actually a total (its own comment used to admit that),
+        // and SectionIndicator now shows the same information correctly
+        // ("Parcela 2 de 4") on every screen, not only this one.
         return renderSlot(slots?.renderGroup, {
           event: ev,
           defaultElement: (
             <View collapsable={false}>
               <LabelHint label={ev.label} hint={null} />
-              <Text testID="repeat-multiplicity">Entries: {ev.multiplicity + 1}</Text>
             </View>
           ),
         });
@@ -299,6 +299,14 @@ export function Form({
   }
 
   const showNav = event.kind !== 'bof' && event.kind !== 'eof';
+  // Section/repeat position indicator (Phase 7 decisions 7, 8): default-on,
+  // rendered at the top of the scroll content for every "in-form" event
+  // kind (same set as `showNav` — never bof/eof). `getCurrentPath()` itself
+  // returns [] for a flat top-level question, and `SectionIndicator` (or a
+  // host's own `renderSectionIndicator` override) renders nothing for an
+  // empty path, so no extra "is there anything to show" gating is needed
+  // beyond `showNav`.
+  const sectionPath = showNav ? store.adapter.getCurrentPath() : [];
 
   return (
     <View style={styles.container} collapsable={false}>
@@ -313,6 +321,11 @@ export function Form({
         contentContainerStyle={styles.contentScrollInner}
         keyboardShouldPersistTaps="handled"
       >
+        {showNav &&
+          renderSlot(slots?.renderSectionIndicator, {
+            path: sectionPath,
+            defaultElement: <SectionIndicator path={sectionPath} />,
+          })}
         {renderContent()}
       </ScrollView>
       {showNav &&
