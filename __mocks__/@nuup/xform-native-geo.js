@@ -16,7 +16,12 @@ let watchCallback = null;
 
 const Location = {
   Accuracy: { BestForNavigation: 6 },
-  requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  requestForegroundPermissionsAsync: jest
+    .fn()
+    .mockResolvedValue({ status: 'granted', granted: true, canAskAgain: true, expires: 'never' }),
+  getForegroundPermissionsAsync: jest
+    .fn()
+    .mockResolvedValue({ status: 'granted', granted: true, canAskAgain: true, expires: 'never' }),
   getCurrentPositionAsync: jest.fn().mockResolvedValue(mockLocation),
   getLastKnownPositionAsync: jest.fn().mockResolvedValue(mockLocation),
   watchPositionAsync: jest.fn().mockImplementation((_options, callback) => {
