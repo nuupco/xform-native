@@ -32,10 +32,22 @@ const Video = jest.fn().mockImplementation((props) => {
   });
 });
 
+const grantedPermission = {
+  status: 'granted',
+  granted: true,
+  canAskAgain: true,
+  expires: 'never',
+};
+
+const getPermissionsAsync = jest.fn().mockResolvedValue(grantedPermission);
+const requestPermissionsAsync = jest.fn().mockResolvedValue(grantedPermission);
+
 const Audio = {
   Recording,
   Sound,
   RecordingOptionsPresets,
+  getPermissionsAsync,
+  requestPermissionsAsync,
 };
 
 module.exports = {

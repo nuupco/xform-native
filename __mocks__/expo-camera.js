@@ -37,14 +37,30 @@ const CameraView = React.forwardRef((props, ref) => {
   });
 });
 
+const grantedPermission = {
+  status: 'granted',
+  granted: true,
+  canAskAgain: true,
+  expires: 'never',
+};
+
 const useCameraPermissions = jest.fn().mockReturnValue([
-  { granted: true },
-  jest.fn().mockResolvedValue({ granted: true }),
+  grantedPermission,
+  jest.fn().mockResolvedValue(grantedPermission),
 ]);
+
+const getCameraPermissionsAsync = jest.fn().mockResolvedValue(grantedPermission);
+const requestCameraPermissionsAsync = jest.fn().mockResolvedValue(grantedPermission);
+const getMicrophonePermissionsAsync = jest.fn().mockResolvedValue(grantedPermission);
+const requestMicrophonePermissionsAsync = jest.fn().mockResolvedValue(grantedPermission);
 
 module.exports = {
   CameraView,
   useCameraPermissions,
+  getCameraPermissionsAsync,
+  requestCameraPermissionsAsync,
+  getMicrophonePermissionsAsync,
+  requestMicrophonePermissionsAsync,
   __mockRecordAsync: mockRecordAsync,
   __mockStopRecording: mockStopRecording,
   __triggerBarcode: (data) => {
