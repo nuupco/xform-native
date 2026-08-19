@@ -10,11 +10,47 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useThemedStyles, type Theme } from '@nuup/xform-native';
 
 import { listPending, flush } from '../services/submissionQueue';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import type { Manifest } from '../services/submissionQueue';
 import type { RootStackParamList } from '../navigation/types';
+import { createScreenStyles } from '../theme/screenStyles';
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+function createStyles(t: Theme) {
+  const screen = createScreenStyles(t);
+  return StyleSheet.create({
+    container: screen.screen,
+    header: screen.header,
+    backButton: screen.backButton,
+    backButtonText: screen.backButtonText,
+    title: screen.headerTitle,
+    sendButton: {
+      backgroundColor: t.color.roles.primaryContainer,
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: t.spacing.xxs,
+      borderRadius: t.radius.md,
+    },
+    sendButtonDisabled: {
+      opacity: t.disabled.contentOpacity,
+    },
+    sendButtonText: {
+      ...t.typography.labelLarge,
+      color: t.color.roles.onPrimaryContainer,
+    },
+    offlineBanner: screen.banner,
+    offlineBannerText: screen.bannerText,
+    centered: screen.centered,
+    emptyText: screen.emptyText,
+    row: screen.listRow,
+    rowInfo: screen.rowInfo,
+    rowTitle: screen.rowTitle,
+    rowMeta: screen.rowMeta,
+  });
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -22,6 +58,7 @@ export function FinalizedScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { isOnline } = useNetworkStatus();
+  const styles = useThemedStyles(createStyles);
 
   const [items, setItems] = useState<Manifest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,93 +159,3 @@ export function FinalizedScreen() {
     </SafeAreaView>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  backButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  sendButton: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  sendButtonDisabled: {
-    opacity: 0.5,
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  offlineBanner: {
-    backgroundColor: '#fff3cd',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ffc107',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  offlineBannerText: {
-    fontSize: 13,
-    color: '#856404',
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  rowInfo: {
-    flex: 1,
-  },
-  rowTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#222',
-  },
-  rowMeta: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
-});

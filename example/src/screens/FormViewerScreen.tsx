@@ -16,14 +16,19 @@ import {
   createFormStore,
   createCancellableFormLoad,
   useFormSession,
+  useThemedStyles,
+  PressableButton,
+  tokens,
   type WidgetOverride,
   type XFormWidgetProps,
   type FormSlots,
   type ValidatorOverride,
   type FormLoadPhase,
   type PhaseTiming,
+  type Theme,
 } from '@nuup/xform-native';
 import { FormLoadingOverlay } from '../components/FormLoadingOverlay';
+import { createScreenStyles } from '../theme/screenStyles';
 
 // ── Demo: shadcn-lite capability showcase ──────────────────────────────────────
 // These are minimal, functional demonstrations of the 4 additive Form
@@ -111,6 +116,8 @@ export function FormViewerScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'Viewer'>>();
   const { asset, draft } = route.params;
+
+  const styles = useThemedStyles(createStyles);
 
   const storeRef = useRef<FormSessionStore | null>(null);
   const [store, setStore] = useState<FormSessionStore | null>(null);
@@ -341,9 +348,7 @@ export function FormViewerScreen() {
         {!loading && error && (
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => void load()}>
-              <Text style={styles.retryButtonText}>Reintentar</Text>
-            </TouchableOpacity>
+            <PressableButton label="Reintentar" onPress={() => void load()} />
           </View>
         )}
         {!loading && !error && store && (
@@ -363,146 +368,95 @@ export function FormViewerScreen() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  backButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  saveDraftButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  saveDraftButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  finalizeButton: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  finalizeButtonText: {
-    color: '#1976d2',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  staleBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff3cd',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ffc107',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  staleBannerText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#856404',
-  },
-  staleBannerDismiss: {
-    fontSize: 16,
-    color: '#856404',
-    fontWeight: '700',
-    paddingHorizontal: 4,
-  },
-  body: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#555',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#c0392b',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  form: {
-    flex: 1,
-    padding: 16,
-    justifyContent: 'center',
-  },
-});
+function createStyles(t: Theme) {
+  const screen = createScreenStyles(t);
+  return StyleSheet.create({
+    container: screen.screen,
+    header: screen.header,
+    backButton: screen.backButton,
+    backButtonText: screen.backButtonText,
+    title: screen.headerTitle,
+    saveDraftButton: {
+      backgroundColor: t.color.roles.primaryContainer,
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: t.spacing.xxs,
+      borderRadius: t.radius.md,
+    },
+    saveDraftButtonText: {
+      ...t.typography.labelLarge,
+      color: t.color.roles.onPrimaryContainer,
+    },
+    finalizeButton: {
+      backgroundColor: t.color.roles.surface,
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: t.spacing.xxs,
+      borderRadius: t.radius.md,
+    },
+    finalizeButtonText: {
+      ...t.typography.labelLarge,
+      color: t.color.roles.primary,
+    },
+    staleBanner: {
+      ...screen.banner,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    staleBannerText: {
+      flex: 1,
+      ...screen.bannerText,
+    },
+    staleBannerDismiss: {
+      ...t.typography.titleMedium,
+      color: t.color.roles.onTertiaryContainer,
+      paddingHorizontal: t.spacing.xxs,
+    },
+    body: {
+      flex: 1,
+    },
+    centered: screen.centered,
+    errorText: screen.errorText,
+    form: {
+      flex: 1,
+      padding: t.spacing.md,
+      justifyContent: 'center',
+    },
+  });
+}
 
 // ── Demo styles (shadcn-lite capability showcase) ──────────────────────────────
+// Uses `tokens` (not a live `useTheme()` call) — retinting the purple demo
+// (design decision 4) doesn't need runtime theme reactivity, since the
+// example app's `ThemeProvider` mounts with no override (decision 2).
 
 const demoStyles = StyleSheet.create({
   noteBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: '#f3e8ff',
+    gap: tokens.spacing.xs,
+    backgroundColor: tokens.color.roles.secondaryContainer,
     borderLeftWidth: 4,
-    borderLeftColor: '#7b2cbf',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginVertical: 4,
+    borderLeftColor: tokens.color.roles.secondary,
+    borderRadius: tokens.radius.sm,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    marginVertical: tokens.spacing.xxs,
   },
   noteIcon: {
-    color: '#7b2cbf',
+    color: tokens.color.roles.secondary,
     fontWeight: '700',
     fontSize: 14,
   },
   noteText: {
     flex: 1,
     fontSize: 14,
-    color: '#3c096c',
+    color: tokens.color.roles.onSecondaryContainer,
     fontStyle: 'italic',
   },
   navWrapper: {
     borderWidth: 2,
-    borderColor: '#7b2cbf',
-    borderRadius: 12,
-    padding: 6,
-    backgroundColor: '#f3e8ff',
+    borderColor: tokens.color.roles.tertiary,
+    borderRadius: tokens.radius.lg,
+    padding: tokens.spacing.xxs,
+    backgroundColor: tokens.color.roles.tertiaryContainer,
   },
 });
