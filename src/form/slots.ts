@@ -13,7 +13,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { AdaptedEvent } from '../adapter/FormAdapter';
+import type { AdaptedEvent, PathSegment } from '../adapter/FormAdapter';
 import type { AdvanceBlock } from './validation';
 
 /**
@@ -46,10 +46,23 @@ export interface FormGroupSlotContext {
   defaultElement: ReactNode;
 }
 
+/**
+ * Phase 7 decision 10: the section/repeat position indicator's slot
+ * context. Separate from `FormGroupSlotContext` because it fires on
+ * `question` stops too (not only container stops) and carries `path`
+ * rather than `event`.
+ */
+export interface FormSectionIndicatorSlotContext {
+  path: readonly PathSegment[];
+  defaultElement: ReactNode;
+}
+
 export interface FormSlots {
   renderNavigation?: (ctx: FormNavigationSlotContext) => ReactNode;
   renderError?: (ctx: FormErrorSlotContext) => ReactNode;
   renderGroup?: (ctx: FormGroupSlotContext) => ReactNode;
+  /** Additive (Phase 7 decision 8/10): override or opt out (return `null`) of the default `SectionIndicator`. */
+  renderSectionIndicator?: (ctx: FormSectionIndicatorSlotContext) => ReactNode;
 }
 
 /**

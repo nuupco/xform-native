@@ -658,10 +658,14 @@ describe('Form component', () => {
     });
     store.stepForward();
     await render(<Form store={store} />);
-    expect(screen.getByText('Group One')).toBeTruthy();
+    // Phase 7: SectionIndicator also renders "Group One" (the leaf container
+    // is the final path segment for group/repeat events — design decision
+    // 3), so assert via the label's own testID rather than an ambiguous
+    // getByText.
+    expect(screen.getByTestId('question-label')).toHaveTextContent('Group One');
   });
 
-  it('renders repeat with a 1-based entry count (multiplicity is a 0-based instance index, not a count)', async () => {
+  it('renders repeat (multiplicity is a 0-based instance index, not a count — see SectionIndicator "N de M" copy)', async () => {
     // REQ hotfix: confirmed on-device that landing on the FIRST populated
     // repeat instance (multiplicity 0 — the engine correctly auto-created
     // it per jr:count) displayed "Entries: 0", which reads as "nothing was
@@ -688,31 +692,10 @@ describe('Form component', () => {
     });
     store.stepForward();
     await render(<Form store={store} />);
-    expect(screen.getByText('Repeat One')).toBeTruthy();
-    expect(screen.getByText('Entries: 3')).toBeTruthy();
-  });
-
-  it('renders "Entries: 1" when landing on the first auto-created repeat instance (multiplicity 0)', async () => {
-    const store = makeStore({
-      events: [
-        { kind: 'bof' },
-        {
-          kind: 'repeat',
-          ref: '/data/r1',
-          label: 'Repeat One',
-          multiplicity: 0,
-        },
-        { kind: 'eof' },
-      ],
-      nodeStates: {},
-      relevance: {},
-      choices: {},
-      answerResults: {},
-      values: {},
-    });
-    store.stepForward();
-    await render(<Form store={store} />);
-    expect(screen.getByText('Entries: 1')).toBeTruthy();
+    expect(screen.getByTestId('question-label')).toHaveTextContent('Repeat One');
+    // The old "Entries: N" line was deleted (Phase 7 decision 14) — the
+    // repeat-multiplicity testID no longer exists.
+    expect(screen.queryByTestId('repeat-multiplicity')).toBeNull();
   });
 
   it('renders prompt-new-repeat', async () => {
@@ -1098,7 +1081,7 @@ describe('Form — REQ-3 auto-skip unlabeled groups', () => {
     });
     store.stepForward(); // bof -> g1
     await render(<Form store={store} />);
-    expect(screen.getByText('Group One')).toBeTruthy();
+    expect(screen.getByTestId('question-label')).toHaveTextContent('Group One');
   });
 
   it('scenario 4: mutual exclusivity — relevance-skip wins over label-skip, exactly one step per render', async () => {
@@ -1315,7 +1298,7 @@ describe('Form — REQ-3 auto-skip unlabeled groups', () => {
     const store = makeRealStore(GROUP_XML);
     store.stepForward(); // bof -> group
     await render(<Form store={store} />);
-    expect(screen.getByText('Datos del productor')).toBeTruthy();
+    expect(screen.getByTestId('question-label')).toHaveTextContent('Datos del productor');
     expect(screen.getByTestId('nav-next')).toBeTruthy();
   });
 });
