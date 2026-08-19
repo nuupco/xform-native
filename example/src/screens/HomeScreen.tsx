@@ -3,17 +3,100 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { elevationStyle, useThemedStyles, type Theme } from '@nuup/xform-native';
 
 import { listDrafts } from '../services/draftStore';
 import { listPending } from '../services/submissionQueue';
 import { listSent } from '../services/sentStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import type { RootStackParamList } from '../navigation/types';
+import { createScreenStyles } from '../theme/screenStyles';
+
+function createStyles(t: Theme) {
+  const screen = createScreenStyles(t);
+  return StyleSheet.create({
+    container: screen.screen,
+    header: {
+      ...screen.header,
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: t.spacing.xs,
+    },
+    title: {
+      ...t.typography.headlineSmall,
+      color: t.color.roles.onPrimary,
+    },
+    networkBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: t.spacing.xs,
+    },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    dotOnline: {
+      backgroundColor: t.color.roles.primaryContainer,
+    },
+    dotOffline: {
+      backgroundColor: t.color.roles.errorContainer,
+    },
+    networkText: {
+      ...t.typography.labelMedium,
+      color: t.color.roles.onPrimary,
+    },
+    menu: {
+      flex: 1,
+      padding: t.spacing.md,
+      gap: t.spacing.sm,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: t.color.roles.surface,
+      borderRadius: t.radius.md,
+      minHeight: 56,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.md,
+      gap: t.spacing.md,
+      // Cast: cross-package react-native type-identity mismatch between the
+      // library's and example app's react-native versions (see
+      // screenStyles.ts) — not a real type error.
+      ...(elevationStyle(t, 1) as object),
+    },
+    menuIcon: {
+      fontSize: 22,
+      color: t.color.roles.primary,
+      width: 28,
+      textAlign: 'center',
+    },
+    menuLabel: {
+      flex: 1,
+      ...t.typography.titleMedium,
+      color: t.color.roles.onSurface,
+    },
+    badge: {
+      backgroundColor: t.color.roles.secondary,
+      borderRadius: t.radius.pill,
+      minWidth: 24,
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: t.spacing.xs,
+    },
+    badgeText: {
+      ...t.typography.labelMedium,
+      color: t.color.roles.onSecondary,
+    },
+  });
+}
 
 export function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { isOnline } = useNetworkStatus();
+  const styles = useThemedStyles(createStyles);
 
   const [draftCount, setDraftCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -99,86 +182,3 @@ export function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  networkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  dotOnline: {
-    backgroundColor: '#a5d6a7',
-  },
-  dotOffline: {
-    backgroundColor: '#ef9a9a',
-  },
-  networkText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 13,
-  },
-  menu: {
-    flex: 1,
-    padding: 16,
-    gap: 12,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    gap: 12,
-  },
-  menuIcon: {
-    fontSize: 22,
-    color: '#1976d2',
-    width: 28,
-    textAlign: 'center',
-  },
-  menuLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#222',
-  },
-  badge: {
-    backgroundColor: '#1976d2',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-});
