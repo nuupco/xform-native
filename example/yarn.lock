@@ -2021,10 +2021,10 @@ expo-asset@~56.0.23:
     "@expo/image-utils" "^0.10.4"
     expo-constants "~56.0.24"
 
-expo-av@^16.0.8:
-  version "16.0.8"
-  resolved "https://registry.yarnpkg.com/expo-av/-/expo-av-16.0.8.tgz#b1671127f3b2ecaeb9c69fc2301cf791d4504dd6"
-  integrity sha512-cmVPftGR/ca7XBgs7R6ky36lF3OC0/MM/lpgX/yXqfv0jASTsh7AYX9JxHCwFmF+Z6JEB1vne9FDx4GiLcGreQ==
+expo-audio@~56.0.13:
+  version "56.0.13"
+  resolved "https://registry.yarnpkg.com/expo-audio/-/expo-audio-56.0.13.tgz#c8979f35bc6c53575d46e55b3aa714836cda69f0"
+  integrity sha512-pfBmT/8OYbhrb37ECk+fC1EstLBFxMTioF4uZrAEeOj3uCgjproj1qYmkpsQLJIoEOMPSIw1iSfBEMl10v1DDA==
 
 expo-camera@~56.0.8:
   version "56.0.8"
@@ -2129,6 +2129,11 @@ expo-status-bar@~56.0.4:
   version "56.0.4"
   resolved "https://registry.yarnpkg.com/expo-status-bar/-/expo-status-bar-56.0.4.tgz#01a0b6f9946ae51fe9d85c961ae9b485383cfcab"
   integrity sha512-IGs/fDfkHXofy2ZQrGiXayhFK04HB85FZXorhcEhDZEcqASKgSqpak+HwUtAaR0MeTJwWyHNF7I6VmVbbp8EcA==
+
+expo-video@~56.1.4:
+  version "56.1.4"
+  resolved "https://registry.yarnpkg.com/expo-video/-/expo-video-56.1.4.tgz#796426fb2b7b82007a844fa3be6b82611f4757f8"
+  integrity sha512-8mXZOnb7ZsWneDlcnRf0M2Ox9eb5dGnNiGiCkj9bwLPY+3jM2Pc1t5ymNUuhw8lSpT/rOnE0J0/81Y3+0k2Zcw==
 
 expo@~56.0.12:
   version "56.0.20"

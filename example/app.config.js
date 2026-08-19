@@ -32,7 +32,7 @@ module.exports = () => ({
       },
     ],
     [
-      'expo-av',
+      'expo-audio',
       {
         microphonePermission:
           'Esta app usa el micrófono para grabar audio en las preguntas del formulario.',

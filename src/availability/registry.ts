@@ -19,9 +19,18 @@ function hasExpoImagePicker(): boolean {
   }
 }
 
-function hasExpoAv(): boolean {
+function hasExpoAudio(): boolean {
   try {
-    require('expo-av');
+    require('expo-audio');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasExpoVideo(): boolean {
+  try {
+    require('expo-video');
     return true;
   } catch {
     return false;
@@ -66,7 +75,8 @@ function hasGeo(): boolean {
 
 const hasAnyMediaDep = (): boolean =>
   hasExpoImagePicker() ||
-  hasExpoAv() ||
+  hasExpoAudio() ||
+  hasExpoVideo() ||
   hasReactNativeSvg() ||
   hasExpoDocumentPicker() ||
   hasExpoCamera();
@@ -103,7 +113,7 @@ const availabilityRegistry = new Map<
     'binary',
     (opts) => {
       if (opts?.mediatype === 'image/*') return hasExpoImagePicker();
-      if (opts?.mediatype === 'audio/*') return hasExpoAv();
+      if (opts?.mediatype === 'audio/*') return hasExpoAudio();
       if (opts?.mediatype === 'video/*') return hasExpoCamera();
       if (opts?.mediatype != null) return hasExpoDocumentPicker();
       return hasAnyMediaDep();

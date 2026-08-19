@@ -3,7 +3,11 @@
  *
  * Gated on expo-camera (optional peer dep). Falls back to
  * UnsupportedWidget when the dep is absent at runtime.
- * Playback uses expo-av Video component (already an optional peer dep).
+ * Playback uses expo-video's `useVideoPlayer` hook + `<VideoView>` component
+ * (optional peer dep; expo-av dropped per the SDK-56 migration). The hook is
+ * called unconditionally through the lazily-`require`d module reference
+ * (`av?.useVideoPlayer?.(...)`) — see AudioWidget's equivalent comment for
+ * why this is hooks-rules-safe with the optional-peer-dep firewall.
  *
  * Restyle (design decision 7, per-widget mapping table, PR12): chrome moves
  * onto `MediaCaptureCard`. The live camera preview (while recording) and the
@@ -48,7 +52,7 @@ let _avLoaded: boolean | undefined;
 function getAvModule(): any | null {
   if (_avLoaded === undefined) {
     try {
-      _AvModule = require('expo-av');
+      _AvModule = require('expo-video');
       _avLoaded = true;
     } catch {
       _avLoaded = false;
@@ -130,6 +134,10 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
 
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  // Hooks-rules-safe unconditional call through the lazily-`require`d
+  // module reference — `av`'s truthiness never varies across this
+  // component instance's lifetime (see AudioWidget's equivalent comment).
+  const player = av?.useVideoPlayer?.(storedUri ? { uri: storedUri } : null);
   const cameraRef = useRef<any>(null);
   const activeCameraRef = useRef<any>(null);
   const isCancelledRef = useRef(false);
@@ -233,20 +241,30 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
   }, []);
 
   const handlePlay = useCallback(() => {
-    if (!av || !storedUri) return;
+    if (!av || !storedUri || !player) return;
+    try {
+      player.play();
+    } catch {
+      // best-effort; playback failure has no dedicated UI state
+    }
     setIsPlaying(true);
-  }, [av, storedUri]);
+  }, [av, storedUri, player]);
 
   const handleClosePlayer = useCallback(() => {
+    try {
+      player?.pause?.();
+    } catch {
+      // best-effort
+    }
     setIsPlaying(false);
-  }, []);
+  }, [player]);
 
   if (!camera) {
     return <UnsupportedWidget dataType="binary" />;
   }
 
   const { CameraView } = camera;
-  const { Video } = av || {};
+  const VideoView = av?.VideoView;
 
   if (!readonly && !isRecording && blockingGate && blockingGateKind) {
     const copy =
@@ -280,7 +298,7 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
     );
   }
 
-  if (isPlaying && storedUri && Video) {
+  if (isPlaying && storedUri && VideoView && player) {
     return (
       <MediaCaptureCard
         testID="video-widget"
@@ -290,11 +308,10 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
         disabled={readonly}
         preview={
           <View style={styles.preview}>
-            <Video
-              source={{ uri: storedUri }}
+            <VideoView
+              player={player}
               style={styles.preview}
-              resizeMode="contain"
-              shouldPlay
+              contentFit="contain"
               testID="video-player"
             />
           </View>

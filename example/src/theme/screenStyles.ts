@@ -43,7 +43,6 @@ export function createScreenStyles(t: Theme): ScreenStyles {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: t.color.roles.primary,
       paddingHorizontal: t.spacing.md,
       paddingVertical: t.spacing.sm,
       gap: t.spacing.sm,
@@ -52,7 +51,14 @@ export function createScreenStyles(t: Theme): ScreenStyles {
       // react-native (0.85.x). Both are the same RN ViewStyle shape at
       // runtime — this is a cross-package type-identity mismatch, not a
       // real type error.
+      //
+      // Spread BEFORE backgroundColor: elevationStyle() always returns its
+      // own computed `backgroundColor` (a surface+primary tint meant for
+      // elevated cards/sheets), which would otherwise overwrite this solid
+      // primary app-bar color with a near-white tint. Only the shadow/
+      // elevation props are wanted here; backgroundColor below wins.
       ...(elevationStyle(t, 2) as object),
+      backgroundColor: t.color.roles.primary,
     },
     headerTitle: {
       flex: 1,
