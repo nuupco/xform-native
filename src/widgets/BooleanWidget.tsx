@@ -16,7 +16,7 @@ import { View, Pressable, Text, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { SegmentedButton } from './primitives/SegmentedButton';
-import { resolveVariant } from './appearance';
+import { resolveVariant } from './engine/appearance';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 

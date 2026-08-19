@@ -23,7 +23,7 @@ import type { ReactNode } from 'react';
 import { AnswerResult } from '@nuup/ts-rosa';
 import type { AdaptedEvent, NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
-import { pickBest, type WidgetMatcher } from '../widgets/matchOverride';
+import { pickBest, type WidgetMatcher } from '../widgets/engine/matchOverride';
 
 /** A question-kind AdaptedEvent — the only kind `handleNext` validates. */
 export type QuestionEvent = Extract<AdaptedEvent, { kind: 'question' }>;

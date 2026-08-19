@@ -37,10 +37,10 @@ export { BottomSheet } from './widgets/primitives/BottomSheet';
 export type { BottomSheetProps } from './widgets/primitives/BottomSheet';
 
 // PR-3a: appearance taxonomy + dispatch
-export { resolveVariant, APPEARANCE_TABLE } from './widgets/appearance';
-export type { VariantId } from './widgets/appearance';
-export { pickWidget } from './widgets/pickWidget';
-export type { PickWidgetResult } from './widgets/pickWidget';
+export { resolveVariant, APPEARANCE_TABLE } from './widgets/engine/appearance';
+export type { VariantId } from './widgets/engine/appearance';
+export { pickWidget } from './widgets/engine/pickWidget';
+export type { PickWidgetResult } from './widgets/engine/pickWidget';
 
 // PR-3a + PR-3b: widgets
 export { StringWidget } from './widgets/StringWidget';
@@ -113,8 +113,8 @@ export {
   resolveWidget,
   WidgetRegistryProvider,
   useWidgetOverrides,
-} from './widgets/registry';
-export type { XFormWidgetProps, WidgetOverride, PickWidgetArgs } from './widgets/registry';
+} from './widgets/engine/registry';
+export type { XFormWidgetProps, WidgetOverride, PickWidgetArgs } from './widgets/engine/registry';
 
 // form-theming: mount-time-only ThemeProvider over tokens.ts (D1/D2)
 export { ThemeProvider, useTheme, useThemedStyles } from './theme/ThemeContext';

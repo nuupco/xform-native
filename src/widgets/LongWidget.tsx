@@ -11,8 +11,8 @@
 import { useState } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { resolveVariant } from './appearance';
-import { useDraftValue } from './useDraftValue';
+import { resolveVariant } from './engine/appearance';
+import { useDraftValue } from './engine/useDraftValue';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { createFieldStyles } from './primitives/fieldStyles';
 import type { NodeRef } from '../adapter/FormAdapter';

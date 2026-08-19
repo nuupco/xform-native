@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { AnswerResult, refToString } from '@nuup/ts-rosa';
 import { useFormSession } from '../store/useFormSession';
-import { resolveWidget, useWidgetOverrides, type WidgetOverride } from '../widgets/registry';
+import { resolveWidget, useWidgetOverrides, type WidgetOverride } from '../widgets/engine/registry';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import type { FormSessionStore } from '../store/FormSessionStore';
 import {

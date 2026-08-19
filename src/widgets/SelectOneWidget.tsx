@@ -31,7 +31,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
-import { resolveVariant } from './appearance';
+import { resolveVariant } from './engine/appearance';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { createFieldStyles } from './primitives/fieldStyles';
 import { SelectionRow } from './primitives/SelectionRow';

@@ -29,7 +29,7 @@ import { useFormSession } from '../store/useFormSession';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { createFieldStyles } from './primitives/fieldStyles';
 import { MinusIcon, PlusIcon } from './primitives/Icon';
-import { resolveVariant } from './appearance';
+import { resolveVariant } from './engine/appearance';
 import { BottomSheet } from './primitives/BottomSheet';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
