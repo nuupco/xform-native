@@ -1283,4 +1283,39 @@ describe('Form — REQ-3 auto-skip unlabeled groups', () => {
     // though its label is null — question kind never label-skips.
     expect(screen.getByTestId('string-input')).toBeTruthy();
   });
+
+  it('scenario 11 (PR1 label-fix behavior change): a group with a real label renders its own screen against the real engine, instead of being auto-skipped', async () => {
+    // Regression for the container-label fix (design decision 4 / maintainer
+    // decision: group screens must now appear once labels resolve). Before
+    // the fix, navigator.getQuestionAtIndex(fi)?.getLabelInnerText() always
+    // returned null for a group leaf on the real ts-rosa engine, so this
+    // group would have been silently auto-skipped by the label-skip effect.
+    const GROUP_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Group Screen</h:title>
+    <model>
+      <instance>
+        <data id="group-screen">
+          <grp>
+            <name/>
+          </grp>
+        </data>
+      </instance>
+      <bind nodeset="/data/grp/name" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/grp">
+      <label>Datos del productor</label>
+      <input ref="/data/grp/name"><label>Name</label></input>
+    </group>
+  </h:body>
+</h:html>`;
+    const store = makeRealStore(GROUP_XML);
+    store.stepForward(); // bof -> group
+    await render(<Form store={store} />);
+    expect(screen.getByText('Datos del productor')).toBeTruthy();
+    expect(screen.getByTestId('nav-next')).toBeTruthy();
+  });
 });
