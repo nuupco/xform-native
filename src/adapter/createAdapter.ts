@@ -12,9 +12,9 @@
 import type { FormSession, ControlType } from '@nuup/ts-rosa';
 import type { FormIndex } from '@nuup/ts-rosa';
 import { isAt, isBof, isEof } from '@nuup/ts-rosa';
-import { resolveReference, addRepeatInstance } from '@nuup/ts-rosa';
-import type { NodeState, SelectChoice, AnswerResult } from '@nuup/ts-rosa';
-import type { FormAdapter, AdaptedEvent, NodeRef } from './FormAdapter';
+import { resolveReference, addRepeatInstance, countRepeatInstances } from '@nuup/ts-rosa';
+import type { NodeState, SelectChoice, AnswerResult, FormIndexLevel } from '@nuup/ts-rosa';
+import type { FormAdapter, AdaptedEvent, NodeRef, PathSegment } from './FormAdapter';
 import { encodeAnswer } from './encodeAnswer';
 
 export function createAdapter(session: FormSession): FormAdapter {
@@ -71,12 +71,23 @@ export function createAdapter(session: FormSession): FormAdapter {
       return adapted;
     }
 
+    // group / repeat / prompt-new-repeat label resolution (Phase 7 decision
+    // 4): navigator.getQuestionAtIndex(fi)?.getLabelInnerText() is WRONG
+    // here — real ts-rosa's getQuestionAtIndex (index.cjs:9661-9666) does
+    // `if (resolved.element.kind !== "question") return null`, so it
+    // unconditionally returns null for a group/repeat/prompt-new-repeat
+    // leaf. AdaptedEvent.label was therefore ALWAYS null for these kinds
+    // against the real engine (only the test fixture faked otherwise — the
+    // same class of "raw vs resolved" defect as
+    // adapter-label-output-substitution.test.ts, in reverse). Read the
+    // label via resolvePath's leaf FormElement instead, which carries
+    // `labelText` for every element kind, not just questions.
     if (ev.kind === 'group') {
-      const q = navigator.getQuestionAtIndex(fi);
+      const resolved = navigator.resolvePath?.(fi.path);
       adapted = {
         kind: 'group',
         ref,
-        label: q?.getLabelInnerText() ?? null,
+        label: resolved?.element.labelText ?? null,
         hint: null,
         index: stepCount,
       };
@@ -84,14 +95,14 @@ export function createAdapter(session: FormSession): FormAdapter {
     }
 
     if (ev.kind === 'repeat') {
-      const q = navigator.getQuestionAtIndex(fi);
+      const resolved = navigator.resolvePath?.(fi.path);
       // multiplicity comes from the last path level
       const lastLevel = fi.path[fi.path.length - 1];
       const multiplicity = lastLevel?.multiplicity ?? 0;
       adapted = {
         kind: 'repeat',
         ref,
-        label: q?.getLabelInnerText() ?? null,
+        label: resolved?.element.labelText ?? null,
         multiplicity,
         index: stepCount,
       };
@@ -99,11 +110,11 @@ export function createAdapter(session: FormSession): FormAdapter {
     }
 
     if (ev.kind === 'prompt-new-repeat') {
-      const q = navigator.getQuestionAtIndex(fi);
+      const resolved = navigator.resolvePath?.(fi.path);
       adapted = {
         kind: 'prompt-new-repeat',
         ref,
-        label: q?.getLabelInnerText() ?? null,
+        label: resolved?.element.labelText ?? null,
         index: stepCount,
       };
       return adapted;
@@ -111,6 +122,78 @@ export function createAdapter(session: FormSession): FormAdapter {
 
     adapted = { kind: 'eof' };
     return adapted;
+  }
+
+  // ---------------------------------------------------------------------------
+  // getCurrentPath (Phase 7 decisions 1-3, 6, 15): derive the root→leaf
+  // ancestor group/repeat chain for the walker's current position.
+  //
+  // navigator.resolvePath(path) is O(depth) pure array indexing over
+  // FormDefinition.body — no XPath eval (index.d.ts:1891-1893) — so calling
+  // it once per ancestor (to get that ancestor's own concrete ref, for
+  // countRepeatInstances) is cheap for the typical depth-2..4 case this
+  // targets (design decision 18).
+  // ---------------------------------------------------------------------------
+  function buildPath(fi: { path: readonly FormIndexLevel[] }): readonly PathSegment[] {
+    const resolved = navigator.resolvePath?.(fi.path);
+    if (!resolved) return [];
+
+    const segments: PathSegment[] = [];
+    const { element, parentChain } = resolved;
+
+    for (let i = 0; i < parentChain.length; i++) {
+      const ancestor = parentChain[i];
+      const level = fi.path[i];
+      if (ancestor === undefined || level === undefined) continue;
+      segments.push(buildSegment(ancestor, level, fi.path.slice(0, i + 1)));
+    }
+
+    // The leaf itself becomes the final segment when the walker is sitting
+    // ON a group/repeat/prompt-new-repeat event (decision 3) — a
+    // prompt-new-repeat leaf resolves to a 'repeat' FormElement, so it is
+    // covered by the same `kind === 'repeat'` check. A 'question' leaf is
+    // deliberately excluded (already covered as the render target itself).
+    if (element.kind === 'group' || element.kind === 'repeat') {
+      const leafLevel = fi.path[fi.path.length - 1];
+      if (leafLevel !== undefined) {
+        segments.push(buildSegment(element, leafLevel, fi.path));
+      }
+    }
+
+    return segments;
+  }
+
+  function buildSegment(
+    element: { kind: 'question' | 'group' | 'repeat'; labelText: string | null; countExpr?: string | null },
+    level: FormIndexLevel,
+    pathToThisLevel: readonly FormIndexLevel[]
+  ): PathSegment {
+    if (element.kind !== 'repeat') {
+      return {
+        kind: 'group',
+        label: element.labelText,
+        multiplicity: null,
+        total: null,
+        countBound: false,
+      };
+    }
+
+    // Resolve this specific ancestor's own concrete ref (truncating the
+    // path to this level) so countRepeatInstances can find the live
+    // created-instance count. `total` is ALWAYS the live count — never a
+    // parse of countExpr (decision 6).
+    const resolvedAtThisLevel = navigator.resolvePath?.(pathToThisLevel);
+    const total = resolvedAtThisLevel
+      ? countRepeatInstances(tree, resolvedAtThisLevel.ref)
+      : 0;
+
+    return {
+      kind: 'repeat',
+      label: element.labelText,
+      multiplicity: level.multiplicity,
+      total,
+      countBound: (element.countExpr ?? null) !== null,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -130,6 +213,12 @@ export function createAdapter(session: FormSession): FormAdapter {
   return {
     getCurrentEvent(): AdaptedEvent {
       return adaptCurrentEvent();
+    },
+
+    getCurrentPath(): readonly PathSegment[] {
+      const ev = navigator.getEvent();
+      if (!isAt(ev.index)) return [];
+      return buildPath(ev.index);
     },
 
     stepForward(): void {
