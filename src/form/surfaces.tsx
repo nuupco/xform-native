@@ -12,6 +12,8 @@ import { elevationStyle } from '../theme/elevationStyle';
 import { PressableButton } from '../widgets/primitives/PressableButton';
 import { AlertIcon, PlusIcon, LeafIcon } from '../widgets/primitives/Icon';
 import { ErrorBanner } from './ErrorBanner';
+import { MarkdownText } from '../text/MarkdownText';
+import { stripOdkMarkdown } from '../text/parseOdkMarkdown';
 
 function createStyles(t: Theme) {
   return StyleSheet.create({
@@ -157,9 +159,7 @@ export function LabelHint({
     <View style={styles.labelWrap} collapsable={false}>
       {label !== null && (
         <View style={styles.labelRow} collapsable={false}>
-          <Text testID="question-label" style={styles.label}>
-            {label}
-          </Text>
+          <MarkdownText testID="question-label" baseStyle={styles.label} value={label} />
           {required && (
             <Text testID="required-indicator" style={styles.required}>
               *
@@ -168,9 +168,7 @@ export function LabelHint({
         </View>
       )}
       {hint !== null && (
-        <Text testID="question-hint" style={styles.hint}>
-          {hint}
-        </Text>
+        <MarkdownText testID="question-hint" baseStyle={styles.hint} value={hint} />
       )}
     </View>
   );
@@ -183,7 +181,7 @@ export function RepeatPromptCard({ label, onPress }: { label: string; onPress: (
       <View style={styles.plusCircle}>
         <PlusIcon />
       </View>
-      <Text style={styles.promptText}>Agregar otro/a {label}</Text>
+      <Text style={styles.promptText}>Agregar otro/a {stripOdkMarkdown(label)}</Text>
     </Pressable>
   );
 }

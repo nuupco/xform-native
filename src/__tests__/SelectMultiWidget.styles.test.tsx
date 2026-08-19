@@ -127,3 +127,21 @@ describe('SelectMultiWidget — "N seleccionadas" counter', () => {
     expect(screen.getByTestId('select-multi-counter')).toHaveTextContent('2 seleccionadas');
   });
 });
+
+describe('SelectMultiWidget — Phase 8 PR3 markdown strip in joined minimal summary', () => {
+  it('strips markdown from each selected label before joining into the collapsed summary', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/minimal-md',
+      dataType: 'selectMulti',
+      choices: [
+        { value: 'val1', label: '**Rojo**' },
+        { value: 'val2', label: '_Azul_' },
+      ],
+      value: ['val1', 'val2'],
+      appearance: 'minimal',
+    });
+    await render(<SelectMultiWidget nodeRef={ref} store={store} appearance="minimal" />);
+    expect(screen.getByText('Rojo, Azul')).toBeTruthy();
+    expect(screen.queryByText(/[*_]/)).toBeNull();
+  });
+});

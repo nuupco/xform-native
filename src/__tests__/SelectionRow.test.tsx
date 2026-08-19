@@ -142,6 +142,51 @@ describe('SelectionRow', () => {
     expect(row.minWidth).toBe(64);
     expect(row.alignSelf).not.toBe('stretch');
   });
+
+  it('Phase 8 PR3: renders a bold choice label with fontWeight 700 at default density', async () => {
+    const { getByText } = await render(
+      <SelectionRow
+        testID="row-1"
+        control="radio"
+        selected={false}
+        label="Opción **fuerte**"
+        onPress={() => {}}
+      />
+    );
+    const boldNode = getByText('fuerte');
+    const style = flatten(boldNode.props.style);
+    expect(style.fontWeight).toBe('700');
+  });
+
+  it('Phase 8 PR3: renders a bold choice label with fontWeight 700 at likert density', async () => {
+    const { getByText } = await render(
+      <SelectionRow
+        testID="row-1"
+        control="radio"
+        selected={false}
+        label="**Sí**"
+        onPress={() => {}}
+        density="likert"
+      />
+    );
+    const boldNode = getByText('Sí');
+    const style = flatten(boldNode.props.style);
+    expect(style.fontWeight).toBe('700');
+  });
+
+  it('Phase 8 PR3: renders a markdown-free label byte-identically (fast path, no nested spans)', async () => {
+    const { getByText } = await render(
+      <SelectionRow
+        testID="row-1"
+        control="radio"
+        selected={false}
+        label="Plain option"
+        onPress={() => {}}
+      />
+    );
+    const node = getByText('Plain option');
+    expect(typeof node.props.children).toBe('string');
+  });
 });
 
 describe('SelectionIndicator', () => {

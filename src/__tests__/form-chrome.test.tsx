@@ -52,6 +52,39 @@ describe('LabelHint', () => {
     await render(<LabelHint label="Name" hint="hint" />);
     expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
+
+  it('Phase 8 PR3: renders bold markdown in the label while question-label stays queryable as one node', async () => {
+    await render(<LabelHint label="Nivel de **agua**" hint="hint" />);
+    const label = screen.getByTestId('question-label');
+    expect(label).toBeTruthy();
+    const boldNode = screen.getByText('agua');
+    const boldFlat = flatten(boldNode);
+    expect(boldFlat.fontWeight).toBe('700');
+  });
+
+  it('Phase 8 PR3: renders bold markdown in the hint while question-hint stays queryable as one node', async () => {
+    await render(<LabelHint label="Name" hint="Escriba su **nombre completo**" />);
+    const hint = screen.getByTestId('question-hint');
+    expect(hint).toBeTruthy();
+    const boldNode = screen.getByText('nombre completo');
+    const boldFlat = flatten(boldNode);
+    expect(boldFlat.fontWeight).toBe('700');
+  });
+
+  it('Phase 8 PR3: a markdown-free label renders the fast path — single string child, no nested Text', async () => {
+    await render(<LabelHint label="Costo * cantidad" hint="hint" />);
+    const label = screen.getByTestId('question-label');
+    expect(label.props.children).toBe('Costo * cantidad');
+  });
+
+  it('Phase 8 PR3: required asterisk is its own sibling node, not consumed as an emphasis delimiter', async () => {
+    await render(<LabelHint label="Nombre *completo*" hint="hint" required />);
+    const required = screen.getByTestId('required-indicator');
+    expect(required.props.children).toBe('*');
+    const italicNode = screen.getByText('completo');
+    const italicFlat = flatten(italicNode);
+    expect(italicFlat.fontStyle).toBe('italic');
+  });
 });
 
 describe('BofSurface', () => {
@@ -102,6 +135,12 @@ describe('RepeatPromptCard', () => {
     await render(<RepeatPromptCard label="Group" onPress={onPress} />);
     fireEvent.press(screen.getByTestId('prompt-continue'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('Phase 8 PR3: strips markdown from an authored repeat label — no literal asterisks, plain interpolated text', async () => {
+    await render(<RepeatPromptCard label="**Parcela**" onPress={() => {}} />);
+    expect(screen.getByText('Agregar otro/a Parcela')).toBeTruthy();
+    expect(screen.queryByText(/\*/)).toBeNull();
   });
 });
 
