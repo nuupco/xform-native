@@ -20,8 +20,9 @@ import { useThemedStyles, useTheme, type Theme } from '../../theme/ThemeContext'
 import { elevationStyle } from '../../theme/elevationStyle';
 import { PressableButton } from './PressableButton';
 import { SafeAreaBottom } from './SafeAreaBottom';
+import type { GpsStatus } from './useGeoGps';
 
-export type GpsStatus = 'idle' | 'requesting' | 'acquiring' | 'tracking' | 'denied' | 'error';
+export type { GpsStatus };
 export type PrewarmStatus = 'idle' | 'running' | 'done' | 'cap' | 'error';
 
 function createStyles(t: Theme) {
@@ -86,6 +87,33 @@ function createStyles(t: Theme) {
     flexSlot: {
       flex: 1,
     },
+    noticeOverlay: {
+      position: 'absolute',
+      bottom: t.spacing.sm,
+      left: t.spacing.sm,
+      right: t.spacing.sm,
+      backgroundColor: t.color.roles.surface,
+      borderRadius: t.radius.md,
+      borderWidth: 1,
+      borderColor: t.color.roles.outlineVariant,
+      padding: t.spacing.md,
+      gap: t.spacing.xs,
+      ...elevationStyle(t, 3),
+    },
+    noticeTitle: {
+      color: t.color.roles.onSurface,
+      ...t.typography.titleSmall,
+    },
+    noticeBody: {
+      color: t.color.roles.onSurfaceVariant,
+      ...t.typography.bodySmall,
+    },
+    noticeActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: t.spacing.sm,
+      marginTop: t.spacing.xs,
+    },
   });
 }
 
@@ -134,6 +162,7 @@ export interface GpsStatusPillProps {
 
 export function GpsStatusPill({ status, accuracyM, testID }: GpsStatusPillProps) {
   const styles = useThemedStyles(createStyles);
+  if (status === 'rationale' || status === 'blocked') return null;
   return (
     <View style={styles.statusOverlay} pointerEvents="none" testID={testID}>
       {(status === 'requesting' || status === 'acquiring') && (
@@ -171,6 +200,103 @@ export function PrewarmStatusPill({ status, testID }: PrewarmStatusPillProps) {
               ? 'No se pudieron descargar los mapas'
               : 'Mapas descargados para uso sin conexión'}
       </Text>
+    </View>
+  );
+}
+
+export interface GpsPermissionNoticeProps {
+  status: GpsStatus;
+  onRequestPermission: () => void;
+  onDismiss: () => void;
+  onOpenSettings: () => void;
+  /**
+   * Widget-specific tap-to-place fallback sentence, appended to the body for
+   * `denied`/`blocked` (never `rationale` — the user hasn't tried and failed
+   * yet). Each widget supplies its own wording (point/vertex).
+   */
+  fallbackHint?: string;
+  testID?: string;
+}
+
+interface NoticeCopy {
+  title: string;
+  body: string;
+  primaryLabel: string;
+  onPrimary: () => void;
+  showDismiss: boolean;
+}
+
+/**
+ * GpsPermissionNotice — pressable card overlay shown instead of
+ * GpsStatusPill when status is `rationale`/`denied`/`blocked` (design
+ * decisions 5-7, 12). Not a Modal/BottomSheet: the map lives inside an
+ * already-open full-screen AppModal, so nesting another Modal here would be
+ * illegal.
+ */
+export function GpsPermissionNotice({
+  status,
+  onRequestPermission,
+  onDismiss,
+  onOpenSettings,
+  fallbackHint,
+  testID,
+}: GpsPermissionNoticeProps) {
+  const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
+
+  let copy: NoticeCopy;
+  if (status === 'rationale') {
+    copy = {
+      title: 'Usar tu ubicación',
+      body: 'Necesitamos el GPS para ubicar tu punto en el mapa. Solo se usa mientras este mapa está abierto.',
+      primaryLabel: 'Permitir ubicación',
+      onPrimary: onRequestPermission,
+      showDismiss: true,
+    };
+  } else if (status === 'blocked') {
+    copy = {
+      title: 'Permiso de ubicación bloqueado',
+      body: 'Actívalo en los ajustes del sistema para usar el GPS.',
+      primaryLabel: 'Abrir ajustes',
+      onPrimary: onOpenSettings,
+      showDismiss: false,
+    };
+  } else {
+    copy = {
+      title: 'Sin permiso de ubicación',
+      body: 'Permite el acceso para ver tu posición en el mapa.',
+      primaryLabel: 'Permitir ubicación',
+      onPrimary: onRequestPermission,
+      showDismiss: true,
+    };
+  }
+
+  const body = fallbackHint && status !== 'rationale' ? `${copy.body} ${fallbackHint}` : copy.body;
+
+  return (
+    <View style={styles.noticeOverlay} testID={testID}>
+      <Text style={styles.noticeTitle}>{copy.title}</Text>
+      <Text style={styles.noticeBody}>{body}</Text>
+      <View style={styles.noticeActions}>
+        {copy.showDismiss && (
+          <PressableButton
+            label="Ahora no"
+            onPress={onDismiss}
+            variant="text"
+            tone="secondary"
+            testID="gps-permission-dismiss"
+            theme={theme}
+          />
+        )}
+        <PressableButton
+          label={copy.primaryLabel}
+          onPress={copy.onPrimary}
+          variant="filled"
+          tone="primary"
+          testID="gps-permission-primary"
+          theme={theme}
+        />
+      </View>
     </View>
   );
 }

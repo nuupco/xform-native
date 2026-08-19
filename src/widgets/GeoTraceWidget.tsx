@@ -22,14 +22,17 @@ import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { AppModal } from './primitives/Modal';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
-import { useGeoGps } from './primitives/useGeoGps';
+import { useGeoGps, isPermissionState } from './primitives/useGeoGps';
 import {
   GeoMapChrome,
   MapActionButton,
   GpsStatusPill,
+  GpsPermissionNotice,
   PrewarmStatusPill,
   GeoActionBar,
 } from './primitives/GeoMapChrome';
+
+const GPS_FALLBACK_HINT = 'También puedes tocar el mapa para ubicar el vértice manualmente.';
 
 interface Vertex {
   lat: number;
@@ -340,7 +343,18 @@ export function GeoTraceWidget({ nodeRef, store, appearance: _appearance }: GeoT
               disabled={prewarmStatus === 'running'}
             />
 
-            <GpsStatusPill status={gps.status} accuracyM={currentPoint?.acc} />
+            {isPermissionState(gps.status) ? (
+              <GpsPermissionNotice
+                status={gps.status}
+                onRequestPermission={gps.requestPermission}
+                onDismiss={gps.dismissRationale}
+                onOpenSettings={gps.openLocationSettings}
+                fallbackHint={GPS_FALLBACK_HINT}
+                testID="gps-permission-notice"
+              />
+            ) : (
+              <GpsStatusPill status={gps.status} accuracyM={currentPoint?.acc} />
+            )}
 
             <PrewarmStatusPill status={prewarmStatus} testID="geo-trace-prewarm-status" />
           </GeoMapChrome>
