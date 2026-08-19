@@ -100,6 +100,19 @@ describe('NoteWidget — styling', () => {
     await render(<NoteWidget nodeRef={ref} store={store} />);
     expect(screen.queryByTestId('note-widget')).toBeNull();
   });
+
+  it('Phase 8 regression: renders a value containing markdown metacharacters literally — resolveValue() output is instance/computed data, never authored markup', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/note',
+      dataType: 'string',
+      value: '**bold** _italic_ # not-a-header * literal-asterisk',
+    });
+    await render(<NoteWidget nodeRef={ref} store={store} />);
+    const node = screen.getByText('**bold** _italic_ # not-a-header * literal-asterisk');
+    expect(node).toBeTruthy();
+    // A single plain string child — no nested <Text> spans, no styled fragments.
+    expect(typeof node.props.children).toBe('string');
+  });
 });
 
 describe('UncastWidget — styling', () => {

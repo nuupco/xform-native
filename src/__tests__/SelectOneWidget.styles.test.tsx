@@ -213,4 +213,36 @@ describe('SelectOneWidget — restyle (SelectionRow radio, all 7 variants)', () 
     await render(<SelectOneWidget nodeRef={ref} store={store} appearance="quick" />);
     expect(screen.getByTestId('select-one-quick-option-val1')).toBeTruthy();
   });
+
+  it('Phase 8 PR3: quick chip renders bold markdown in the choice label', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/quick-md',
+      dataType: 'selectOne',
+      controlType: 'select1',
+      choices: [{ value: 'val1', label: 'Opción **fuerte**' }],
+      appearance: 'quick',
+    });
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="quick" />);
+    const boldNode = screen.getByText('fuerte');
+    expect(flatten(boldNode.props.style).fontWeight).toBe('700');
+  });
+
+  it('Phase 8 PR3: minimal variant dropdown trigger strips markdown while the sheet row renders it styled', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/minimal-md',
+      dataType: 'selectOne',
+      controlType: 'select1',
+      choices: [{ value: 'val1', label: '# Opción **A**' }],
+      value: 'val1',
+      appearance: 'minimal',
+    });
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="minimal" />);
+    expect(screen.getByText('Opción A')).toBeTruthy();
+    expect(screen.queryByText(/[#*]/)).toBeNull();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('select-one-dropdown-trigger'));
+    });
+    const boldNode = screen.getByText('A');
+    expect(flatten(boldNode.props.style).fontWeight).toBe('700');
+  });
 });

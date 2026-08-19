@@ -37,6 +37,8 @@ import { createFieldStyles } from './primitives/fieldStyles';
 import { SelectionRow } from './primitives/SelectionRow';
 import { SearchIcon } from './primitives/Icon';
 import { BottomSheet } from './primitives/BottomSheet';
+import { MarkdownText } from '../text/MarkdownText';
+import { stripOdkMarkdown } from '../text/parseOdkMarkdown';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -163,7 +165,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           accessible={!isReadonly}
         >
           <Text style={styles.dropdownTriggerText}>
-            {selected?.label ?? selected?.value ?? 'Select…'}
+            {stripOdkMarkdown(selected?.label ?? selected?.value ?? 'Select…')}
           </Text>
         </Pressable>
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-one-sheet">
@@ -193,7 +195,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           accessible={!isReadonly}
         >
           <Text style={styles.dropdownTriggerText}>
-            {selected?.label ?? selected?.value ?? 'Select…'}
+            {stripOdkMarkdown(selected?.label ?? selected?.value ?? 'Select…')}
           </Text>
         </Pressable>
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} testID="select-one-sheet">
@@ -315,9 +317,10 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
                 accessibilityRole="radio"
                 accessibilityState={{ checked: isSelected, disabled: isReadonly }}
               >
-                <Text style={[styles.quickChipLabel, isSelected && styles.quickChipLabelSelected]}>
-                  {choice.label ?? choice.value}
-                </Text>
+                <MarkdownText
+                  value={choice.label ?? choice.value}
+                  baseStyle={[styles.quickChipLabel, isSelected && styles.quickChipLabelSelected]}
+                />
               </Pressable>
             );
           })}
