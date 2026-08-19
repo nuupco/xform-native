@@ -13,6 +13,8 @@ import { FormSessionStore } from '../store/FormSessionStore';
 import { makeFakeSession } from '../test-support/makeFakeSession';
 import { VideoWidget } from '../widgets/VideoWidget';
 
+const camera = require('expo-camera');
+
 afterEach(async () => {
   await cleanup();
   jest.clearAllMocks();
@@ -191,5 +193,96 @@ describe('VideoWidget', () => {
       fireEvent.press(screen.getByTestId('video-stop-button'));
     });
     expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://video.mp4');
+  });
+
+  it('camera denied only: notice names camera specifically and recording does not start', async () => {
+    camera.getCameraPermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+      granted: false,
+      canAskAgain: true,
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('video-record-button'));
+    });
+    expect(screen.getByText('Sin permiso de cámara')).toBeTruthy();
+    expect(camera.__mockRecordAsync).not.toHaveBeenCalled();
+  });
+
+  it('microphone denied only: notice names microphone specifically and recordAsync is never called', async () => {
+    camera.getMicrophonePermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+      granted: false,
+      canAskAgain: true,
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('video-record-button'));
+    });
+    expect(screen.getByText('Sin permiso de micrófono')).toBeTruthy();
+    expect(camera.__mockRecordAsync).not.toHaveBeenCalled();
+  });
+
+  it('both denied: notice reflects camera (checked first) and recording does not start', async () => {
+    camera.getCameraPermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+      granted: false,
+      canAskAgain: true,
+    });
+    // Mic mock is deliberately not queued: handleRecord short-circuits after
+    // the camera check fails, so mic.get() is never called for this press.
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('video-record-button'));
+    });
+    expect(screen.getByText('Sin permiso de cámara')).toBeTruthy();
+    expect(camera.__mockRecordAsync).not.toHaveBeenCalled();
+  });
+
+  it('both granted proceeds unchanged: recordAsync is invoked', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('video-record-button'));
+    });
+    expect(screen.getByTestId('video-camera-view')).toBeTruthy();
+  });
+
+  it('camera blocked shows "Abrir ajustes" and no dismiss', async () => {
+    camera.getCameraPermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+      granted: false,
+      canAskAgain: false,
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('video-record-button'));
+    });
+    expect(screen.getByText('Abrir ajustes')).toBeTruthy();
+    expect(screen.queryByTestId('permission-notice-dismiss')).toBeNull();
   });
 });

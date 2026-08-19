@@ -167,4 +167,70 @@ describe('AudioWidget', () => {
     expect(screen.getByTestId('audio-stop-button')).toBeTruthy();
     expect(screen.queryByTestId('audio-record-button')).toBeNull();
   });
+
+  // Regression (design decision 9, spec "AudioWidget Microphone Gate and
+  // Rejection Handling" — Scenario: prepareToRecordAsync rejects despite
+  // granted permission). Prior to the fix, handleRecord made zero permission
+  // calls and had no try/catch, so this rejection was an unhandled promise
+  // rejection and isRecording never became true nor stayed cleanly false.
+  it('regression: prepareToRecordAsync rejecting does not produce an unhandled rejection and keeps isRecording false', async () => {
+    av.Audio.getPermissionsAsync.mockResolvedValueOnce({
+      status: 'granted',
+      granted: true,
+      canAskAgain: true,
+    });
+    av.__mockRecording.prepareToRecordAsync.mockRejectedValueOnce(
+      new Error('device busy'),
+    );
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('audio-record-button'));
+    });
+    expect(screen.queryByTestId('audio-stop-button')).toBeNull();
+    expect(screen.queryByTestId('audio-record-button')).toBeNull();
+    expect(screen.getByTestId('permission-notice')).toBeTruthy();
+  });
+
+  it('mic permission rationale blocks recording and shows the permission notice', async () => {
+    av.Audio.getPermissionsAsync.mockResolvedValueOnce({
+      status: 'undetermined',
+      granted: false,
+      canAskAgain: true,
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('audio-record-button'));
+    });
+    expect(screen.getByTestId('permission-notice')).toBeTruthy();
+    expect(av.__mockRecording.prepareToRecordAsync).not.toHaveBeenCalled();
+  });
+
+  it('mic permission blocked shows "Abrir ajustes" and no dismiss', async () => {
+    av.Audio.getPermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+      granted: false,
+      canAskAgain: false,
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('audio-record-button'));
+    });
+    expect(screen.getByText('Abrir ajustes')).toBeTruthy();
+    expect(screen.queryByTestId('permission-notice-dismiss')).toBeNull();
+  });
 });
