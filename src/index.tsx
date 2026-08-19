@@ -8,7 +8,7 @@ export { isWidgetAvailable } from './availability/registry';
 export type { IsWidgetAvailableOpts } from './availability/registry';
 
 // PR-2: adapter types (opaque, firewall-safe)
-export type { NodeRef, AdaptedEvent, FormAdapter } from './adapter/FormAdapter';
+export type { NodeRef, AdaptedEvent, FormAdapter, PathSegment } from './adapter/FormAdapter';
 
 // PR-2: adapter factory
 export { createAdapter } from './adapter/createAdapter';
@@ -159,7 +159,12 @@ export type {
   FormNavigationSlotContext,
   FormErrorSlotContext,
   FormGroupSlotContext,
+  FormSectionIndicatorSlotContext,
 } from './form/slots';
+
+// Phase 7 PR3: section/repeat position indicator (design decisions 7-14, 17)
+export { SectionIndicator } from './form/SectionIndicator';
+export type { SectionIndicatorProps } from './form/SectionIndicator';
 
 // form-validation-hooks: injectable per-controlType validation callback (D7/D8)
 export {
