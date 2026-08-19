@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import type { FormLoadPhase } from '@nuup/xform-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  PressableButton,
+  useTheme,
+  useThemedStyles,
+  type FormLoadPhase,
+  type Theme,
+} from '@nuup/xform-native';
 
 /**
  * Presentational-only progress overlay shown while `createFormStore` is
@@ -28,7 +34,34 @@ export interface FormLoadingOverlayProps {
   onCancel: () => void;
 }
 
+function createStyles(t: Theme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: t.spacing.lg,
+      gap: t.spacing.sm,
+    },
+    phaseLabel: {
+      ...t.typography.bodyLarge,
+      color: t.color.roles.onSurfaceVariant,
+      textAlign: 'center',
+    },
+    elapsed: {
+      ...t.typography.bodySmall,
+      ...t.typography.mono,
+      color: t.color.roles.onSurfaceVariant,
+    },
+    cancelButton: {
+      marginTop: t.spacing.sm,
+    },
+  });
+}
+
 export function FormLoadingOverlay({ phase, onCancel }: FormLoadingOverlayProps) {
+  const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
@@ -42,47 +75,17 @@ export function FormLoadingOverlay({ phase, onCancel }: FormLoadingOverlayProps)
 
   return (
     <View style={styles.container} testID="form-loading-overlay">
-      <ActivityIndicator size="large" color="#1976d2" />
+      <ActivityIndicator size="large" color={theme.color.roles.primary} />
       <Text style={styles.phaseLabel}>{label}</Text>
       <Text style={styles.elapsed}>{elapsedSeconds}s</Text>
-      <TouchableOpacity
-        testID="form-load-cancel"
-        style={styles.cancelButton}
-        onPress={onCancel}
-      >
-        <Text style={styles.cancelButtonText}>Cancelar</Text>
-      </TouchableOpacity>
+      <View style={styles.cancelButton}>
+        <PressableButton
+          testID="form-load-cancel"
+          label="Cancelar"
+          tone="error"
+          onPress={onCancel}
+        />
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  phaseLabel: {
-    fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
-  },
-  elapsed: {
-    fontSize: 14,
-    color: '#888',
-  },
-  cancelButton: {
-    marginTop: 12,
-    backgroundColor: '#c0392b',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  cancelButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});
