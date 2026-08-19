@@ -11,16 +11,48 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTheme, useThemedStyles, type Theme } from '@nuup/xform-native';
 
 import { listSent, deleteSent } from '../services/sentStore';
 import type { SentManifest } from '../services/sentStore';
 import type { RootStackParamList } from '../navigation/types';
+import { createScreenStyles } from '../theme/screenStyles';
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+function createStyles(t: Theme) {
+  const screen = createScreenStyles(t);
+  return StyleSheet.create({
+    container: screen.screen,
+    header: screen.header,
+    backButton: screen.backButton,
+    backButtonText: screen.backButtonText,
+    title: screen.headerTitle,
+    centered: screen.centered,
+    emptyText: screen.emptyText,
+    row: screen.listRow,
+    rowInfo: screen.rowInfo,
+    rowTitle: screen.rowTitle,
+    rowMeta: screen.rowMeta,
+    deleteButton: {
+      padding: t.spacing.xs,
+      marginLeft: t.spacing.xs,
+      minWidth: 48,
+      minHeight: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    deleteText: { fontSize: 18 },
+  });
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function SentScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
   const [items, setItems] = useState<SentManifest[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,7 +100,7 @@ export function SentScreen() {
       {/* Body */}
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#1976d2" />
+          <ActivityIndicator size="large" color={theme.color.roles.primary} />
         </View>
       ) : items.length === 0 ? (
         <View style={styles.centered}>
@@ -103,36 +135,3 @@ export function SentScreen() {
     </SafeAreaView>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  backButton: { paddingHorizontal: 8, paddingVertical: 4 },
-  backButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  title: { flex: 1, fontSize: 18, fontWeight: '700', color: '#fff' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  emptyText: { fontSize: 16, color: '#888', textAlign: 'center' },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  rowInfo: { flex: 1 },
-  rowTitle: { fontSize: 15, fontWeight: '600', color: '#222' },
-  rowMeta: { fontSize: 12, color: '#888', marginTop: 2 },
-  deleteButton: { padding: 6, marginLeft: 8 },
-  deleteText: { fontSize: 18 },
-});
