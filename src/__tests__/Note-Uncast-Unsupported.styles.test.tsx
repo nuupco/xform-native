@@ -88,6 +88,18 @@ describe('NoteWidget — styling', () => {
     );
     expect(screen.getByTestId('note-widget')).toBeTruthy();
   });
+
+  it('renders nothing when the bound value is empty (the label already carries the note text)', async () => {
+    const { store, ref } = makeStoreFor({ ref: '/data/note', dataType: 'string', value: null });
+    await render(<NoteWidget nodeRef={ref} store={store} />);
+    expect(screen.queryByTestId('note-widget')).toBeNull();
+  });
+
+  it('renders nothing when the bound value is whitespace-only', async () => {
+    const { store, ref } = makeStoreFor({ ref: '/data/note', dataType: 'string', value: '   ' });
+    await render(<NoteWidget nodeRef={ref} store={store} />);
+    expect(screen.queryByTestId('note-widget')).toBeNull();
+  });
 });
 
 describe('UncastWidget — styling', () => {
