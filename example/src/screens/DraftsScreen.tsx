@@ -10,6 +10,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  PressableButton,
+  useThemedStyles,
+  type Theme,
+} from '@nuup/xform-native';
 
 import { listDrafts, loadDraft, deleteDraft } from '../services/draftStore';
 import { listPending } from '../services/submissionQueue';
@@ -17,6 +22,7 @@ import { draftToAsset } from '../services/draftToAsset';
 import type { Manifest } from '../services/submissionQueue';
 import type { LoadedDraft } from './FormViewerScreen';
 import type { RootStackParamList } from '../navigation/types';
+import { createScreenStyles } from '../theme/screenStyles';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,11 +32,45 @@ type Section = {
   kind: 'draft' | 'queue';
 };
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+function createStyles(t: Theme) {
+  const screen = createScreenStyles(t);
+  return StyleSheet.create({
+    container: screen.screen,
+    header: screen.header,
+    backButton: screen.backButton,
+    backButtonText: screen.backButtonText,
+    title: screen.headerTitle,
+    centered: screen.centered,
+    emptyText: screen.emptyText,
+    sectionHeader: screen.sectionHeader,
+    sectionHeaderText: screen.sectionHeaderText,
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: t.color.roles.surface,
+      paddingHorizontal: t.spacing.md,
+      paddingVertical: t.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: t.color.roles.outlineVariant,
+    },
+    rowInfo: screen.rowInfo,
+    rowTitle: screen.rowTitle,
+    rowMeta: screen.rowMeta,
+    rowActions: {
+      flexDirection: 'row',
+      gap: t.spacing.xs,
+    },
+  });
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function DraftsScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const styles = useThemedStyles(createStyles);
 
   const [drafts, setDrafts] = useState<Manifest[]>([]);
   const [pending, setPending] = useState<Manifest[]>([]);
@@ -137,20 +177,21 @@ export function DraftsScreen() {
               </View>
               {section.kind === 'draft' && (
                 <View style={styles.rowActions}>
-                  <TouchableOpacity
+                  <PressableButton
                     testID={`resume-${item.formId}`}
-                    style={styles.actionButton}
+                    label="Reanudar"
+                    variant="text"
+                    height={36}
                     onPress={() => void handleResume(item.formId)}
-                  >
-                    <Text style={styles.actionButtonText}>Reanudar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  />
+                  <PressableButton
                     testID={`delete-${item.formId}`}
-                    style={[styles.actionButton, styles.deleteButton]}
+                    label="Eliminar"
+                    variant="text"
+                    tone="error"
+                    height={36}
                     onPress={() => handleDelete(item.formId, item.formTitle)}
-                  >
-                    <Text style={styles.deleteButtonText}>Eliminar</Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               )}
             </View>
@@ -160,103 +201,3 @@ export function DraftsScreen() {
     </SafeAreaView>
   );
 }
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  backButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-  },
-  sectionHeader: {
-    backgroundColor: '#e8f0fe',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  sectionHeaderText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1976d2',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-  },
-  rowInfo: {
-    flex: 1,
-  },
-  rowTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#222',
-  },
-  rowMeta: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
-  rowActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    backgroundColor: '#c0392b',
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});

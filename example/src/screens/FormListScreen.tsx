@@ -10,13 +10,55 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  PressableButton,
+  useTheme,
+  useThemedStyles,
+  type Theme,
+} from '@nuup/xform-native';
 import { listForms } from '../services/apiClient';
 import type { KoboAsset } from '../services/apiClient';
 import type { RootStackParamList } from '../navigation/types';
+import { createScreenStyles } from '../theme/screenStyles';
+
+function createStyles(t: Theme) {
+  const screen = createScreenStyles(t);
+  return StyleSheet.create({
+    container: screen.screen,
+    header: screen.header,
+    backButton: screen.backButton,
+    backButtonText: screen.backButtonText,
+    title: screen.headerTitle,
+    centered: screen.centered,
+    emptyContainer: {
+      flexGrow: 1,
+    },
+    listContainer: {
+      paddingBottom: t.spacing.md,
+    },
+    loadingText: {
+      marginTop: t.spacing.sm,
+      ...t.typography.bodyLarge,
+      color: t.color.roles.onSurfaceVariant,
+    },
+    errorText: screen.errorText,
+    emptyText: screen.emptyText,
+    row: screen.listRow,
+    rowText: {
+      ...t.typography.titleMedium,
+      color: t.color.roles.onSurface,
+    },
+    loadMoreButton: {
+      margin: t.spacing.md,
+    },
+  });
+}
 
 export function FormListScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
 
   const [forms, setForms] = useState<KoboAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,16 +109,14 @@ export function FormListScreen() {
 
       {loading && (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#1976d2" />
+          <ActivityIndicator size="large" color={theme.color.roles.primary} />
           <Text style={styles.loadingText}>Cargando formularios...</Text>
         </View>
       )}
       {!loading && error && (
         <View style={styles.centered}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={load}>
-            <Text style={styles.retryButtonText}>Reintentar</Text>
-          </TouchableOpacity>
+          <PressableButton label="Reintentar" onPress={() => void load()} />
         </View>
       )}
       {!loading && !error && (
@@ -103,20 +143,14 @@ export function FormListScreen() {
           }
           ListFooterComponent={
             nextUrl !== null ? (
-              <TouchableOpacity
-                style={[
-                  styles.loadMoreButton,
-                  loadingMore && styles.loadMoreButtonDisabled,
-                ]}
-                onPress={loadMore}
-                disabled={loadingMore}
-              >
-                {loadingMore ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.loadMoreButtonText}>Cargar más</Text>
-                )}
-              </TouchableOpacity>
+              <View style={styles.loadMoreButton}>
+                <PressableButton
+                  label={loadingMore ? 'Cargando...' : 'Cargar más'}
+                  onPress={() => void loadMore()}
+                  disabled={loadingMore}
+                  fullWidth
+                />
+              </View>
             ) : null
           }
         />
@@ -124,98 +158,3 @@ export function FormListScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  backButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  emptyContainer: {
-    flexGrow: 1,
-  },
-  listContainer: {
-    paddingBottom: 16,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#555',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#c0392b',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-  },
-  row: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-    backgroundColor: '#fff',
-  },
-  rowText: {
-    fontSize: 16,
-    color: '#222',
-  },
-  loadMoreButton: {
-    margin: 16,
-    backgroundColor: '#1976d2',
-    paddingVertical: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  loadMoreButtonDisabled: {
-    opacity: 0.6,
-  },
-  loadMoreButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});
