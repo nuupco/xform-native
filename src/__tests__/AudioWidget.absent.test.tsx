@@ -1,7 +1,7 @@
 /**
  * AudioWidget absent-dep test — REQ-M14.
  */
-jest.mock('expo-av', () => {
+jest.mock('expo-audio', () => {
   throw new Error('not found');
 });
 

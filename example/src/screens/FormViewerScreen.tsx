@@ -21,7 +21,6 @@ import {
   tokens,
   type WidgetOverride,
   type XFormWidgetProps,
-  type FormSlots,
   type ValidatorOverride,
   type FormLoadPhase,
   type PhaseTiming,
@@ -58,17 +57,6 @@ const demoWidgetOverrides: readonly WidgetOverride[] = [
 // 4. Custom validator: for `note` controls (harmless additive check) — this
 // demonstrates composing on top of defaultValidate() rather than a real
 // business rule, since note controls have no user input to validate.
-// 3. Composition slot: replace the default navigation row with visually
-// distinct pill-shaped buttons, reusing `defaultElement` so we never
-// duplicate Form's enabled/disabled logic.
-const demoFormSlots: FormSlots = {
-  renderNavigation: (ctx) => (
-    <View style={demoStyles.navWrapper} testID="demo-custom-navigation">
-      {ctx.defaultElement}
-    </View>
-  ),
-};
-
 const demoValidatorOverrides: readonly ValidatorOverride[] = [
   {
     // `dataType: 'string'` alone also matches select1/select bindings (they
@@ -356,7 +344,6 @@ export function FormViewerScreen() {
             <Form
               store={store}
               widgets={demoWidgetOverrides}
-              slots={demoFormSlots}
               validators={demoValidatorOverrides}
             />
           </View>
@@ -451,12 +438,5 @@ const demoStyles = StyleSheet.create({
     fontSize: 14,
     color: tokens.color.roles.onSecondaryContainer,
     fontStyle: 'italic',
-  },
-  navWrapper: {
-    borderWidth: 2,
-    borderColor: tokens.color.roles.tertiary,
-    borderRadius: tokens.radius.lg,
-    padding: tokens.spacing.xxs,
-    backgroundColor: tokens.color.roles.tertiaryContainer,
   },
 });

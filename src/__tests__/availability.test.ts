@@ -66,7 +66,7 @@ describe('isWidgetAvailable', () => {
 
     it('binary with mediatype audio/* returns false when only expo-image-picker mock is present', () => {
       jest.isolateModules(() => {
-        jest.doMock('expo-av', () => { throw new Error(); });
+        jest.doMock('expo-audio', () => { throw new Error(); });
         jest.doMock('react-native-svg', () => { throw new Error(); });
         jest.doMock('expo-document-picker', () => { throw new Error(); });
         const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');
@@ -104,7 +104,8 @@ describe('isWidgetAvailable', () => {
 
     it('binary with mediatype video/* returns false when only expo-image-picker mock is present', () => {
       jest.isolateModules(() => {
-        jest.doMock('expo-av', () => { throw new Error(); });
+        jest.doMock('expo-audio', () => { throw new Error(); });
+        jest.doMock('expo-video', () => { throw new Error(); });
         jest.doMock('react-native-svg', () => { throw new Error(); });
         jest.doMock('expo-document-picker', () => { throw new Error(); });
         jest.doMock('expo-camera', () => { throw new Error(); });
@@ -116,7 +117,7 @@ describe('isWidgetAvailable', () => {
     it('binary with mediatype audio/* returns false when only expo-image-picker is present', () => {
       jest.isolateModules(() => {
         jest.doMock('expo-image-picker', () => ({}), { virtual: true });
-        jest.doMock('expo-av', () => { throw new Error(); });
+        jest.doMock('expo-audio', () => { throw new Error(); });
         jest.doMock('react-native-svg', () => { throw new Error(); });
         jest.doMock('expo-document-picker', () => { throw new Error(); });
         const { isWidgetAvailable: localIsAvailable } = require('../availability/registry');

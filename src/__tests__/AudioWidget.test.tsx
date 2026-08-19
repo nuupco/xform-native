@@ -13,7 +13,7 @@ import { FormSessionStore } from '../store/FormSessionStore';
 import { makeFakeSession } from '../test-support/makeFakeSession';
 import { AudioWidget } from '../widgets/AudioWidget';
 
-const av = require('expo-av');
+const av = require('expo-audio');
 
 afterEach(async () => {
   await cleanup();
@@ -119,7 +119,7 @@ describe('AudioWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('audio-play-button'));
     });
-    expect(av.__mockSound.playAsync).toHaveBeenCalled();
+    expect(av.__mockPlayer.play).toHaveBeenCalled();
   });
 
   it('unmounting mid-recording stops and unloads the recording', async () => {
@@ -135,7 +135,7 @@ describe('AudioWidget', () => {
     await act(async () => {
       unmount();
     });
-    expect(av.__mockRecording.stopAndUnloadAsync).toHaveBeenCalled();
+    expect(av.__mockRecorder.stop).toHaveBeenCalled();
   });
 
   it('unmounting with a loaded sound unloads it', async () => {
@@ -151,7 +151,7 @@ describe('AudioWidget', () => {
     await act(async () => {
       unmount();
     });
-    expect(av.__mockSound.unloadAsync).toHaveBeenCalled();
+    expect(av.__mockPlayer.remove).toHaveBeenCalled();
   });
 
   it('shows Stop while recording and hides Record', async () => {
@@ -174,12 +174,12 @@ describe('AudioWidget', () => {
   // calls and had no try/catch, so this rejection was an unhandled promise
   // rejection and isRecording never became true nor stayed cleanly false.
   it('regression: prepareToRecordAsync rejecting does not produce an unhandled rejection and keeps isRecording false', async () => {
-    av.Audio.getPermissionsAsync.mockResolvedValueOnce({
+    av.getRecordingPermissionsAsync.mockResolvedValueOnce({
       status: 'granted',
       granted: true,
       canAskAgain: true,
     });
-    av.__mockRecording.prepareToRecordAsync.mockRejectedValueOnce(
+    av.__mockRecorder.prepareToRecordAsync.mockRejectedValueOnce(
       new Error('device busy'),
     );
     const store = makeStore();
@@ -197,7 +197,7 @@ describe('AudioWidget', () => {
   });
 
   it('mic permission rationale blocks recording and shows the permission notice', async () => {
-    av.Audio.getPermissionsAsync.mockResolvedValueOnce({
+    av.getRecordingPermissionsAsync.mockResolvedValueOnce({
       status: 'undetermined',
       granted: false,
       canAskAgain: true,
@@ -212,11 +212,11 @@ describe('AudioWidget', () => {
       fireEvent.press(screen.getByTestId('audio-record-button'));
     });
     expect(screen.getByTestId('permission-notice')).toBeTruthy();
-    expect(av.__mockRecording.prepareToRecordAsync).not.toHaveBeenCalled();
+    expect(av.__mockRecorder.prepareToRecordAsync).not.toHaveBeenCalled();
   });
 
   it('mic permission blocked shows "Abrir ajustes" and no dismiss', async () => {
-    av.Audio.getPermissionsAsync.mockResolvedValueOnce({
+    av.getRecordingPermissionsAsync.mockResolvedValueOnce({
       status: 'denied',
       granted: false,
       canAskAgain: false,
