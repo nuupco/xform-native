@@ -28,6 +28,7 @@ import { useFormSession } from '../store/useFormSession';
 import { useTheme, useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { elevationStyle } from '../theme/elevationStyle';
 import { GripIcon } from './primitives/Icon';
+import { MarkdownText } from '../text/MarkdownText';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 import type { SelectChoice } from '@nuup/ts-rosa';
@@ -189,7 +190,7 @@ function RankRow({
           {index + 1}
         </Text>
       </View>
-      <Text style={styles.label}>{choice.label ?? choice.value}</Text>
+      <MarkdownText value={choice.label ?? choice.value} baseStyle={styles.label} />
       <View style={styles.controls}>
         <Pressable
           testID={`rank-up-${choice.value}`}

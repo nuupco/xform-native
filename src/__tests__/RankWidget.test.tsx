@@ -160,4 +160,19 @@ describe('RankWidget', () => {
     fireEvent.press(screen.getByTestId('rank-down-a'));
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it('Phase 8 PR3: renders bold markdown in a choice label', async () => {
+    const { store, ref } = makeStoreFor({
+      ref: '/data/rank-md',
+      dataType: 'selectMulti',
+      choices: [{ value: 'a', label: 'Opción **fuerte**' }],
+      value: null,
+    });
+    await render(<RankWidget nodeRef={ref} store={store} />);
+    const boldNode = screen.getByText('fuerte');
+    const style = Array.isArray(boldNode.props.style)
+      ? Object.assign({}, ...boldNode.props.style.filter(Boolean))
+      : boldNode.props.style;
+    expect(style.fontWeight).toBe('700');
+  });
 });

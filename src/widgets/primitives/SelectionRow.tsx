@@ -21,7 +21,6 @@ import { useEffect, useRef } from 'react';
 import {
   Animated,
   Pressable,
-  Text,
   View,
   type GestureResponderEvent,
   type StyleProp,
@@ -29,6 +28,7 @@ import {
   type TextStyle,
 } from 'react-native';
 import { useTheme, defaultTheme, type Theme } from '../../theme/ThemeContext';
+import { MarkdownText } from '../../text/MarkdownText';
 
 export type SelectionControl = 'radio' | 'checkbox';
 
@@ -221,13 +221,13 @@ export function SelectionRow({
       <View style={contentStyle}>
         {children ?? (isLikert ? (
           <>
-            {label !== undefined && <Text style={labelStyle}>{label}</Text>}
+            {label !== undefined && <MarkdownText value={label} baseStyle={labelStyle} />}
             <SelectionIndicator control={control} selected={selected} theme={t} />
           </>
         ) : (
           <>
             <SelectionIndicator control={control} selected={selected} theme={t} />
-            {label !== undefined && <Text style={labelStyle}>{label}</Text>}
+            {label !== undefined && <MarkdownText value={label} baseStyle={labelStyle} />}
           </>
         ))}
       </View>

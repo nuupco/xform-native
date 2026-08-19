@@ -35,6 +35,7 @@ import { createFieldStyles } from './primitives/fieldStyles';
 import { SelectionRow } from './primitives/SelectionRow';
 import { SearchIcon } from './primitives/Icon';
 import { BottomSheet } from './primitives/BottomSheet';
+import { stripOdkMarkdown } from '../text/parseOdkMarkdown';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -154,7 +155,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
   if (variant === 'minimal') {
     const selectedLabels = choices
       .filter((c) => selections.includes(c.value))
-      .map((c) => c.label ?? c.value)
+      .map((c) => stripOdkMarkdown(c.label ?? c.value))
       .join(', ');
     return (
       <View style={styles.container}>
@@ -188,7 +189,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
   if (variant === 'minimal-autocomplete' || variant === 'autocomplete') {
     const selectedLabels = choices
       .filter((c) => selections.includes(c.value))
-      .map((c) => c.label ?? c.value)
+      .map((c) => stripOdkMarkdown(c.label ?? c.value))
       .join(', ');
     return (
       <View style={styles.container}>
