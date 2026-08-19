@@ -1,21 +1,67 @@
 import React, { useState } from 'react';
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  PressableButton,
+  elevationStyle,
+  useThemedStyles,
+  type Theme,
+} from '@nuup/xform-native';
 import { saveServerConfig } from '../config/serverConfig';
 import type { RootStackParamList } from '../navigation/types';
+import { createScreenStyles } from '../theme/screenStyles';
+
+function createStyles(t: Theme) {
+  const screen = createScreenStyles(t);
+  return StyleSheet.create({
+    container: {
+      ...screen.screen,
+      justifyContent: 'center',
+      padding: t.spacing.md,
+    },
+    card: {
+      backgroundColor: t.color.roles.surface,
+      borderRadius: t.radius.lg,
+      padding: t.spacing.lg,
+      // Cast: cross-package react-native type-identity mismatch between the
+      // library's and example app's react-native versions (see
+      // screenStyles.ts) — not a real type error.
+      ...(elevationStyle(t, 2) as object),
+    },
+    title: {
+      ...t.typography.headlineSmall,
+      color: t.color.roles.onSurface,
+      marginBottom: t.spacing.lg,
+      textAlign: 'center',
+    },
+    label: {
+      ...t.typography.labelLarge,
+      color: t.color.roles.onSurfaceVariant,
+      marginBottom: t.spacing.xxs,
+      marginTop: t.spacing.sm,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: t.color.roles.outline,
+      borderRadius: t.radius.md,
+      paddingHorizontal: t.spacing.sm,
+      paddingVertical: t.spacing.xs,
+      minHeight: 48,
+      ...t.typography.bodyLarge,
+      color: t.color.roles.onSurface,
+    },
+    button: {
+      marginTop: t.spacing.lg,
+    },
+  });
+}
 
 export function LoginScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const styles = useThemedStyles(createStyles);
 
   const [baseUrl, setBaseUrl] = useState('https://kf.kobo.nuup.org/');
   const [username, setUsername] = useState('bajionuup');
@@ -95,73 +141,15 @@ export function LoginScreen() {
           placeholder="contraseña"
         />
 
-        <TouchableOpacity
-          style={[styles.button, connecting && styles.buttonDisabled]}
-          onPress={() => void handleConnect()}
-          disabled={connecting}
-        >
-          <Text style={styles.buttonText}>
-            {connecting ? 'Conectando...' : 'Conectar'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.button}>
+          <PressableButton
+            label={connecting ? 'Conectando...' : 'Conectar'}
+            onPress={() => void handleConnect()}
+            disabled={connecting}
+            fullWidth
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1976d2',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#222',
-  },
-  button: {
-    backgroundColor: '#1976d2',
-    borderRadius: 8,
-    paddingVertical: 14,
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});
