@@ -16,12 +16,18 @@
  * region rather than expanding MediaCaptureCard's API. `state:'empty'` is
  * used only for the true empty case (no value, not scanning).
  */
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { MediaCaptureCard } from './primitives/MediaCaptureCard';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import {
+  usePermissionGate,
+  isPermissionBlockingState,
+  type PermissionGateStatus,
+} from './primitives/usePermissionGate';
+import { PermissionNotice } from './primitives/PermissionNotice';
 
 let _cameraModule: any | null = null;
 let _cameraLoaded: boolean | undefined;
@@ -70,6 +76,27 @@ function createStyles(t: Theme) {
   });
 }
 
+function getCameraNoticeCopy(status: PermissionGateStatus) {
+  switch (status) {
+    case 'rationale':
+      return {
+        title: 'Usar la cámara',
+        body: 'Necesitamos la cámara para escanear el código.',
+      };
+    case 'blocked':
+      return {
+        title: 'Permiso de cámara bloqueado',
+        body: 'Actívalo en los ajustes del sistema para escanear códigos.',
+      };
+    case 'denied':
+    default:
+      return {
+        title: 'Sin permiso de cámara',
+        body: 'Permite el acceso para escanear códigos.',
+      };
+  }
+}
+
 export function BarcodeWidget({ nodeRef, store, appearance: _appearance }: BarcodeWidgetProps) {
   // Theming (D2): useThemedStyles MUST stay the first statement, before the
   // peer-dependency gating early return below.
@@ -84,6 +111,16 @@ export function BarcodeWidget({ nodeRef, store, appearance: _appearance }: Barco
     typeof resolved === 'string' ? resolved : ''
   );
 
+  const cameraAdapter = useMemo(
+    () => ({
+      get: () => camera?.getCameraPermissionsAsync?.(),
+      request: () => camera?.requestCameraPermissionsAsync?.(),
+    }),
+    [camera]
+  );
+  const gate = usePermissionGate(cameraAdapter);
+  const pendingIntentRef = useRef<'scan' | 'rescan' | null>(null);
+
   // When resolved value changes externally, sync local state
   useEffect(() => {
     if (typeof resolved === 'string') {
@@ -93,10 +130,26 @@ export function BarcodeWidget({ nodeRef, store, appearance: _appearance }: Barco
     }
   }, [resolved]);
 
-  const handleScanPress = useCallback(() => {
-    if (readonly || !camera) return;
+  // If the user retries permission (rationale/denied) from the notice and it
+  // is granted, resume the scan they originally intended instead of leaving
+  // them back at the empty/captured card.
+  useEffect(() => {
+    if (gate.status !== 'granted' || !pendingIntentRef.current) return;
+    if (pendingIntentRef.current === 'rescan') {
+      setValue('');
+    }
+    pendingIntentRef.current = null;
     setScanning(true);
-  }, [camera, readonly]);
+  }, [gate.status]);
+
+  const handleScanPress = useCallback(async () => {
+    if (readonly || !camera) return;
+    if (!(await gate.ensure())) {
+      pendingIntentRef.current = 'scan';
+      return;
+    }
+    setScanning(true);
+  }, [camera, readonly, gate]);
 
   const handleBarcodeScanned = useCallback(
     (result: { data: string }) => {
@@ -107,17 +160,44 @@ export function BarcodeWidget({ nodeRef, store, appearance: _appearance }: Barco
     [nodeRef, store]
   );
 
-  const handleRescan = useCallback(() => {
+  const handleRescan = useCallback(async () => {
     if (readonly || !camera) return;
+    if (!(await gate.ensure())) {
+      pendingIntentRef.current = 'rescan';
+      return;
+    }
     setValue('');
     setScanning(true);
-  }, [camera, readonly]);
+  }, [camera, readonly, gate]);
 
   if (!camera) {
     return <UnsupportedWidget dataType="barcode" />;
   }
 
   const { CameraView } = camera;
+
+  if (!readonly && !scanning && isPermissionBlockingState(gate.status)) {
+    const copy = getCameraNoticeCopy(gate.status);
+    return (
+      <MediaCaptureCard
+        testID="barcode-widget"
+        state="captured"
+        icon={<Text>📷</Text>}
+        title="No barcode scanned"
+        actions={[]}
+        preview={
+          <PermissionNotice
+            title={copy.title}
+            body={copy.body}
+            primaryLabel={gate.status === 'blocked' ? 'Abrir ajustes' : 'Permitir'}
+            onPrimary={gate.status === 'blocked' ? gate.openSettings : gate.requestPermission}
+            dismissLabel={gate.status === 'blocked' ? undefined : 'Ahora no'}
+            onDismiss={gate.status === 'blocked' ? undefined : gate.dismissRationale}
+          />
+        }
+      />
+    );
+  }
 
   if (readonly) {
     return (
