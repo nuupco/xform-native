@@ -231,6 +231,31 @@ describe('GeoPointWidget', () => {
     expect(screen.getByText('Sin permiso de ubicación')).toBeTruthy();
   });
 
+  it('renders the permission notice when denied and retries the OS prompt on primary press (PR2)', async () => {
+    mockGeo.Location.requestForegroundPermissionsAsync.mockResolvedValueOnce({
+      status: 'denied',
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    await render(
+      <GeoPointWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('geo-open-map-button'));
+    });
+    expect(screen.getByTestId('gps-permission-notice')).toBeTruthy();
+    expect(screen.getByText('Sin permiso de ubicación')).toBeTruthy();
+
+    const callsBefore = mockGeo.Location.requestForegroundPermissionsAsync.mock.calls.length;
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('gps-permission-primary'));
+    });
+    expect(mockGeo.Location.requestForegroundPermissionsAsync.mock.calls.length).toBe(
+      callsBefore + 1,
+    );
+  });
+
   it('shows live accuracy readout once a GPS fix lands', async () => {
     const store = makeStore();
     store.stepForward();
