@@ -13,13 +13,19 @@
  * in-progress-recording state (`MicIcon` pulsing via `recordingPulse`,
  * `Stop` action with `tone:'error'`).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Text, StyleSheet } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { MediaCaptureCard } from './primitives/MediaCaptureCard';
 import { MicIcon } from './primitives/Icon';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import {
+  usePermissionGate,
+  isPermissionBlockingState,
+  type PermissionGateStatus,
+} from './primitives/usePermissionGate';
+import { PermissionNotice } from './primitives/PermissionNotice';
 
 let _AudioModule: any | null = null;
 let _avLoaded: boolean | undefined;
@@ -48,6 +54,32 @@ function createStyles(t: Theme) {
   });
 }
 
+function getMicNoticeCopy(status: PermissionGateStatus) {
+  switch (status) {
+    case 'rationale':
+      return {
+        title: 'Usar el micrófono',
+        body: 'Necesitamos el micrófono para grabar tu respuesta de audio.',
+      };
+    case 'blocked':
+      return {
+        title: 'Permiso de micrófono bloqueado',
+        body: 'Actívalo en los ajustes del sistema para grabar audio.',
+      };
+    case 'error':
+      return {
+        title: 'No se pudo iniciar la grabación',
+        body: 'Vuelve a intentarlo.',
+      };
+    case 'denied':
+    default:
+      return {
+        title: 'Sin permiso de micrófono',
+        body: 'Permite el acceso para grabar audio.',
+      };
+  }
+}
+
 export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWidgetProps) {
   // Theming (D2): useThemedStyles MUST stay the first statement, before the
   // peer-dependency gating early return below.
@@ -62,6 +94,15 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
   const [isRecording, setIsRecording] = useState(false);
   const recordingRef = useRef<any>(null);
   const soundRef = useRef<any>(null);
+
+  const micAdapter = useMemo(
+    () => ({
+      get: () => av?.Audio?.getPermissionsAsync?.(),
+      request: () => av?.Audio?.requestPermissionsAsync?.(),
+    }),
+    [av]
+  );
+  const gate = usePermissionGate(micAdapter);
 
   // Recording pulse — one-shot opacity dip (not a repeating loop: the global
   // `Animated.timing` jest stub resolves `start()` synchronously, which would
@@ -79,38 +120,56 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
 
   const handleRecord = useCallback(async () => {
     if (!av || readonly) return;
-    const { Audio } = av;
-    const recording = new Audio.Recording();
-    await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-    await recording.startAsync();
-    recordingRef.current = recording;
-    setIsRecording(true);
-  }, [av, readonly]);
+    if (!(await gate.ensure())) return;
+    try {
+      const { Audio } = av;
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.startAsync();
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch {
+      // Genuine runtime failure (device busy, hardware issue) despite a
+      // granted permission — design decision 9. Never leave this as an
+      // unhandled rejection.
+      gate.markError();
+      setIsRecording(false);
+    }
+  }, [av, readonly, gate]);
 
   const handleStop = useCallback(async () => {
     if (!av || readonly || !recordingRef.current) return;
-    const recording = recordingRef.current;
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    recordingRef.current = null;
-    if (uri) {
-      store.answerQuestion(nodeRef, uri);
+    try {
+      const recording = recordingRef.current;
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      recordingRef.current = null;
+      if (uri) {
+        store.answerQuestion(nodeRef, uri);
+      }
+    } catch {
+      // best-effort; nothing else to do on a failed stop
+    } finally {
+      setIsRecording(false);
     }
-    setIsRecording(false);
   }, [av, readonly, nodeRef, store]);
 
   const handlePlay = useCallback(async () => {
     if (!av || readonly) return;
     const uri = storedUri;
     if (!uri) return;
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync();
-      soundRef.current = null;
+    try {
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+      const { Audio } = av;
+      const { sound } = await Audio.Sound.createAsync({ uri });
+      soundRef.current = sound;
+      await sound.playAsync();
+    } catch {
+      // best-effort; playback failure has no dedicated UI state
     }
-    const { Audio } = av;
-    const { sound } = await Audio.Sound.createAsync({ uri });
-    soundRef.current = sound;
-    await sound.playAsync();
   }, [av, readonly, storedUri]);
 
   useEffect(() => {
@@ -136,6 +195,33 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
 
   if (!av) {
     return <UnsupportedWidget dataType="binary" />;
+  }
+
+  if (
+    !readonly &&
+    !isRecording &&
+    (isPermissionBlockingState(gate.status) || gate.status === 'error')
+  ) {
+    const copy = getMicNoticeCopy(gate.status);
+    return (
+      <MediaCaptureCard
+        testID="audio-widget"
+        state="captured"
+        icon={<MicIcon />}
+        title="No recording"
+        actions={[]}
+        preview={
+          <PermissionNotice
+            title={copy.title}
+            body={copy.body}
+            primaryLabel={gate.status === 'blocked' ? 'Abrir ajustes' : 'Permitir'}
+            onPrimary={gate.status === 'blocked' ? gate.openSettings : gate.requestPermission}
+            dismissLabel={gate.status === 'blocked' ? undefined : 'Ahora no'}
+            onDismiss={gate.status === 'blocked' ? undefined : gate.dismissRationale}
+          />
+        }
+      />
+    );
   }
 
   if (isRecording) {

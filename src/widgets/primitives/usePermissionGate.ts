@@ -70,6 +70,13 @@ export interface UsePermissionGateResult {
   dismissRationale: () => void;
   openSettings: () => void;
   reset: () => void;
+  /**
+   * Marks the gate as `error` — for a genuine runtime failure that occurs
+   * *after* a granted permission check (e.g. device busy), distinct from a
+   * permission-adapter failure that `ensure()`/`requestPermission()` already
+   * catch internally (design decision 9).
+   */
+  markError: () => void;
 }
 
 export function usePermissionGate(adapter: PermissionAdapter): UsePermissionGateResult {
@@ -160,6 +167,10 @@ export function usePermissionGate(adapter: PermissionAdapter): UsePermissionGate
     setCanAskAgain(true);
   }, []);
 
+  const markError = useCallback(() => {
+    if (mountedRef.current) setStatus('error');
+  }, []);
+
   // Recovery: while blocked, watch for the app returning to foreground
   // (e.g. after the user grants the permission in system Settings) and
   // re-run the pre-check once (design decision 11).
@@ -189,5 +200,6 @@ export function usePermissionGate(adapter: PermissionAdapter): UsePermissionGate
     dismissRationale,
     openSettings,
     reset,
+    markError,
   };
 }

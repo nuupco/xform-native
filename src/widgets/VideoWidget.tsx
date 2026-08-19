@@ -13,13 +13,19 @@
  * content" region. Camera/video preview keep the fixed 240x180 size,
  * upgraded to `radius.md` per the mapping table (was `radius.sm`).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { MediaCaptureCard } from './primitives/MediaCaptureCard';
 import { VideoIcon } from './primitives/Icon';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import {
+  usePermissionGate,
+  isPermissionBlockingState,
+  type PermissionGateStatus,
+} from './primitives/usePermissionGate';
+import { PermissionNotice } from './primitives/PermissionNotice';
 
 let _CameraModule: any | null = null;
 let _cameraLoaded: boolean | undefined;
@@ -68,6 +74,48 @@ function createStyles(t: Theme) {
   });
 }
 
+function getCameraNoticeCopy(status: PermissionGateStatus) {
+  switch (status) {
+    case 'rationale':
+      return {
+        title: 'Usar la cámara',
+        body: 'Necesitamos la cámara para grabar el video.',
+      };
+    case 'blocked':
+      return {
+        title: 'Permiso de cámara bloqueado',
+        body: 'Actívalo en los ajustes del sistema para grabar el video.',
+      };
+    case 'denied':
+    default:
+      return {
+        title: 'Sin permiso de cámara',
+        body: 'Permite el acceso para grabar el video.',
+      };
+  }
+}
+
+function getMicNoticeCopy(status: PermissionGateStatus) {
+  switch (status) {
+    case 'rationale':
+      return {
+        title: 'Usar el micrófono',
+        body: 'Necesitamos el micrófono para grabar el audio del video.',
+      };
+    case 'blocked':
+      return {
+        title: 'Permiso de micrófono bloqueado',
+        body: 'Actívalo en los ajustes del sistema para grabar audio.',
+      };
+    case 'denied':
+    default:
+      return {
+        title: 'Sin permiso de micrófono',
+        body: 'Permite el acceso para grabar audio.',
+      };
+  }
+}
+
 export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWidgetProps) {
   // Theming (D2): useThemedStyles MUST stay the first statement, before the
   // peer-dependency gating early return below.
@@ -86,6 +134,38 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
   const activeCameraRef = useRef<any>(null);
   const isCancelledRef = useRef(false);
   const mountedRef = useRef(true);
+
+  const cameraAdapter = useMemo(
+    () => ({
+      get: () => camera?.getCameraPermissionsAsync?.(),
+      request: () => camera?.requestCameraPermissionsAsync?.(),
+    }),
+    [camera]
+  );
+  const cameraGate = usePermissionGate(cameraAdapter);
+
+  const micAdapter = useMemo(
+    () => ({
+      get: () => camera?.getMicrophonePermissionsAsync?.(),
+      request: () => camera?.requestMicrophonePermissionsAsync?.(),
+    }),
+    [camera]
+  );
+  const micGate = usePermissionGate(micAdapter);
+
+  // Decision 8: camera checked first, then microphone; the notice reflects
+  // the first non-granted permission. Recording is blocked until BOTH are
+  // granted (maintainer decision — no silent audio-less fallback).
+  const blockingGate = isPermissionBlockingState(cameraGate.status)
+    ? cameraGate
+    : isPermissionBlockingState(micGate.status)
+      ? micGate
+      : null;
+  const blockingGateKind: 'camera' | 'mic' | null = isPermissionBlockingState(cameraGate.status)
+    ? 'camera'
+    : isPermissionBlockingState(micGate.status)
+      ? 'mic'
+      : null;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -123,10 +203,14 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
       });
   }, [isRecording, nodeRef, store]);
 
-  const handleRecord = useCallback(() => {
+  const handleRecord = useCallback(async () => {
     if (!camera || readonly) return;
+    const cameraGranted = await cameraGate.ensure();
+    if (!cameraGranted) return;
+    const micGranted = await micGate.ensure();
+    if (!micGranted) return;
     setIsRecording(true);
-  }, [camera, readonly]);
+  }, [camera, readonly, cameraGate, micGate]);
 
   const handleStop = useCallback(() => {
     if (!cameraRef.current) return;
@@ -163,6 +247,38 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
 
   const { CameraView } = camera;
   const { Video } = av || {};
+
+  if (!readonly && !isRecording && blockingGate && blockingGateKind) {
+    const copy =
+      blockingGateKind === 'camera'
+        ? getCameraNoticeCopy(blockingGate.status)
+        : getMicNoticeCopy(blockingGate.status);
+    return (
+      <MediaCaptureCard
+        testID="video-widget"
+        state="captured"
+        icon={<VideoIcon />}
+        title="No video recorded"
+        actions={[]}
+        preview={
+          <PermissionNotice
+            title={copy.title}
+            body={copy.body}
+            primaryLabel={blockingGate.status === 'blocked' ? 'Abrir ajustes' : 'Permitir'}
+            onPrimary={
+              blockingGate.status === 'blocked'
+                ? blockingGate.openSettings
+                : blockingGate.requestPermission
+            }
+            dismissLabel={blockingGate.status === 'blocked' ? undefined : 'Ahora no'}
+            onDismiss={
+              blockingGate.status === 'blocked' ? undefined : blockingGate.dismissRationale
+            }
+          />
+        }
+      />
+    );
+  }
 
   if (isPlaying && storedUri && Video) {
     return (
