@@ -14,6 +14,7 @@ import {
   GeoMapChrome,
   MapActionButton,
   GpsStatusPill,
+  GpsPermissionNotice,
   PrewarmStatusPill,
   GeoActionBar,
 } from '../widgets/primitives/GeoMapChrome';
@@ -103,6 +104,16 @@ describe('GpsStatusPill', () => {
     expect(screen.getByText('Sin permiso de ubicación')).toBeTruthy();
   });
 
+  it('renders nothing for rationale (PR2 permission notice split)', async () => {
+    const { toJSON } = await render(<GpsStatusPill status="rationale" />);
+    expect(toJSON()).toBeNull();
+  });
+
+  it('renders nothing for blocked (PR2 permission notice split)', async () => {
+    const { toJSON } = await render(<GpsStatusPill status="blocked" />);
+    expect(toJSON()).toBeNull();
+  });
+
   it('shows the error copy', async () => {
     await render(<GpsStatusPill status="error" />);
     expect(screen.getByText('No se pudo obtener la ubicación')).toBeTruthy();
@@ -152,6 +163,106 @@ describe('PrewarmStatusPill', () => {
     const pillStyle = flatten(screen.getByTestId('prewarm-status').props.style);
     expect(pillStyle.borderRadius).toBe(tokens.radius.pill);
     expect(pillStyle.backgroundColor).toBe(tokens.color.roles.surface);
+  });
+});
+
+describe('GpsPermissionNotice', () => {
+  it('renders rationale copy and fires requestPermission/dismiss', async () => {
+    const onRequestPermission = jest.fn();
+    const onDismiss = jest.fn();
+    const onOpenSettings = jest.fn();
+    await render(
+      <GpsPermissionNotice
+        status="rationale"
+        onRequestPermission={onRequestPermission}
+        onDismiss={onDismiss}
+        onOpenSettings={onOpenSettings}
+        testID="gps-permission-notice"
+      />,
+    );
+    expect(screen.getByTestId('gps-permission-notice')).toBeTruthy();
+    expect(screen.getByText('Usar tu ubicación')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Necesitamos el GPS para ubicar tu punto en el mapa. Solo se usa mientras este mapa está abierto.',
+      ),
+    ).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('gps-permission-primary'));
+    });
+    expect(onRequestPermission).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('gps-permission-dismiss'));
+    });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onOpenSettings).not.toHaveBeenCalled();
+  });
+
+  it('renders denied copy (byte-identical title to the pill) and fires requestPermission/dismiss', async () => {
+    const onRequestPermission = jest.fn();
+    const onDismiss = jest.fn();
+    await render(
+      <GpsPermissionNotice
+        status="denied"
+        onRequestPermission={onRequestPermission}
+        onDismiss={onDismiss}
+        onOpenSettings={() => {}}
+        testID="gps-permission-notice"
+      />,
+    );
+    expect(screen.getByText('Sin permiso de ubicación')).toBeTruthy();
+    expect(screen.getByText('Permite el acceso para ver tu posición en el mapa.')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('gps-permission-primary'));
+    });
+    expect(onRequestPermission).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('gps-permission-dismiss'));
+    });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('appends the fallbackHint to the denied body when provided', async () => {
+    await render(
+      <GpsPermissionNotice
+        status="denied"
+        onRequestPermission={() => {}}
+        onDismiss={() => {}}
+        onOpenSettings={() => {}}
+        fallbackHint="También puedes tocar el mapa para ubicar el punto manualmente."
+        testID="gps-permission-notice"
+      />,
+    );
+    expect(
+      screen.getByText(
+        'Permite el acceso para ver tu posición en el mapa. También puedes tocar el mapa para ubicar el punto manualmente.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('renders blocked copy with Abrir ajustes and no dismiss button', async () => {
+    const onOpenSettings = jest.fn();
+    await render(
+      <GpsPermissionNotice
+        status="blocked"
+        onRequestPermission={() => {}}
+        onDismiss={() => {}}
+        onOpenSettings={onOpenSettings}
+        testID="gps-permission-notice"
+      />,
+    );
+    expect(screen.getByText('Permiso de ubicación bloqueado')).toBeTruthy();
+    expect(screen.getByText('Actívalo en los ajustes del sistema para usar el GPS.')).toBeTruthy();
+    expect(screen.queryByTestId('gps-permission-dismiss')).toBeNull();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('gps-permission-primary'));
+    });
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 });
 
