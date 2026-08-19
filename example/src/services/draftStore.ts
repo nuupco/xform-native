@@ -18,10 +18,18 @@ import type { Manifest } from './submissionQueue';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type LoadedDraft = {
+/** Exactly what loadDraft() reads back from disk. */
+export type StoredDraft = {
   instanceXml: string;
   instanceAttachments: FormAttachment[];
   manifest: Manifest;
+};
+
+/** A StoredDraft plus the viewer-layer staleness verdict carried through navigation. */
+export type LoadedDraft = StoredDraft & {
+  isStale: boolean;
+  savedVersion?: string;
+  currentVersion?: string;
 };
 
 export type StalenessResult =
@@ -87,7 +95,7 @@ export async function saveDraft(
   return manifest;
 }
 
-export async function loadDraft(formId: string): Promise<LoadedDraft | null> {
+export async function loadDraft(formId: string): Promise<StoredDraft | null> {
   const dir = draftDir(formId);
   const manifestPath = `${dir}manifest.json`;
 

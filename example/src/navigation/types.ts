@@ -1,5 +1,5 @@
 import type { KoboAsset } from '../services/apiClient';
-import type { LoadedDraft } from '../screens/FormViewerScreen';
+import type { LoadedDraft } from '../services/draftStore';
 
 export type RootStackParamList = {
   Login: undefined;

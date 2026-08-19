@@ -20,7 +20,7 @@ import { listDrafts, loadDraft, deleteDraft } from '../services/draftStore';
 import { listPending } from '../services/submissionQueue';
 import { draftToAsset } from '../services/draftToAsset';
 import type { Manifest } from '../services/submissionQueue';
-import type { LoadedDraft } from './FormViewerScreen';
+import type { LoadedDraft } from '../services/draftStore';
 import type { RootStackParamList } from '../navigation/types';
 import { createScreenStyles } from '../theme/screenStyles';
 
