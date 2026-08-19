@@ -2,7 +2,10 @@
  * NoteWidget — read-only display of note text (REQ-15).
  *
  * Never calls answerQuestion. No editable input element.
- * Renders text from resolveValue(nodeRef).
+ * Renders text from resolveValue(nodeRef). Renders nothing at all when
+ * that value is empty — an empty note (e.g. a readonly/calculated field
+ * whose expression hasn't resolved to anything yet) has no information to
+ * show, so it shouldn't reserve visual space or leak an empty box.
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -23,6 +26,10 @@ export function NoteWidget({ nodeRef, store }: NoteWidgetProps) {
   const value = store.adapter.resolveValue(nodeRef);
   const text = value != null ? String(value) : '';
 
+  if (text.trim().length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.container} testID="note-widget">
       <Text style={styles.text}>{text}</Text>
@@ -37,7 +44,6 @@ function createStyles(t: Theme) {
       paddingHorizontal: t.spacing.md,
       backgroundColor: t.color.roles.secondaryContainer,
       borderRadius: t.radius.md,
-      marginVertical: t.spacing.xs,
     },
     text: {
       ...t.typography.bodyMedium,
