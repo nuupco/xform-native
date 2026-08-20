@@ -997,6 +997,10 @@ function groupEvent(ref: string, label: string | null) {
   return { kind: 'group' as const, ref, label, hint: null };
 }
 
+function repeatEvent(ref: string, label: string | null, multiplicity = 0) {
+  return { kind: 'repeat' as const, ref, label, multiplicity };
+}
+
 function reqStates(refs: string[]) {
   const nodeStates: Record<string, NodeState> = {};
   const relevance: Record<string, boolean> = {};
@@ -1114,6 +1118,31 @@ describe('Form — REQ-3 auto-skip unlabeled groups', () => {
     // 1 step for handleNext (q1 -> g1) + 1 auto-skip step (g1 -> q2) = 2 total,
     // never 3 (which would indicate a double-step / race).
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('scenario 4b: an unlabeled repeat-entry event is auto-skipped, same as an unlabeled group', async () => {
+    const { nodeStates, relevance } = reqStates(['/data/q1', '/data/q2']);
+    const store = makeStore({
+      events: [
+        { kind: 'bof' },
+        questionEvent('/data/q1', 'Q1'),
+        repeatEvent('/data/rep[0]', null),
+        questionEvent('/data/q2', 'Q2'),
+        { kind: 'eof' },
+      ],
+      nodeStates,
+      relevance,
+      choices: {},
+      answerResults: {},
+      values: { '/data/q1': 'a', '/data/q2': '' },
+    });
+    store.stepForward(); // bof -> q1
+    await render(<Form store={store} />);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    // Settles on q2 — the blank repeat-entry screen (label: null) is never shown.
+    expect(screen.getByText('Q2')).toBeTruthy();
   });
 
   it('scenario 5: bof/eof are never skipped for label', async () => {

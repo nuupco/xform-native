@@ -99,7 +99,7 @@ export function Form({
   // Auto-skip effect (REQ-10 relevance-skip + REQ-3 label-skip).
   // Precedence per render pass (ADR-D2), at most one step per run:
   //   1. relevance-skip (navigable kinds, direction-aware)
-  //   2. label-skip (groups only, label === null/'', direction-aware)
+  //   2. label-skip (groups and repeat-entry, label === null/'', direction-aware)
   //   3. no-op (settled — render current event)
   useEffect(() => {
     const ev = store.adapter.getCurrentEvent();
@@ -116,7 +116,7 @@ export function Form({
       step();
       return;
     }
-    if (ev.kind === 'group' && (ev.label === null || ev.label === '')) {
+    if ((ev.kind === 'group' || ev.kind === 'repeat') && (ev.label === null || ev.label === '')) {
       step();
       return;
     }
