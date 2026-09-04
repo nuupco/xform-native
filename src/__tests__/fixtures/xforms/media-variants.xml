@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Media Variants</h:title>
+    <model>
+      <instance>
+        <data id="media-variants">
+          <img_default/>
+          <img_annotate/>
+          <img_selfie/>
+          <img_front_camera/>
+          <img_new_front/>
+          <audio_default/>
+          <audio_new/>
+          <video_default/>
+          <video_selfie/>
+          <file_default/>
+          <signature_default/>
+          <signature_draw/>
+          <barcode_default/>
+        </data>
+      </instance>
+      <bind nodeset="/data/img_default" type="binary"/>
+      <bind nodeset="/data/img_annotate" type="binary"/>
+      <bind nodeset="/data/img_selfie" type="binary"/>
+      <bind nodeset="/data/img_front_camera" type="binary"/>
+      <bind nodeset="/data/img_new_front" type="binary"/>
+      <bind nodeset="/data/audio_default" type="binary"/>
+      <bind nodeset="/data/audio_new" type="binary"/>
+      <bind nodeset="/data/video_default" type="binary"/>
+      <bind nodeset="/data/video_selfie" type="binary"/>
+      <bind nodeset="/data/file_default" type="binary"/>
+      <bind nodeset="/data/signature_default" type="binary"/>
+      <bind nodeset="/data/signature_draw" type="binary"/>
+      <bind nodeset="/data/barcode_default" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <upload ref="/data/img_default" mediatype="image/*"><label>Image default</label></upload>
+    <upload ref="/data/img_annotate" mediatype="image/*" appearance="annotate"><label>Image annotate</label></upload>
+    <upload ref="/data/img_selfie" mediatype="image/*" appearance="selfie"><label>Image selfie</label></upload>
+    <upload ref="/data/img_front_camera" mediatype="image/*" appearance="front-camera"><label>Image front-camera</label></upload>
+    <upload ref="/data/img_new_front" mediatype="image/*" appearance="new-front"><label>Image new-front</label></upload>
+    <upload ref="/data/audio_default" mediatype="audio/*"><label>Audio default</label></upload>
+    <upload ref="/data/audio_new" mediatype="audio/*" appearance="new"><label>Audio new</label></upload>
+    <upload ref="/data/video_default" mediatype="video/*"><label>Video default</label></upload>
+    <upload ref="/data/video_selfie" mediatype="video/*" appearance="selfie"><label>Video selfie</label></upload>
+    <upload ref="/data/file_default" mediatype="*/*"><label>File default</label></upload>
+    <upload ref="/data/signature_default" mediatype="image/*" appearance="signature"><label>Signature default</label></upload>
+    <upload ref="/data/signature_draw" mediatype="image/*" appearance="draw"><label>Signature draw</label></upload>
+    <input ref="/data/barcode_default" appearance="barcode"><label>Barcode default</label></input>
+  </h:body>
+</h:html>

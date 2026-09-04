@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Select Variants</h:title>
+    <model>
+      <instance>
+        <data id="select-variants">
+          <s_default/>
+          <s_minimal/>
+          <s_compact/>
+          <s_quick/>
+          <s_columns/>
+          <s_columns_pack/>
+          <s_search/>
+          <s_autocomplete/>
+          <s_minimal_autocomplete/>
+          <s_image_map/>
+          <s_no_buttons/>
+          <s_likert/>
+          <s_list/>
+          <s_list_nolabel/>
+          <s_label/>
+          <s_columns_n/>
+        </data>
+      </instance>
+      <bind nodeset="/data/s_default" type="string"/>
+      <bind nodeset="/data/s_minimal" type="string"/>
+      <bind nodeset="/data/s_compact" type="string"/>
+      <bind nodeset="/data/s_quick" type="string"/>
+      <bind nodeset="/data/s_columns" type="string"/>
+      <bind nodeset="/data/s_columns_pack" type="string"/>
+      <bind nodeset="/data/s_search" type="string"/>
+      <bind nodeset="/data/s_autocomplete" type="string"/>
+      <bind nodeset="/data/s_minimal_autocomplete" type="string"/>
+      <bind nodeset="/data/s_image_map" type="string"/>
+      <bind nodeset="/data/s_no_buttons" type="string"/>
+      <bind nodeset="/data/s_likert" type="string"/>
+      <bind nodeset="/data/s_list" type="string"/>
+      <bind nodeset="/data/s_list_nolabel" type="string"/>
+      <bind nodeset="/data/s_label" type="string"/>
+      <bind nodeset="/data/s_columns_n" type="string"/>
+      <itext>
+        <translation lang="en">
+          <text id="s_image_map:label">
+            <value>Image-map select1</value>
+            <value form="image">jr://images/test.svg</value>
+          </text>
+        </translation>
+      </itext>
+    </model>
+  </h:head>
+  <h:body>
+    <select1 ref="/data/s_default">
+      <label>Default select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_minimal" appearance="minimal">
+      <label>Minimal select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_compact" appearance="compact">
+      <label>Compact select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_quick" appearance="quick">
+      <label>Quick select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_columns" appearance="columns">
+      <label>Columns select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_columns_pack" appearance="columns-pack">
+      <label>Columns-pack select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_search" appearance="search">
+      <label>Search select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_autocomplete" appearance="autocomplete">
+      <label>Autocomplete select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_minimal_autocomplete" appearance="minimal autocomplete">
+      <label>Minimal+autocomplete select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_image_map" appearance="image-map">
+      <label ref="jr:itext('s_image_map:label')"/>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_no_buttons" appearance="no-buttons">
+      <label>No-buttons select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_likert" appearance="likert">
+      <label>Likert select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_list" appearance="list">
+      <label>List select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_list_nolabel" appearance="list-nolabel">
+      <label>List-nolabel select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_label" appearance="label">
+      <label>Label select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select1>
+    <select1 ref="/data/s_columns_n" appearance="columns-3">
+      <label>Columns-3 select1</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+      <item><label>C</label><value>c</value></item>
+    </select1>
+  </h:body>
+</h:html>

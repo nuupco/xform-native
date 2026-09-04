@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Select Multi Variants</h:title>
+    <model>
+      <instance>
+        <data id="select-multi-variants">
+          <m_default/>
+          <m_minimal/>
+          <m_compact/>
+          <m_columns/>
+          <m_columns_pack/>
+          <m_autocomplete/>
+          <m_minimal_autocomplete/>
+          <m_likert/>
+          <m_list_nolabel/>
+          <m_columns_n/>
+          <m_timed_grid/>
+        </data>
+      </instance>
+      <bind nodeset="/data/m_default" type="string"/>
+      <bind nodeset="/data/m_minimal" type="string"/>
+      <bind nodeset="/data/m_compact" type="string"/>
+      <bind nodeset="/data/m_columns" type="string"/>
+      <bind nodeset="/data/m_columns_pack" type="string"/>
+      <bind nodeset="/data/m_autocomplete" type="string"/>
+      <bind nodeset="/data/m_minimal_autocomplete" type="string"/>
+      <bind nodeset="/data/m_likert" type="string"/>
+      <bind nodeset="/data/m_list_nolabel" type="string"/>
+      <bind nodeset="/data/m_columns_n" type="string"/>
+      <bind nodeset="/data/m_timed_grid" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <select ref="/data/m_default">
+      <label>Default select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_minimal" appearance="minimal">
+      <label>Minimal select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_compact" appearance="compact">
+      <label>Compact select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_columns" appearance="columns">
+      <label>Columns select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_columns_pack" appearance="columns-pack">
+      <label>Columns-pack select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_autocomplete" appearance="autocomplete">
+      <label>Autocomplete select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_minimal_autocomplete" appearance="minimal autocomplete">
+      <label>Minimal+autocomplete select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_likert" appearance="likert">
+      <label>Likert select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_list_nolabel" appearance="list-nolabel">
+      <label>List-nolabel select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+    <select ref="/data/m_columns_n" appearance="columns-3">
+      <label>Columns-3 select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+      <item><label>C</label><value>c</value></item>
+    </select>
+    <select ref="/data/m_timed_grid" appearance="x-timed-grid">
+      <label>Timed grid select</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </select>
+  </h:body>
+</h:html>

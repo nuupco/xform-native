@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Rank Trigger Note</h:title>
+    <model>
+      <instance>
+        <data id="rank-trigger-note">
+          <rank_default/>
+          <trigger_default/>
+          <note_default/>
+        </data>
+      </instance>
+      <bind nodeset="/data/rank_default" type="string"/>
+      <bind nodeset="/data/trigger_default" type="string"/>
+      <bind nodeset="/data/note_default" type="string" readonly="true()"/>
+    </model>
+  </h:head>
+  <h:body>
+    <rank ref="/data/rank_default">
+      <label>Rank default</label>
+      <item><label>A</label><value>a</value></item>
+      <item><label>B</label><value>b</value></item>
+    </rank>
+    <trigger ref="/data/trigger_default">
+      <label>Trigger default</label>
+    </trigger>
+    <input ref="/data/note_default" appearance="note">
+      <label>Note default</label>
+    </input>
+  </h:body>
+</h:html>

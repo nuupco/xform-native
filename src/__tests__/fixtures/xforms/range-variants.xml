@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Range Variants</h:title>
+    <model>
+      <instance>
+        <data id="range-variants">
+          <r_default/>
+          <r_rating/>
+          <r_vertical/>
+          <r_no_ticks/>
+          <r_picker/>
+        </data>
+      </instance>
+      <bind nodeset="/data/r_default" type="int"/>
+      <bind nodeset="/data/r_rating" type="int"/>
+      <bind nodeset="/data/r_vertical" type="int"/>
+      <bind nodeset="/data/r_no_ticks" type="int"/>
+      <bind nodeset="/data/r_picker" type="int"/>
+    </model>
+  </h:head>
+  <h:body>
+    <range ref="/data/r_default" start="1" end="5" step="1">
+      <label>Range default</label>
+    </range>
+    <range ref="/data/r_rating" start="1" end="5" step="1" appearance="rating">
+      <label>Range rating</label>
+    </range>
+    <range ref="/data/r_vertical" start="1" end="5" step="1" appearance="vertical">
+      <label>Range vertical</label>
+    </range>
+    <range ref="/data/r_no_ticks" start="1" end="5" step="1" appearance="no-ticks">
+      <label>Range no-ticks</label>
+    </range>
+    <range ref="/data/r_picker" start="1" end="5" step="1" appearance="picker">
+      <label>Range picker</label>
+    </range>
+  </h:body>
+</h:html>

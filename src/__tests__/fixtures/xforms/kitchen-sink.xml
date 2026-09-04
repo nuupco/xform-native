@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Kitchen Sink</h:title>
+    <model>
+      <instance>
+        <data id="kitchen-sink">
+          <str/>
+          <num_int/>
+          <num_dec/>
+          <num_long/>
+          <bool/>
+          <note/>
+          <trig/>
+          <sel1/>
+          <selm/>
+          <rank/>
+          <date_v/>
+          <time_v/>
+          <datetime_v/>
+          <rng/>
+          <point_v/>
+          <shape_v/>
+          <trace_v/>
+          <img/>
+          <aud/>
+          <vid/>
+          <sig/>
+          <file_v/>
+          <bar/>
+        </data>
+      </instance>
+      <bind nodeset="/data/str" type="string"/>
+      <bind nodeset="/data/num_int" type="int"/>
+      <bind nodeset="/data/num_dec" type="decimal"/>
+      <bind nodeset="/data/num_long" type="long"/>
+      <bind nodeset="/data/bool" type="boolean"/>
+      <bind nodeset="/data/note" type="string" readonly="true()"/>
+      <bind nodeset="/data/trig" type="string"/>
+      <bind nodeset="/data/sel1" type="string"/>
+      <bind nodeset="/data/selm" type="string"/>
+      <bind nodeset="/data/rank" type="string"/>
+      <bind nodeset="/data/date_v" type="date"/>
+      <bind nodeset="/data/time_v" type="time"/>
+      <bind nodeset="/data/datetime_v" type="dateTime"/>
+      <bind nodeset="/data/rng" type="int"/>
+      <bind nodeset="/data/point_v" type="geopoint"/>
+      <bind nodeset="/data/shape_v" type="geoshape"/>
+      <bind nodeset="/data/trace_v" type="geotrace"/>
+      <bind nodeset="/data/img" type="binary"/>
+      <bind nodeset="/data/aud" type="binary"/>
+      <bind nodeset="/data/vid" type="binary"/>
+      <bind nodeset="/data/sig" type="binary"/>
+      <bind nodeset="/data/file_v" type="binary"/>
+      <bind nodeset="/data/bar" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/str"><label>String</label></input>
+    <input ref="/data/num_int"><label>Int</label></input>
+    <input ref="/data/num_dec"><label>Decimal</label></input>
+    <input ref="/data/num_long"><label>Long</label></input>
+    <input ref="/data/bool"><label>Boolean</label></input>
+    <input ref="/data/note" appearance="note"><label>Note</label></input>
+    <trigger ref="/data/trig"><label>Trigger</label></trigger>
+    <select1 ref="/data/sel1">
+      <label>Select one</label>
+      <item><label>A</label><value>a</value></item>
+    </select1>
+    <select ref="/data/selm">
+      <label>Select multi</label>
+      <item><label>A</label><value>a</value></item>
+    </select>
+    <rank ref="/data/rank">
+      <label>Rank</label>
+      <item><label>A</label><value>a</value></item>
+    </rank>
+    <input ref="/data/date_v"><label>Date</label></input>
+    <input ref="/data/time_v"><label>Time</label></input>
+    <input ref="/data/datetime_v"><label>DateTime</label></input>
+    <range ref="/data/rng" start="1" end="5" step="1"><label>Range</label></range>
+    <input ref="/data/point_v"><label>Geopoint</label></input>
+    <input ref="/data/shape_v"><label>Geoshape</label></input>
+    <input ref="/data/trace_v"><label>Geotrace</label></input>
+    <upload ref="/data/img" mediatype="image/*"><label>Image</label></upload>
+    <upload ref="/data/aud" mediatype="audio/*"><label>Audio</label></upload>
+    <upload ref="/data/vid" mediatype="video/*"><label>Video</label></upload>
+    <upload ref="/data/sig" mediatype="image/*" appearance="signature"><label>Signature</label></upload>
+    <upload ref="/data/file_v" mediatype="*/*"><label>File</label></upload>
+    <input ref="/data/bar" appearance="barcode"><label>Barcode</label></input>
+  </h:body>
+</h:html>

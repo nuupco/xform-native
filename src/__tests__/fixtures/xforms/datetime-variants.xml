@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>DateTime Variants</h:title>
+    <model>
+      <instance>
+        <data id="datetime-variants">
+          <d_default/>
+          <d_month_year/>
+          <d_year/>
+          <d_no_calendar/>
+          <d_buddhist/>
+          <d_coptic/>
+          <d_ethiopian/>
+          <d_islamic/>
+          <d_persian/>
+          <t_default/>
+          <dt_default/>
+        </data>
+      </instance>
+      <bind nodeset="/data/d_default" type="date"/>
+      <bind nodeset="/data/d_month_year" type="date"/>
+      <bind nodeset="/data/d_year" type="date"/>
+      <bind nodeset="/data/d_no_calendar" type="date"/>
+      <bind nodeset="/data/d_buddhist" type="date"/>
+      <bind nodeset="/data/d_coptic" type="date"/>
+      <bind nodeset="/data/d_ethiopian" type="date"/>
+      <bind nodeset="/data/d_islamic" type="date"/>
+      <bind nodeset="/data/d_persian" type="date"/>
+      <bind nodeset="/data/t_default" type="time"/>
+      <bind nodeset="/data/dt_default" type="dateTime"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/d_default"><label>Date default</label></input>
+    <input ref="/data/d_month_year" appearance="month-year"><label>Date month-year</label></input>
+    <input ref="/data/d_year" appearance="year"><label>Date year</label></input>
+    <input ref="/data/d_no_calendar" appearance="no-calendar"><label>Date no-calendar</label></input>
+    <input ref="/data/d_buddhist" appearance="buddhist"><label>Date buddhist</label></input>
+    <input ref="/data/d_coptic" appearance="coptic"><label>Date coptic</label></input>
+    <input ref="/data/d_ethiopian" appearance="ethiopian"><label>Date ethiopian</label></input>
+    <input ref="/data/d_islamic" appearance="islamic"><label>Date islamic</label></input>
+    <input ref="/data/d_persian" appearance="persian"><label>Date persian</label></input>
+    <input ref="/data/t_default"><label>Time default</label></input>
+    <input ref="/data/dt_default"><label>DateTime default</label></input>
+  </h:body>
+</h:html>

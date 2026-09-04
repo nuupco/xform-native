@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Numeric Variants</h:title>
+    <model>
+      <instance>
+        <data id="numeric-variants">
+          <i_default/>
+          <i_thousands/>
+          <i_bearing/>
+          <i_counter/>
+          <dec_default/>
+          <dec_thousands/>
+          <long_thousands/>
+        </data>
+      </instance>
+      <bind nodeset="/data/i_default" type="int"/>
+      <bind nodeset="/data/i_thousands" type="int"/>
+      <bind nodeset="/data/i_bearing" type="int"/>
+      <bind nodeset="/data/i_counter" type="int"/>
+      <bind nodeset="/data/dec_default" type="decimal"/>
+      <bind nodeset="/data/dec_thousands" type="decimal"/>
+      <bind nodeset="/data/long_thousands" type="long"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/i_default"><label>Int default</label></input>
+    <input ref="/data/i_thousands" appearance="thousands-sep"><label>Int thousands-sep</label></input>
+    <input ref="/data/i_bearing" appearance="bearing"><label>Int bearing</label></input>
+    <input ref="/data/i_counter" appearance="counter"><label>Int counter</label></input>
+    <input ref="/data/dec_default"><label>Decimal default</label></input>
+    <input ref="/data/dec_thousands" appearance="thousands-sep"><label>Decimal thousands-sep</label></input>
+    <input ref="/data/long_thousands" appearance="thousands-sep"><label>Long thousands-sep</label></input>
+  </h:body>
+</h:html>

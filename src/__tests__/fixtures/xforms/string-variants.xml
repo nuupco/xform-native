@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>String Variants</h:title>
+    <model>
+      <instance>
+        <data id="string-variants">
+          <s_default/>
+          <s_multiline/>
+          <s_numbers/>
+          <s_url/>
+          <s_printer/>
+          <s_masked/>
+          <s_ex_calc/>
+        </data>
+      </instance>
+      <bind nodeset="/data/s_default" type="string"/>
+      <bind nodeset="/data/s_multiline" type="string"/>
+      <bind nodeset="/data/s_numbers" type="string"/>
+      <bind nodeset="/data/s_url" type="string"/>
+      <bind nodeset="/data/s_printer" type="string"/>
+      <bind nodeset="/data/s_masked" type="string"/>
+      <bind nodeset="/data/s_ex_calc" type="string" calculate="concat('x')"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/s_default"><label>String default</label></input>
+    <input ref="/data/s_multiline" appearance="multiline"><label>String multiline</label></input>
+    <input ref="/data/s_numbers" appearance="numbers"><label>String numbers</label></input>
+    <input ref="/data/s_url" appearance="url"><label>String url</label></input>
+    <input ref="/data/s_printer" appearance="printer"><label>String printer</label></input>
+    <input ref="/data/s_masked" appearance="masked"><label>String masked</label></input>
+    <input ref="/data/s_ex_calc"><label>String ex: calculate</label></input>
+  </h:body>
+</h:html>
