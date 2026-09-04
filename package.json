@@ -55,7 +55,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@nuup/ts-rosa": "github:nuupco/ts-rosa#v0.1.11",
+    "@nuup/ts-rosa": "github:nuupco/ts-rosa#6925ce3",
     "@xmldom/xmldom": "^0.9.0"
   },
   "peerDependencies": {
@@ -64,6 +64,7 @@
     "expo-camera": "*",
     "expo-document-picker": "*",
     "expo-image-picker": "*",
+    "expo-sensors": "*",
     "expo-video": "*",
     "react": "*",
     "react-native": "*",
@@ -86,6 +87,9 @@
       "optional": true
     },
     "expo-camera": {
+      "optional": true
+    },
+    "expo-sensors": {
       "optional": true
     },
     "@react-native-community/datetimepicker": {

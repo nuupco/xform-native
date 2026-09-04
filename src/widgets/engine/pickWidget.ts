@@ -196,7 +196,7 @@ export function pickWidget(
     case 'geopoint':
       return {
         Widget: GeoPointWidget,
-        variant: 'default',
+        variant: resolveVariant(dataType, controlType, appearance),
       };
 
     case 'geoshape':

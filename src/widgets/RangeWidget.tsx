@@ -21,6 +21,9 @@
  *   no-ticks  → stepper without value text display
  *   picker    → BottomSheet picker with scrollable list of values
  *   vertical  → vertical stepper layout
+ *   rating    → row of 1..N touch-to-select stars, N = end - start + 1
+ *               (falls back to 5 stars when start/end are absent, matching
+ *               this widget's existing start=0/end=10 default-prop story)
  */
 
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
@@ -50,8 +53,8 @@ export function RangeWidget({
   nodeRef,
   store,
   appearance,
-  start = 0,
-  end = 10,
+  start: startProp,
+  end: endProp,
   step = 1,
 }: RangeWidgetProps) {
   const styles = useThemedStyles(createStyles);
@@ -61,6 +64,9 @@ export function RangeWidget({
   const rawValue = store.adapter.resolveValue(nodeRef);
   const variant = resolveVariant('int', 'range', appearance);
   const isReadonly = nodeState?.readonly ?? false;
+
+  const start = startProp ?? 0;
+  const end = endProp ?? 10;
 
   // Normalize current value to a number, default to start if null
   const currentValue: number =
@@ -95,6 +101,42 @@ export function RangeWidget({
   const isVertical = variant === 'vertical';
   const isNoTicks = variant === 'no-ticks';
   const isPicker = variant === 'picker';
+  const isRating = variant === 'rating';
+
+  function handleRate(value: number) {
+    if (isReadonly) return;
+    store.answerQuestion(nodeRef, value);
+  }
+
+  if (isRating) {
+    const starCount = startProp != null && endProp != null ? endProp - startProp + 1 : 5;
+    const ratingBase = startProp ?? 1;
+    const stars = Array.from({ length: starCount }, (_, i) => ratingBase + i);
+    return (
+      <View style={styles.container}>
+        <View testID="range-rating" style={styles.ratingRow}>
+          {stars.map((value) => {
+            const filled = currentValue >= value;
+            return (
+              <Pressable
+                key={value}
+                testID={`range-rating-star-${value}`}
+                onPress={() => handleRate(value)}
+                disabled={isReadonly}
+                style={isReadonly && styles.disabled}
+                accessibilityRole="button"
+                accessibilityState={{ selected: filled, disabled: isReadonly }}
+              >
+                <Text style={filled ? styles.ratingStarFilled : styles.ratingStarEmpty}>
+                  {filled ? '★' : '☆'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
 
   if (isPicker) {
     return (
@@ -232,6 +274,19 @@ function createStyles(t: Theme) {
     pickerOptionText: {
       ...f.fieldText,
       textAlign: 'center',
+    },
+    ratingRow: {
+      flexDirection: 'row',
+      gap: t.spacing.xs,
+      alignSelf: 'flex-start',
+    },
+    ratingStarFilled: {
+      fontSize: 32,
+      color: t.color.roles.primary,
+    },
+    ratingStarEmpty: {
+      fontSize: 32,
+      color: t.color.roles.outline,
     },
   });
 }

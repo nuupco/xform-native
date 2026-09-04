@@ -334,5 +334,9 @@ export function createAdapter(session: FormSession): FormAdapter {
         ref as Parameters<typeof evaluator.initializeRepeatInstance>[0]
       );
     },
+
+    getLabelMediaUri(form: string): string | null {
+      return navigator.getQuestionAtIndex()?.getLabelMediaUri?.(form) ?? null;
+    },
   };
 }

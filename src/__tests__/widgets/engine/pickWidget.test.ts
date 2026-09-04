@@ -61,11 +61,6 @@ describe('pickWidget — PR-3a types', () => {
     expect(variant).toBe('default');
   });
 
-  it('dispatches boolean checkbox → BooleanWidget checkbox', () => {
-    const { Widget, variant } = pickWidget('boolean', 'input', 'checkbox');
-    expect(Widget).toBe(BooleanWidget);
-    expect(variant).toBe('checkbox');
-  });
 });
 
 describe('pickWidget — trigger controlType routing', () => {

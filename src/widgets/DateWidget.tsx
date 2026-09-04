@@ -18,9 +18,21 @@
  *   store.answerQuestion receives a Date directly.
  *
  * Variants (ADR-3 date):
- *   default    → full YYYY-MM-DD TextInput (+ native picker button when available)
- *   month-year → MM-YYYY entry, stored as Date with day=1
- *   year       → YYYY entry, stored as Date with month=1, day=1
+ *   default     → full YYYY-MM-DD TextInput (+ native picker button when available)
+ *   month-year  → MM-YYYY entry, stored as Date with day=1
+ *   year        → YYYY entry, stored as Date with month=1, day=1
+ *   no-calendar → full YYYY-MM-DD TextInput, same as default, but NEVER
+ *                 renders the native picker button (spec: text entry only,
+ *                 no calendar UI at all, even when the optional peer dep is
+ *                 present)
+ *   buddhist, coptic, ethiopian, islamic, persian → YYYY-MM-DD TextInput,
+ *                 same mask/shape as default, but the digits are read/shown
+ *                 in that calendar system instead of Gregorian. The stored
+ *                 value is still a Gregorian UTC Date (ODK Collect's own
+ *                 pickers for these appearances are display/edit-only too —
+ *                 see calendars.ts docblock for the conversion sources).
+ *                 No native picker equivalent exists for these, same as
+ *                 month-year/year.
  */
 
 import { useState, useEffect } from 'react';
@@ -30,6 +42,19 @@ import { useTheme, useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { createFieldStyles } from './primitives/fieldStyles';
 import { CalendarIcon } from './primitives/Icon';
 import { resolveVariant } from './engine/appearance';
+import {
+  gregorianToBuddhist,
+  buddhistToGregorian,
+  gregorianToCoptic,
+  copticToGregorian,
+  gregorianToEthiopian,
+  ethiopianToGregorian,
+  gregorianToIslamic,
+  islamicToGregorian,
+  gregorianToPersian,
+  persianToGregorian,
+  type CalendarDate,
+} from './calendars';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
 
@@ -148,6 +173,30 @@ function parseYearInput(text: string): Date | null {
   return d;
 }
 
+function formatCalendarDisplay(cal: CalendarDate): string {
+  const y = String(cal.year).padStart(4, '0');
+  const m = String(cal.month).padStart(2, '0');
+  const d = String(cal.day).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseCalendarInput(
+  text: string,
+  toGregorian: (year: number, month: number, day: number) => Date | null,
+): Date | null {
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return toGregorian(parseInt(match[1]!, 10), parseInt(match[2]!, 10), parseInt(match[3]!, 10));
+}
+
+const CALENDAR_VARIANTS = {
+  buddhist: { toCalendar: gregorianToBuddhist, toGregorian: buddhistToGregorian },
+  coptic: { toCalendar: gregorianToCoptic, toGregorian: copticToGregorian },
+  ethiopian: { toCalendar: gregorianToEthiopian, toGregorian: ethiopianToGregorian },
+  islamic: { toCalendar: gregorianToIslamic, toGregorian: islamicToGregorian },
+  persian: { toCalendar: gregorianToPersian, toGregorian: persianToGregorian },
+} as const;
+
 export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -158,6 +207,8 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
   const variant = resolveVariant('date', 'input', appearance);
   const isReadonly = nodeState?.readonly ?? false;
 
+  const calendarVariant = CALENDAR_VARIANTS[variant as keyof typeof CALENDAR_VARIANTS];
+
   // Determine the store-derived display string based on variant
   let storeDisplayValue = '';
   if (value instanceof Date) {
@@ -165,6 +216,8 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
       storeDisplayValue = formatMonthYearDisplay(value);
     } else if (variant === 'year') {
       storeDisplayValue = formatYearDisplay(value);
+    } else if (calendarVariant) {
+      storeDisplayValue = formatCalendarDisplay(calendarVariant.toCalendar(value));
     } else {
       storeDisplayValue = formatDateDisplay(value);
     }
@@ -190,6 +243,9 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
   const [showNativePicker, setShowNativePicker] = useState(false);
   const DateTimePicker = getDateTimePicker();
   const showPickerButton = variant === 'default' && DateTimePicker !== null;
+  // 'no-calendar' deliberately never shows the native picker button, even
+  // when the optional peer dep is installed — same TextInput/mask path as
+  // 'default' otherwise (see docblock).
 
   function handleNativePickerChange(_event: unknown, selectedDate?: Date) {
     setShowNativePicker(false);
@@ -220,6 +276,8 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
       parsed = parseMonthYearInput(masked);
     } else if (variant === 'year') {
       parsed = parseYearInput(masked);
+    } else if (calendarVariant) {
+      parsed = parseCalendarInput(masked, calendarVariant.toGregorian);
     } else {
       parsed = parseDateInput(masked);
     }

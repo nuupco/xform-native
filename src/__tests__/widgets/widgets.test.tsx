@@ -326,12 +326,6 @@ describe('BooleanWidget', () => {
     await render(<BooleanWidget nodeRef={ref} store={store} />);
     expect(screen.queryByTestId('required-indicator')).toBeNull();
   });
-
-  it('renders checkbox variant when appearance=checkbox', async () => {
-    const { store, ref } = makeStoreFor({ ref: '/data/flag', dataType: 'boolean', value: false });
-    await render(<BooleanWidget nodeRef={ref} store={store} appearance="checkbox" />);
-    expect(screen.getByTestId('boolean-checkbox')).toBeTruthy();
-  });
 });
 
 // ---------------------------------------------------------------------------

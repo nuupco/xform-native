@@ -125,4 +125,14 @@ export interface FormAdapter {
    * or a non-repeat ref).
    */
   createRepeatInstance(ref: NodeRef): void;
+  /**
+   * Raw (unresolved) `jr://` media reference from the CURRENT question's
+   * label itext, for the given media form ('image' | 'audio' | 'video' |
+   * 'big-image'). Mirrors ts-rosa's `getQuestionAtIndex().getLabelMediaUri`
+   * — resolving that `jr://` string to a loadable URI is a host concern
+   * (see createFormStore's `mediaResolver` opt), same firewall boundary as
+   * `getChoices`/`resolveValue`. Returns `null` when the label carries no
+   * media of that form, or when not at a question position.
+   */
+  getLabelMediaUri(form: string): string | null;
 }

@@ -32,6 +32,18 @@ export interface ExternalDataFetcher {
   resolve(uri: string): Promise<string | null>;
 }
 
+/**
+ * Host fetch seam for `jr://` question-label media references (e.g.
+ * `image-map`'s SVG label image) — same opt-in shape as
+ * ExternalDataFetcher, resolved on demand at render time rather than at
+ * session creation (a question's own label media isn't declared up front
+ * the way external secondary instances are), so it is stored on the
+ * FormSessionStore instance instead of consumed inside runCreateFormStore.
+ */
+export interface MediaResolver {
+  resolve(uri: string): Promise<string | null>;
+}
+
 export interface CreateFormStoreOpts {
   /** Edit-mode hydration passthrough. */
   instanceXml?: string;
@@ -39,6 +51,8 @@ export interface CreateFormStoreOpts {
   externalInstanceResolver?: ExternalDataFetcher;
   /** Optional host override of the XmlParser seam. */
   xmlParser?: XmlParser;
+  /** Host fetch seam for `jr://` question-label media references. */
+  mediaResolver?: MediaResolver;
   /**
    * ADR-3: opt-in split-cost timing instrumentation. When supplied, wraps
    * `parseForm` / `resolveExternalInstances` / `createFormSession` in
@@ -169,5 +183,5 @@ async function runCreateFormStore(
         opts?.instanceXml !== undefined ? { instanceXml: opts.instanceXml } : undefined
       );
 
-  return new FormSessionStore(session);
+  return new FormSessionStore(session, opts?.mediaResolver);
 }

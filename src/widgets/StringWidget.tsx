@@ -1,7 +1,12 @@
 /**
  * StringWidget — renders a string/text input (REQ-13).
  *
- * Variants (ADR-3): default | multiline | numbers | url
+ * Variants (ADR-3): default | multiline | numbers | url | masked
+ *
+ * `masked` obscures input as it's typed (RN's `secureTextEntry`, same as ODK
+ * Collect's password-style InputType transformation). Per ODK Collect's
+ * Appearances.isMasked(), 'numbers' always wins when both tokens are present
+ * — see appearance.ts's resolveVariant.
  */
 
 import { useState } from 'react';
@@ -93,6 +98,7 @@ export function StringWidget({ nodeRef, store, appearance }: StringWidgetProps) 
         editable={!isReadonly}
         multiline={variant === 'multiline'}
         keyboardType={variant === 'numbers' ? 'numeric' : variant === 'url' ? 'url' : 'default'}
+        secureTextEntry={variant === 'masked'}
         autoCapitalize="none"
       />
     </View>

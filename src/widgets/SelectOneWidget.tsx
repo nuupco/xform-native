@@ -5,7 +5,7 @@
  *   selectOne value = string (a single choice token).
  *   store.answerQuestion receives the token string directly.
  *
- * Variants (ADR-3 selectOne, 7 render branches — resolveVariant untouched):
+ * Variants (ADR-3 selectOne, 11 render branches):
  *   default      → radio-style list, SelectionRow (control:'radio')
  *   minimal      → bottom-sheet dropdown (BottomSheet + SelectionRow rows)
  *   autocomplete → minimal + a filled pill search bar (SearchIcon) on top
@@ -14,13 +14,61 @@
  *   likert       → horizontal row of SelectionRow cells (density: 'likert')
  *   columns      → multi-column FlatList, SelectionRow (default density)
  *   columns-pack → compact multi-column FlatList, SelectionRow (density: 'pack')
+ *   compact      → same multi-column FlatList as `columns`, dropping the text
+ *                  label when a choice has associated media. ts-rosa's
+ *                  SelectChoice (getChoices()) exposes only value/label — no
+ *                  media reference — so no choice this widget ever sees has
+ *                  media, and the label is always shown (falls back to the
+ *                  `columns` behavior per spec: "if no media, show the label
+ *                  the same as columns").
+ *   no-buttons   → same row list as `default`, without the radio indicator —
+ *                  the whole row stays the tap target (SelectionRow already
+ *                  makes the full row pressable)
  *   quick        → horizontal ScrollView of chip/tag Pressables (unchanged
  *                  chrome — a chip is not a row, kept off SelectionRow per
  *                  the design doc's own per-widget key list: quickChip/
  *                  quickChipSelected stay distinct from the row primitive)
+ *
+ * list         → horizontal row of SelectionRow cells (density: 'likert'),
+ *                 label displayed above the radio — ODK Collect's ListWidget
+ *                 (radio buttons aligned horizontally, meant to sit under a
+ *                 field-list LabelWidget header, but works standalone here).
+ * list-nolabel → same as `list` but the choice label text is suppressed
+ *                 (ODK's ListWidget with displayLabel=false) — only the
+ *                 radio indicators show.
+ * label        → ODK Collect's LabelWidget: renders only the choice labels
+ *                 in a horizontal row, with NO interactive control and NO
+ *                 answer ever produced (ODK's LabelWidget.getAnswer() always
+ *                 returns null — it exists purely to caption a field-list of
+ *                 list-nolabel widgets). Faithfully reproduced here: no
+ *                 SelectionIndicator, no onPress, store is never written.
+ * columns-n    → same multi-column FlatList as `columns`, but the column
+ *                 count is parsed from the appearance string itself
+ *                 (columns-3, columns-12, ...) instead of being fixed at 2 —
+ *                 mirrors ODK's Appearances.getNumberOfColumns.
+ * map          → ODK Collect's SelectOneFromMapWidget: tapping the field
+ *                 opens a full-screen map with every choice plotted as a pin
+ *                 (from SelectChoice.geometry, itemset-only). Tapping a pin
+ *                 selects that choice and closes the map. Falls through to
+ *                 `default` when the map dep is absent or no choice carries
+ *                 geometry (the variant has nothing to plot).
+ *
+ * image-map   → ODK Collect's SelectOneImageMapWidget: the question's own
+ *                 label carries a `jr://images/...svg` itext media
+ *                 reference (ts-rosa's getLabelMediaUri('image')). The
+ *                 host-supplied store.mediaResolver resolves that raw
+ *                 reference to a loadable URI, the SVG is fetched and
+ *                 DOM-parsed, and every <path>/<rect>/<circle>/<ellipse>/
+ *                 <polygon> whose `id` case-insensitively matches a
+ *                 choice's `value` becomes a tappable react-native-svg
+ *                 shape (same Svg/onPress pattern as SignatureWidget).
+ *                 Falls back to `default` when react-native-svg or
+ *                 store.mediaResolver is absent, the label carries no
+ *                 image media, or the fetch/parse fails to produce any
+ *                 matched shape.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -37,16 +85,114 @@ import { createFieldStyles } from './primitives/fieldStyles';
 import { SelectionRow } from './primitives/SelectionRow';
 import { SearchIcon } from './primitives/Icon';
 import { BottomSheet } from './primitives/BottomSheet';
+import { AppModal } from './primitives/Modal';
+import { GeoMapChrome } from './primitives/GeoMapChrome';
 import { MarkdownText } from '../text/MarkdownText';
 import { stripOdkMarkdown } from '../text/parseOdkMarkdown';
 import type { NodeRef } from '../adapter/FormAdapter';
 import type { FormSessionStore } from '../store/FormSessionStore';
+import type { SelectChoice } from '@nuup/ts-rosa';
+import { DOMParser } from '@xmldom/xmldom';
+import type { Document as XmlDocument, Element as XmlElement } from '@xmldom/xmldom';
+
+let _svgModule: any | null = null;
+let _svgLoaded: boolean | undefined;
+
+function getSvgModule(): any | null {
+  if (_svgLoaded === undefined) {
+    try {
+      _svgModule = require('react-native-svg');
+      _svgLoaded = true;
+    } catch {
+      _svgLoaded = false;
+    }
+  }
+  return _svgModule;
+}
+
+const IMAGE_MAP_TAG_COMPONENT: Readonly<Record<string, string>> = {
+  path: 'Path',
+  rect: 'Rect',
+  circle: 'Circle',
+  ellipse: 'Ellipse',
+  polygon: 'Polygon',
+};
+
+interface ImageMapShape {
+  tag: string;
+  id: string;
+  attrs: Record<string, string>;
+}
+
+/** DOM-parses an SVG document, extracting every id-bearing shape ODK Collect's own svg_map_helper.js matches (<path>/<rect>/<circle>/<ellipse>/<polygon> — <g> excluded, no nested-shape composition here). */
+function parseImageMapShapes(markup: string): { viewBox: string | null; shapes: ImageMapShape[] } {
+  const doc = new DOMParser().parseFromString(markup, 'image/svg+xml') as unknown as XmlDocument;
+  const svgEl = doc.documentElement;
+  if (!svgEl) return { viewBox: null, shapes: [] };
+
+  const shapes: ImageMapShape[] = [];
+  const walk = (node: XmlElement) => {
+    const children = node.childNodes;
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      if (!child || child.nodeType !== 1) continue;
+      const el = child as unknown as XmlElement;
+      const tag = el.tagName?.toLowerCase() ?? '';
+      const id = el.getAttribute('id');
+      if (tag in IMAGE_MAP_TAG_COMPONENT && id) {
+        const attrs: Record<string, string> = {};
+        const attributes = el.attributes;
+        for (let j = 0; j < attributes.length; j++) {
+          const attr = attributes[j];
+          if (attr && attr.name !== 'id') attrs[attr.name] = attr.value;
+        }
+        shapes.push({ tag, id, attrs });
+      }
+      walk(el);
+    }
+  };
+  walk(svgEl as unknown as XmlElement);
+
+  return { viewBox: svgEl.getAttribute('viewBox'), shapes };
+}
+
+let _geoModule: any | null = null;
+let _geoLoaded: boolean | undefined;
+
+function getGeoModule(): any | null {
+  if (_geoLoaded === undefined) {
+    try {
+      _geoModule = require('@nuup/xform-native-geo');
+      _geoLoaded = true;
+    } catch {
+      _geoLoaded = false;
+    }
+  }
+  return _geoModule;
+}
+
+/** Parses a geopoint-convention string ("lat lon [alt [acc]]") to {lat, lon}. */
+function parseGeometry(geometry: string | null | undefined): { lat: number; lon: number } | null {
+  if (!geometry) return null;
+  const parts = geometry.trim().split(/\s+/);
+  const lat = parseFloat(parts[0] ?? '');
+  const lon = parseFloat(parts[1] ?? '');
+  if (isNaN(lat) || isNaN(lon)) return null;
+  return { lat, lon };
+}
 
 
 export interface SelectOneWidgetProps {
   nodeRef: NodeRef;
   store: FormSessionStore;
   appearance?: string | null;
+}
+
+/** Column count for the `columns-n` variant, parsed from the raw appearance string (e.g. `columns-3`). */
+function parseColumnsN(appearance: string | null | undefined): number {
+  const match = (appearance ?? '').toLowerCase().match(/columns-(\d+)/);
+  const n = match ? parseInt(match[1] ?? '', 10) : 1;
+  return n >= 1 ? n : 1;
 }
 
 function createStyles(t: Theme) {
@@ -120,6 +266,64 @@ function createStyles(t: Theme) {
     quickChipLabelSelected: {
       color: t.color.roles.onPrimary,
     },
+    // no-buttons — same 56dp row height as the default radio row, minus the
+    // indicator, so the whole row remains the tap target with no visual gap.
+    noButtonsRow: {
+      minHeight: 56,
+      justifyContent: 'center',
+      paddingHorizontal: t.spacing.md,
+    },
+    noButtonsLabel: {
+      ...t.typography.bodyLarge,
+      color: t.color.roles.onSurface,
+    },
+    noButtonsLabelSelected: {
+      color: t.color.roles.primary,
+    },
+    // label (ODK LabelWidget) — plain, non-interactive caption row
+    labelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginVertical: t.spacing.sm,
+    },
+    labelText: {
+      ...t.typography.bodyLarge,
+      color: t.color.roles.onSurface,
+      textAlign: 'center',
+    },
+    // map (SelectOneFromMapWidget)
+    mapOpenButton: {
+      ...f.field,
+    },
+    mapOpenButtonText: {
+      ...f.fieldText,
+    },
+    modalContent: {
+      flex: 1,
+      width: '100%',
+    },
+    map: {
+      flex: 1,
+      width: '100%',
+    },
+    mapPin: {
+      width: 20,
+      height: 20,
+      backgroundColor: t.color.roles.error,
+      borderRadius: 10,
+    },
+    mapPinSelected: {
+      backgroundColor: t.color.roles.primary,
+    },
+    mapPinLabel: {
+      ...t.typography.bodySmall,
+      color: t.color.roles.onSurface,
+      backgroundColor: t.color.roles.surface,
+      paddingHorizontal: t.spacing.xs,
+      borderRadius: t.radius.sm,
+      marginTop: 2,
+      textAlign: 'center',
+    },
   });
 }
 
@@ -134,6 +338,40 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [mapVisible, setMapVisible] = useState(false);
+  const [imageMapMarkup, setImageMapMarkup] = useState<string | null>(null);
+
+  const rawLabelImageUri = variant === 'image-map' ? store.adapter.getLabelMediaUri('image') : null;
+
+  // Unconditional Hook Ordering (same invariant as the map/geo hooks above):
+  // fetching + parsing only happens for image-map, but the effect itself is
+  // declared for every variant.
+  useEffect(() => {
+    if (variant !== 'image-map' || !rawLabelImageUri || !store.mediaResolver) {
+      setImageMapMarkup(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const uri = await store.mediaResolver!.resolve(rawLabelImageUri);
+      if (!uri) return;
+      const res = await fetch(uri);
+      const text = await res.text();
+      if (!cancelled) setImageMapMarkup(text);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [variant, rawLabelImageUri, store]);
+
+  const handleSelectFromMap = useCallback(
+    (value: string) => {
+      if (isReadonly) return;
+      store.answerQuestion(nodeRef, value);
+      setMapVisible(false);
+    },
+    [isReadonly, nodeRef, store],
+  );
 
   // Hoisted above all variant branching (Unconditional Hook Ordering): this
   // widget re-renders as the SAME instance when only `appearance` changes,
@@ -184,7 +422,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
     );
   }
 
-  if (variant === 'minimal-autocomplete' || variant === 'autocomplete') {
+  if (variant === 'autocomplete') {
     const selected = choices.find((c) => c.value === currentValue);
     return (
       <View style={styles.container}>
@@ -297,6 +535,123 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
     );
   }
 
+  if (variant === 'compact') {
+    return (
+      <View style={styles.container}>
+        <FlatList
+          testID="select-one-compact-list"
+          data={choices}
+          keyExtractor={(item, index) => `${item.value}__${index}`}
+          numColumns={2}
+          renderItem={({ item }) => (
+            <View style={styles.columnsCell}>
+              <SelectionRow
+                testID={`select-one-compact-option-${item.value}`}
+                control="radio"
+                selected={item.value === currentValue}
+                label={item.label ?? item.value}
+                disabled={isReadonly}
+                onPress={() => handleSelect(item.value)}
+              />
+            </View>
+          )}
+        />
+      </View>
+    );
+  }
+
+  if (variant === 'no-buttons') {
+    return (
+      <View style={styles.container}>
+        {choices.map((choice, index) => {
+          const isSelected = choice.value === currentValue;
+          return (
+            <Pressable
+              key={`${choice.value}__${index}`}
+              testID={`select-one-no-buttons-option-${choice.value}`}
+              style={styles.noButtonsRow}
+              onPress={() => handleSelect(choice.value)}
+              disabled={isReadonly}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isSelected, disabled: isReadonly }}
+            >
+              <MarkdownText
+                value={choice.label ?? choice.value}
+                baseStyle={[styles.noButtonsLabel, isSelected && styles.noButtonsLabelSelected]}
+              />
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
+
+  if (variant === 'list' || variant === 'list-nolabel') {
+    const showLabel = variant === 'list';
+    return (
+      <View style={styles.container}>
+        <View testID="select-one-list-container" style={styles.likertRow}>
+          {choices.map((choice, index) => (
+            <SelectionRow
+              key={`${choice.value}__${index}`}
+              testID={`select-one-list-option-${choice.value}`}
+              control="radio"
+              density="likert"
+              selected={choice.value === currentValue}
+              label={showLabel ? (choice.label ?? choice.value) : undefined}
+              disabled={isReadonly}
+              onPress={() => handleSelect(choice.value)}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (variant === 'label') {
+    // ODK Collect's LabelWidget: caption-only, never produces an answer.
+    return (
+      <View style={styles.container}>
+        <View testID="select-one-label-container" style={styles.labelRow}>
+          {choices.map((choice, index) => (
+            <MarkdownText
+              key={`${choice.value}__${index}`}
+              testID={`select-one-label-text-${choice.value}`}
+              value={choice.label ?? choice.value}
+              baseStyle={styles.labelText}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (variant === 'columns-n') {
+    const numColumns = parseColumnsN(appearance);
+    return (
+      <View style={styles.container}>
+        <FlatList
+          testID="select-one-columns-n-list"
+          data={choices}
+          keyExtractor={(item, index) => `${item.value}__${index}`}
+          numColumns={numColumns}
+          renderItem={({ item }) => (
+            <View style={[styles.columnsCell, { minWidth: `${100 / numColumns}%` }]}>
+              <SelectionRow
+                testID={`select-one-columns-n-option-${item.value}`}
+                control="radio"
+                selected={item.value === currentValue}
+                label={item.label ?? item.value}
+                disabled={isReadonly}
+                onPress={() => handleSelect(item.value)}
+              />
+            </View>
+          )}
+        />
+      </View>
+    );
+  }
+
   if (variant === 'quick') {
     return (
       <View style={styles.container}>
@@ -327,6 +682,112 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
         </ScrollView>
       </View>
     );
+  }
+
+  if (variant === 'map') {
+    const geo = getGeoModule();
+    const plottable = choices
+      .map((choice: SelectChoice) => ({ choice, point: parseGeometry(choice.geometry) }))
+      .filter((c): c is { choice: SelectChoice; point: { lat: number; lon: number } } => c.point !== null);
+
+    // No map dep, or no choice carries geometry to plot — the variant has
+    // nothing to render, so fall back to the default radio list below.
+    if (geo && plottable.length > 0) {
+      const { MapLibre } = geo;
+      const selected = choices.find((c) => c.value === currentValue);
+      const firstPoint = plottable[0]!.point;
+      const mapCenter: [number, number] = [firstPoint.lon, firstPoint.lat];
+
+      return (
+        <View style={styles.container}>
+          <Pressable
+            testID="select-one-map-open-button"
+            style={styles.mapOpenButton}
+            onPress={() => !isReadonly && setMapVisible(true)}
+            accessible={!isReadonly}
+          >
+            <Text style={styles.mapOpenButtonText}>
+              {stripOdkMarkdown(selected?.label ?? selected?.value ?? 'Select…')}
+            </Text>
+          </Pressable>
+
+          <AppModal
+            visible={mapVisible}
+            onRequestClose={() => setMapVisible(false)}
+            testID="select-one-map-modal"
+            fullScreen
+            animationType="slide"
+          >
+            <View style={styles.modalContent}>
+              <GeoMapChrome>
+                <MapLibre.Map style={styles.map} testID="select-one-map">
+                  <MapLibre.Camera initialViewState={{ center: mapCenter, zoom: 12 }} />
+                  {plottable.map(({ choice, point }) => (
+                    <MapLibre.Marker
+                      key={choice.value}
+                      id={`select-one-map-pin-${choice.value}`}
+                      lngLat={[point.lon, point.lat]}
+                      onPress={() => handleSelectFromMap(choice.value)}
+                    >
+                      <Pressable
+                        testID={`select-one-map-pin-${choice.value}`}
+                        onPress={() => handleSelectFromMap(choice.value)}
+                      >
+                        <View
+                          style={[
+                            styles.mapPin,
+                            choice.value === currentValue && styles.mapPinSelected,
+                          ]}
+                        />
+                        <Text style={styles.mapPinLabel}>{choice.label ?? choice.value}</Text>
+                      </Pressable>
+                    </MapLibre.Marker>
+                  ))}
+                </MapLibre.Map>
+              </GeoMapChrome>
+            </View>
+          </AppModal>
+        </View>
+      );
+    }
+  }
+
+  if (variant === 'image-map' && imageMapMarkup) {
+    const svg = getSvgModule();
+    if (svg) {
+      const { viewBox, shapes } = parseImageMapShapes(imageMapMarkup);
+      const matched = shapes
+        .map((shape) => ({
+          shape,
+          choice: choices.find((c) => c.value.toLowerCase() === shape.id.toLowerCase()),
+        }))
+        .filter((m): m is { shape: ImageMapShape; choice: SelectChoice } => m.choice !== undefined);
+
+      if (matched.length > 0) {
+        return (
+          <View style={styles.container}>
+            <svg.Svg
+              testID="select-one-image-map-svg"
+              width="100%"
+              height="100%"
+              viewBox={viewBox ?? undefined}
+            >
+              {matched.map(({ shape, choice }) => {
+                const Component = svg[IMAGE_MAP_TAG_COMPONENT[shape.tag]!];
+                return (
+                  <Component
+                    key={shape.id}
+                    {...shape.attrs}
+                    testID={`select-one-image-map-region-${choice.value}`}
+                    onPress={() => handleSelect(choice.value)}
+                  />
+                );
+              })}
+            </svg.Svg>
+          </View>
+        );
+      }
+    }
   }
 
   // default (radio-style) — fallback for unrecognized variants

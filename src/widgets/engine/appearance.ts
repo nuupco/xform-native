@@ -35,11 +35,14 @@ export const APPEARANCE_TABLE: Readonly<
     multiline: 'multiline',
     numbers: 'numbers',
     url: 'url',
+    masked: 'masked',
     // 'thousands-sep' resolves to default for string (only valid for int/decimal/long)
   },
   int: {
     __default: 'default',
     'thousands-sep': 'thousands-sep',
+    bearing: 'bearing',
+    counter: 'counter',
   },
   decimal: {
     __default: 'default',
@@ -50,8 +53,7 @@ export const APPEARANCE_TABLE: Readonly<
     'thousands-sep': 'thousands-sep',
   },
   boolean: {
-    __default: 'default', // default = switch
-    checkbox: 'checkbox',
+    __default: 'default', // default = switch; ODK Collect has no boolean appearance variants
   },
   // PR-3b types — table entries exist but widgets deferred
   selectOne: {
@@ -59,25 +61,42 @@ export const APPEARANCE_TABLE: Readonly<
     minimal: 'minimal',
     likert: 'likert',
     autocomplete: 'autocomplete',
-    'minimal-autocomplete': 'minimal-autocomplete',
     columns: 'columns',
     'columns-pack': 'columns-pack',
+    compact: 'compact',
+    'no-buttons': 'no-buttons',
     quick: 'quick',
-    // map/image → default (P4/P2 defer)
+    'list-nolabel': 'list-nolabel',
+    list: 'list',
+    label: 'label',
+    map: 'map',
+    'image-map': 'image-map',
   },
   selectMulti: {
     __default: 'default',
     minimal: 'minimal',
     columns: 'columns',
     'columns-pack': 'columns-pack',
+    compact: 'compact',
     autocomplete: 'autocomplete',
-    'minimal-autocomplete': 'minimal-autocomplete',
     likert: 'likert',
+    'list-nolabel': 'list-nolabel',
+    'x-timed-grid': 'x-timed-grid',
   },
   date: {
     __default: 'default',
     'month-year': 'month-year',
     year: 'year',
+    'no-calendar': 'no-calendar',
+    ethiopian: 'ethiopian',
+    coptic: 'coptic',
+    islamic: 'islamic',
+    persian: 'persian',
+    buddhist: 'buddhist',
+    // bikram-sambat, myanmar → default: ODK Collect delegates those
+    // conversions to external compiled/complex libraries with no published,
+    // independently-verifiable source (see calendars.ts docblock) — left as
+    // documented gaps.
   },
   time: {
     __default: 'default',
@@ -89,6 +108,15 @@ export const APPEARANCE_TABLE: Readonly<
     __default: 'default',
     draw: 'signature',
     signature: 'signature',
+    annotate: 'annotate',
+    selfie: 'selfie',
+    'front-camera': 'front-camera',
+    'new-front': 'new-front',
+    new: 'new',
+  },
+  geopoint: {
+    __default: 'default',
+    'placement-map': 'placement-map',
   },
   // controlType override for range
   'controlType:range': {
@@ -96,6 +124,7 @@ export const APPEARANCE_TABLE: Readonly<
     'no-ticks': 'no-ticks',
     picker: 'picker',
     vertical: 'vertical',
+    rating: 'rating',
   },
 };
 
@@ -127,20 +156,24 @@ export function resolveVariant(
   // any other unknown token.
   const tokens = rawTokens.map((t) => (t === 'search' ? 'autocomplete' : t));
 
-  // Special case: 'minimal' + 'autocomplete' are composable (not mutually
-  // exclusive) for selectOne/selectMulti — 'minimal' picks the bottom-sheet
-  // control style, 'autocomplete' layers a search box on top of it. This is
-  // a known, explicit combination — not a general N-token composition system.
-  if (
-    (dataType === 'selectOne' || dataType === 'selectMulti') &&
-    tokens.includes('minimal') &&
-    tokens.includes('autocomplete') &&
-    'minimal-autocomplete' in bucket
-  ) {
-    return bucket['minimal-autocomplete'] as VariantId;
-  }
-
+  // ODK Collect evaluates 'minimal' and 'autocomplete' as independent flags
+  // (contains()), not a single compound variant. This table resolves by
+  // first-recognized-token only, so "minimal autocomplete" lands on
+  // 'minimal' — a known limitation: this engine doesn't support real layout
+  // composition.
   for (const token of tokens) {
+    // columns-n is parametrized (columns-3, columns-12, ...) — the number
+    // itself is read from the raw appearance string by the widget, not
+    // carried through VariantId, so any recognized numbered token collapses
+    // to the same 'columns-n' variant id here.
+    if ('columns' in bucket && /^columns-\d+$/.test(token)) {
+      return 'columns-n';
+    }
+    // ODK Collect's Appearances.isMasked() is `contains(MASKED) && !contains(NUMBERS)`
+    // — 'numbers' always wins over 'masked' regardless of token order.
+    if (token === 'masked' && tokens.includes('numbers')) {
+      continue;
+    }
     if (token !== '__default' && token in bucket) {
       return bucket[token] as VariantId;
     }

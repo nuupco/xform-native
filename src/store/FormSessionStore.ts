@@ -16,6 +16,7 @@
 import type { FormSession, AnswerResult } from '@nuup/ts-rosa';
 import { createAdapter } from '../adapter/createAdapter';
 import type { FormAdapter, NodeRef } from '../adapter/FormAdapter';
+import type { MediaResolver } from '../createFormStore';
 
 export interface FormSessionSnapshot {
   readonly version: number;
@@ -25,6 +26,9 @@ export class FormSessionStore {
   /** Expose adapter for test access (getRef from getCurrentEvent) */
   readonly adapter: FormAdapter;
 
+  /** Host fetch seam for `jr://` question-label media (e.g. image-map's SVG). */
+  readonly mediaResolver: MediaResolver | undefined;
+
   /** Last answerQuestion result (for Form-level validation feedback). */
   lastAnswerResult: { ref: NodeRef; result: AnswerResult } | null = null;
 
@@ -32,9 +36,10 @@ export class FormSessionStore {
   private readonly _subscribers = new Set<() => void>();
   private readonly _session: FormSession;
 
-  constructor(session: FormSession) {
+  constructor(session: FormSession, mediaResolver?: MediaResolver) {
     this._session = session;
     this.adapter = createAdapter(session);
+    this.mediaResolver = mediaResolver;
     this._snapshot = Object.freeze({ version: 0 });
   }
 
@@ -101,6 +106,17 @@ export class FormSessionStore {
   /** Additive passthrough — delegates to the underlying session (Slice C). */
   serializeToXml(): string {
     return this._session.serializeToXml();
+  }
+
+  /**
+   * Re-resolves finalize-time preloads (e.g. `end` timestamp) and re-runs the
+   * calculate cascade, mirroring JavaRosa's FormDef#postProcessInstance. Must
+   * be called before serializeToXml() at submission time — ts-rosa does not
+   * trigger this on its own.
+   */
+  finalize(): void {
+    this._session.finalize();
+    this._bump();
   }
 
   // ---------------------------------------------------------------------------

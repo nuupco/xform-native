@@ -22,6 +22,7 @@ module.exports = {
   getMediaLibraryPermissionsAsync,
   requestMediaLibraryPermissionsAsync,
   MediaTypeOptions: { Images: 'Images', Videos: 'Videos', All: 'All' },
+  CameraType: { front: 'front', back: 'back' },
   UIImagePickerControllerQualityType: { High: 1, Medium: 0.5, Low: 0.3 },
   __mockLaunchCamera: launchCameraAsync,
   __mockLaunchLibrary: launchImageLibraryAsync,

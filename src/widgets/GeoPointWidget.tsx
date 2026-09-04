@@ -10,8 +10,16 @@
  * adapted to this repo's inline-widget architecture: no WebView/bridge
  * layer here — the widget itself renders the map inline inside its own
  * modal, driven directly by `store.answerQuestion` / `resolveValue`.
+ *
+ * Variant `placement-map` (ADR-3 geopoint) skips the intermediate
+ * "Open Map" tap entirely — the map modal opens automatically on mount
+ * (GPS starts immediately too), so the respondent lands directly on the
+ * tap/drag-to-place map. The `default` variant's flow (tap-to-place, GPS as
+ * a visual reference, undo/accept/cancel) is otherwise unchanged — it's the
+ * exact same map, just reached without the extra button tap.
  */
 import { useCallback, useState, useEffect } from 'react';
+import { resolveVariant } from './engine/appearance';
 import {
   View,
   Text,
@@ -120,12 +128,14 @@ export interface GeoPointWidgetProps {
   appearance?: string | null;
 }
 
-export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoPointWidgetProps) {
+export function GeoPointWidget({ nodeRef, store, appearance }: GeoPointWidgetProps) {
   const styles = useThemedStyles(createStyles);
   const geo = getGeoModule();
   const resolved = store.adapter.resolveValue(nodeRef);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
+  const variant = resolveVariant('geopoint', 'input', appearance);
+  const isPlacementMap = variant === 'placement-map';
 
   const [modalVisible, setModalVisible] = useState(false);
   const [coordinate, setCoordinate] = useState<GeoPoint | null>(
@@ -150,6 +160,15 @@ export function GeoPointWidget({ nodeRef, store, appearance: _appearance }: GeoP
     setTappedPoint(isGeoPoint(coordinate) ? coordinate : null);
     void gps.start();
   }, [coordinate, gps]);
+
+  // placement-map: skip the intermediate "Open Map" tap — land straight on
+  // the map, once, when there's no answer yet to edit.
+  useEffect(() => {
+    if (isPlacementMap && !readonly && !modalVisible && !isGeoPoint(resolved)) {
+      openMap();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlacementMap, readonly]);
 
   const closeMap = useCallback(() => {
     gps.stop();

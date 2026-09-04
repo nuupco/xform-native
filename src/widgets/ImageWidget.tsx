@@ -3,19 +3,64 @@
  *
  * Gated on expo-image-picker (optional peer dep). Falls back to
  * UnsupportedWidget when the dep is absent at runtime.
+ *
+ * Variants (ADR-3 binary/upload — appearance token resolved via
+ * resolveVariant('binary', 'upload', appearance), same bucket every upload
+ * widget shares; only Image acts on these tokens):
+ *   selfie | front-camera → camera opens with the front lens
+ *                            (ImagePicker.CameraType.front)
+ *   new                   → gallery ("Pick from Library") button hidden;
+ *                            camera capture only
+ *   new-front             → both of the above combined
+ *   annotate              → after capture, an SVG+PanResponder drawing
+ *                            overlay (same pattern as SignatureWidget) sits
+ *                            on top of the photo so the respondent can mark
+ *                            it up. The stroke overlay is NOT rasterized
+ *                            into the photo file — this repo has no RN-core
+ *                            way to composite SVG onto a raster image
+ *                            (would need react-native-view-shot or a native
+ *                            canvas), so annotations persist only as a
+ *                            visual overlay in this widget's own preview,
+ *                            not baked into the stored image URI.
  */
-import { useCallback, useMemo, useState } from 'react';
-import { Text, Image, StyleSheet, type ImageSourcePropType } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  Text,
+  Image,
+  View,
+  PanResponder,
+  StyleSheet,
+  type GestureResponderEvent,
+  type PanResponderGestureState,
+  type ImageSourcePropType,
+} from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
-import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { resolveVariant } from './engine/appearance';
+import { useThemedStyles, useTheme, type Theme } from '../theme/ThemeContext';
 import { MediaCaptureCard } from './primitives/MediaCaptureCard';
+import { PressableButton } from './primitives/PressableButton';
 import {
   usePermissionGate,
   isPermissionBlockingState,
   type PermissionGateStatus,
 } from './primitives/usePermissionGate';
 import { PermissionNotice } from './primitives/PermissionNotice';
+
+let _SvgModule: any | null = null;
+let _svgLoaded: boolean | undefined;
+
+function getSvg(): any | null {
+  if (_svgLoaded === undefined) {
+    try {
+      _SvgModule = require('react-native-svg');
+      _svgLoaded = true;
+    } catch {
+      _svgLoaded = false;
+    }
+  }
+  return _SvgModule;
+}
 
 let _ImagePicker: any | null = null;
 let _pickerLoaded: boolean | undefined;
@@ -45,6 +90,18 @@ function createStyles(t: Theme) {
       height: 120,
       borderRadius: t.radius.sm,
       backgroundColor: t.color.roles.surfaceVariant,
+    },
+    annotateWrapper: {
+      width: 120,
+      height: 120,
+    },
+    annotateOverlay: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    annotateButtonRow: {
+      flexDirection: 'row',
+      gap: t.spacing.sm,
+      marginTop: t.spacing.xs,
     },
   });
 }
@@ -91,19 +148,65 @@ function getLibraryNoticeCopy(status: PermissionGateStatus) {
   }
 }
 
-export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWidgetProps) {
+export function ImageWidget({ nodeRef, store, appearance }: ImageWidgetProps) {
   // Theming (D2): useThemedStyles MUST stay the first statement, before the
   // peer-dependency gating early return below, to preserve hook-order
   // stability (select-widgets-hook-order invariant).
   const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
   const picker = getImagePicker();
+  const svg = getSvg();
   const resolved = store.adapter.resolveValue(nodeRef);
   const uri: string | null =
     typeof resolved === 'string' && resolved.length > 0 ? resolved : null;
   const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
+  const variant = resolveVariant('binary', 'upload', appearance);
+  const isFrontCamera = variant === 'selfie' || variant === 'front-camera' || variant === 'new-front';
+  const isCameraOnly = variant === 'new' || variant === 'new-front';
+  const isAnnotate = variant === 'annotate';
+
   const [thumbnailUri, setThumbnailUri] = useState<string | null>(uri);
+
+  // Annotate overlay strokes (SVG + PanResponder — SignatureWidget's
+  // pattern). Declared unconditionally so hook order/count stays stable
+  // across variants (Unconditional Hook Ordering, same invariant as the
+  // select widgets).
+  const [annotateStrokes, setAnnotateStrokes] = useState<string[]>([]);
+  const annotateCurrentPath = useRef<string[]>([]);
+  const annotatePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => isAnnotate && !readonly,
+      onMoveShouldSetPanResponder: () => isAnnotate && !readonly,
+      onPanResponderGrant: () => {
+        annotateCurrentPath.current = [];
+        setAnnotateStrokes((prev) => [...prev, '']);
+      },
+      onPanResponderMove: (
+        _evt: GestureResponderEvent,
+        gs: PanResponderGestureState,
+      ) => {
+        const cmd =
+          annotateCurrentPath.current.length === 0
+            ? `M${gs.moveX},${gs.moveY}`
+            : `L${gs.moveX},${gs.moveY}`;
+        annotateCurrentPath.current.push(cmd);
+        setAnnotateStrokes((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = annotateCurrentPath.current.join(' ');
+          return next;
+        });
+      },
+      onPanResponderRelease: () => {
+        annotateCurrentPath.current = [];
+      },
+    }),
+  ).current;
+
+  const handleClearAnnotations = useCallback(() => {
+    setAnnotateStrokes([]);
+  }, []);
 
   const cameraAdapter = useMemo(
     () => ({
@@ -142,9 +245,11 @@ export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWi
     const result = await picker.launchCameraAsync({
       mediaTypes: ['images'],
       quality: 0.8,
+      ...(isFrontCamera ? { cameraType: picker.CameraType?.front } : {}),
     });
+    setAnnotateStrokes([]);
     handleResult(result);
-  }, [picker, readonly, cameraGate, handleResult]);
+  }, [picker, readonly, cameraGate, handleResult, isFrontCamera]);
 
   const handleLibrary = useCallback(async () => {
     if (!picker || readonly) return;
@@ -165,7 +270,14 @@ export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWi
   // once its own gate has been exercised via ensure() (i.e. the user tapped
   // that specific action) — never on mount.
   const cameraBlocking = isPermissionBlockingState(cameraGate.status);
-  const libraryBlocking = isPermissionBlockingState(libraryGate.status);
+  const libraryBlocking = !isCameraOnly && isPermissionBlockingState(libraryGate.status);
+
+  const baseActions = [
+    { label: 'Take Photo', onPress: handleCamera, testID: 'image-camera-button' },
+    ...(isCameraOnly
+      ? []
+      : [{ label: 'Pick from Library', onPress: handleLibrary, testID: 'image-library-button' }]),
+  ];
 
   if (cameraBlocking || libraryBlocking) {
     const gate = cameraBlocking ? cameraGate : libraryGate;
@@ -189,13 +301,31 @@ export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWi
             onDismiss={gate.status === 'blocked' ? undefined : gate.dismissRationale}
           />
         }
-        actions={[
-          { label: 'Take Photo', onPress: handleCamera, testID: 'image-camera-button' },
-          { label: 'Pick from Library', onPress: handleLibrary, testID: 'image-library-button' },
-        ]}
+        actions={baseActions}
       />
     );
   }
+
+  const annotateOverlay = isAnnotate && svg && (
+    <View
+      testID="image-annotate-overlay"
+      style={styles.annotateOverlay}
+      {...annotatePanResponder.panHandlers}
+    >
+      <svg.Svg width="100%" height="100%" viewBox="0 0 120 120">
+        {annotateStrokes.map((path, i) => (
+          <svg.Path
+            key={i}
+            d={path}
+            stroke={theme.color.roles.error}
+            strokeWidth={2}
+            fill="none"
+            testID={`image-annotate-stroke-${i}`}
+          />
+        ))}
+      </svg.Svg>
+    </View>
+  );
 
   return (
     <MediaCaptureCard
@@ -206,18 +336,31 @@ export function ImageWidget({ nodeRef, store, appearance: _appearance }: ImageWi
       disabled={readonly}
       preview={
         source && (
-          <Image
-            source={source}
-            style={styles.thumbnail}
-            testID="image-thumbnail"
-            accessibilityLabel="Selected image"
-          />
+          <>
+            <View style={styles.annotateWrapper}>
+              <Image
+                source={source}
+                style={styles.thumbnail}
+                testID="image-thumbnail"
+                accessibilityLabel="Selected image"
+              />
+              {annotateOverlay}
+            </View>
+            {isAnnotate && svg && (
+              <View style={styles.annotateButtonRow}>
+                <PressableButton
+                  label="Clear"
+                  onPress={handleClearAnnotations}
+                  variant="text"
+                  testID="image-annotate-clear-button"
+                  theme={theme}
+                />
+              </View>
+            )}
+          </>
         )
       }
-      actions={[
-        { label: 'Take Photo', onPress: handleCamera, testID: 'image-camera-button' },
-        { label: 'Pick from Library', onPress: handleLibrary, testID: 'image-library-button' },
-      ]}
+      actions={baseActions}
     />
   );
 }

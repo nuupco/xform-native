@@ -80,10 +80,6 @@ describe('resolveVariant — boolean', () => {
     expect(resolveVariant('boolean', 'input', null)).toBe('default');
   });
 
-  it('returns checkbox for appearance=checkbox', () => {
-    expect(resolveVariant('boolean', 'input', 'checkbox')).toBe('checkbox');
-  });
-
   it('returns default for unknown appearance', () => {
     expect(resolveVariant('boolean', 'input', 'slider')).toBe('default');
   });
@@ -107,17 +103,15 @@ describe('resolveVariant — binary', () => {
   });
 });
 
-describe('resolveVariant — selectOne minimal+autocomplete composition', () => {
-  it('returns minimal-autocomplete when both tokens are present (minimal first)', () => {
-    expect(resolveVariant('selectOne', 'select1', 'minimal autocomplete')).toBe(
-      'minimal-autocomplete',
-    );
+describe('resolveVariant — selectOne minimal/autocomplete tokens (no compound variant)', () => {
+  // ODK evaluates 'minimal' and 'autocomplete' independently; this table has
+  // no compound variant, so it resolves by first-recognized-token.
+  it('resolves to minimal when minimal is the first recognized token', () => {
+    expect(resolveVariant('selectOne', 'select1', 'minimal autocomplete')).toBe('minimal');
   });
 
-  it('returns minimal-autocomplete regardless of token order (autocomplete first)', () => {
-    expect(resolveVariant('selectOne', 'select1', 'autocomplete minimal')).toBe(
-      'minimal-autocomplete',
-    );
+  it('resolves to autocomplete when autocomplete is the first recognized token', () => {
+    expect(resolveVariant('selectOne', 'select1', 'autocomplete minimal')).toBe('autocomplete');
   });
 
   it('still returns minimal when only minimal is present', () => {
@@ -136,32 +130,147 @@ describe('resolveVariant — selectOne minimal+autocomplete composition', () => 
     expect(resolveVariant('selectOne', 'select1', 'search')).toBe('autocomplete');
   });
 
-  it('returns minimal-autocomplete for real-world "minimal and search" (production XLSForm convention, "and" ignored as unrecognized filler)', () => {
-    expect(resolveVariant('selectOne', 'select1', 'minimal and search')).toBe(
-      'minimal-autocomplete',
-    );
+  it('resolves "minimal and search" to minimal (production XLSForm convention, "and" ignored as unrecognized filler)', () => {
+    expect(resolveVariant('selectOne', 'select1', 'minimal and search')).toBe('minimal');
   });
 });
 
-describe('resolveVariant — selectMulti minimal+autocomplete composition', () => {
-  it('returns minimal-autocomplete when both tokens are present', () => {
-    expect(resolveVariant('selectMulti', 'select', 'minimal autocomplete')).toBe(
-      'minimal-autocomplete',
-    );
+describe('resolveVariant — selectMulti minimal/autocomplete tokens (no compound variant)', () => {
+  it('resolves to minimal when minimal is the first recognized token', () => {
+    expect(resolveVariant('selectMulti', 'select', 'minimal autocomplete')).toBe('minimal');
   });
 
-  it('returns minimal-autocomplete regardless of token order', () => {
-    expect(resolveVariant('selectMulti', 'select', 'autocomplete minimal')).toBe(
-      'minimal-autocomplete',
-    );
+  it('resolves to autocomplete when autocomplete is the first recognized token', () => {
+    expect(resolveVariant('selectMulti', 'select', 'autocomplete minimal')).toBe('autocomplete');
   });
 });
 
 describe('resolveVariant — unknown dataType (never throws)', () => {
   it('returns default for unknown dataType', () => {
-    // TypeScript would complain about 'geopoint' here since it is not in the
-    // table, but cast to any for the never-throw contract test.
+    // TypeScript would complain about a made-up dataType here since it's not
+    // in the table, but cast to any for the never-throw contract test.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(resolveVariant('geopoint' as any, 'input', 'something')).toBe('default');
+    expect(resolveVariant('not-a-real-datatype' as any, 'input', 'something')).toBe('default');
+  });
+});
+
+describe('resolveVariant — selectOne compact / no-buttons', () => {
+  it('returns compact for appearance=compact', () => {
+    expect(resolveVariant('selectOne', 'select1', 'compact')).toBe('compact');
+  });
+
+  it('returns no-buttons for appearance=no-buttons', () => {
+    expect(resolveVariant('selectOne', 'select1', 'no-buttons')).toBe('no-buttons');
+  });
+
+  it('returns image-map for appearance=image-map', () => {
+    expect(resolveVariant('selectOne', 'select1', 'image-map')).toBe('image-map');
+  });
+});
+
+describe('resolveVariant — selectMulti compact', () => {
+  it('returns compact for appearance=compact', () => {
+    expect(resolveVariant('selectMulti', 'select', 'compact')).toBe('compact');
+  });
+});
+
+describe('resolveVariant — selectOne list / list-nolabel / label', () => {
+  it('returns list for appearance=list', () => {
+    expect(resolveVariant('selectOne', 'select1', 'list')).toBe('list');
+  });
+
+  it('returns list-nolabel for appearance=list-nolabel', () => {
+    expect(resolveVariant('selectOne', 'select1', 'list-nolabel')).toBe('list-nolabel');
+  });
+
+  it('returns label for appearance=label', () => {
+    expect(resolveVariant('selectOne', 'select1', 'label')).toBe('label');
+  });
+});
+
+describe('resolveVariant — selectMulti list-nolabel', () => {
+  it('returns list-nolabel for appearance=list-nolabel', () => {
+    expect(resolveVariant('selectMulti', 'select', 'list-nolabel')).toBe('list-nolabel');
+  });
+});
+
+describe('resolveVariant — columns-n (parametrized)', () => {
+  it('resolves selectOne columns-3 to columns-n', () => {
+    expect(resolveVariant('selectOne', 'select1', 'columns-3')).toBe('columns-n');
+  });
+
+  it('resolves selectOne columns-12 to columns-n', () => {
+    expect(resolveVariant('selectOne', 'select1', 'columns-12')).toBe('columns-n');
+  });
+
+  it('resolves selectMulti columns-3 to columns-n', () => {
+    expect(resolveVariant('selectMulti', 'select', 'columns-3')).toBe('columns-n');
+  });
+
+  it('does not treat plain "columns" as columns-n', () => {
+    expect(resolveVariant('selectOne', 'select1', 'columns')).toBe('columns');
+  });
+});
+
+describe('resolveVariant — geopoint', () => {
+  it('returns default for absent appearance', () => {
+    expect(resolveVariant('geopoint', 'input', null)).toBe('default');
+  });
+
+  it('returns placement-map for appearance=placement-map', () => {
+    expect(resolveVariant('geopoint', 'input', 'placement-map')).toBe('placement-map');
+  });
+});
+
+describe('resolveVariant — int range rating / bearing', () => {
+  it('returns rating for controlType:range appearance=rating', () => {
+    expect(resolveVariant('int', 'range', 'rating')).toBe('rating');
+  });
+
+  it('returns bearing for int input appearance=bearing', () => {
+    expect(resolveVariant('int', 'input', 'bearing')).toBe('bearing');
+  });
+
+  it('returns counter for int input appearance=counter', () => {
+    expect(resolveVariant('int', 'input', 'counter')).toBe('counter');
+  });
+});
+
+describe('resolveVariant — string masked', () => {
+  it('returns masked for string input appearance=masked', () => {
+    expect(resolveVariant('string', 'input', 'masked')).toBe('masked');
+  });
+
+  it('numbers wins over masked regardless of token order', () => {
+    expect(resolveVariant('string', 'input', 'masked numbers')).toBe('numbers');
+    expect(resolveVariant('string', 'input', 'numbers masked')).toBe('numbers');
+  });
+});
+
+describe('resolveVariant — date no-calendar', () => {
+  it('returns no-calendar for appearance=no-calendar', () => {
+    expect(resolveVariant('date', 'input', 'no-calendar')).toBe('no-calendar');
+  });
+});
+
+describe('resolveVariant — binary upload appearance tokens', () => {
+  it('returns annotate for appearance=annotate', () => {
+    expect(resolveVariant('binary', 'upload', 'annotate')).toBe('annotate');
+  });
+
+  it('returns selfie for appearance=selfie', () => {
+    expect(resolveVariant('binary', 'upload', 'selfie')).toBe('selfie');
+  });
+
+  it('returns front-camera for appearance=front-camera', () => {
+    expect(resolveVariant('binary', 'upload', 'front-camera')).toBe('front-camera');
+  });
+
+  it('returns new-front for appearance=new-front', () => {
+    expect(resolveVariant('binary', 'upload', 'new-front')).toBe('new-front');
+  });
+
+  it('returns new for appearance=new', () => {
+    expect(resolveVariant('binary', 'upload', 'new')).toBe('new');
   });
 });

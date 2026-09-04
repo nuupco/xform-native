@@ -53,6 +53,8 @@ export type ScriptEventQuestion = {
   hint: string | null;
   appearance: string | null;
   ancestors?: readonly FakeAncestor[];
+  /** Keyed by media form ('image' | 'audio' | 'video' | 'big-image'). */
+  labelMediaUri?: Record<string, string | null>;
 };
 export type ScriptEventGroup = {
   kind: 'group';
@@ -273,6 +275,7 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
       getMediatype(): string | null;
       getQuestionText(): string | null;
       getSubstitutedHintText(): string | null;
+      getLabelMediaUri(form: string): string | null;
     } | null {
       const pos = idx !== undefined ? formIndices.indexOf(idx) : cursor;
       const ev = events[pos >= 0 ? pos : cursor];
@@ -294,6 +297,7 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
           // <output> substitutions.
           getQuestionText: () => q.label,
           getSubstitutedHintText: () => q.hint,
+          getLabelMediaUri: (form: string) => q.labelMediaUri?.[form] ?? null,
         };
       }
       // Phase 7 decision 4/15: mirror the real ts-rosa engine's
@@ -441,6 +445,7 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
     evaluator: evaluator as never,
     navigator: navigator as never,
     serializeToXml: () => '',
+    finalize: () => {},
   };
 }
 
