@@ -25,6 +25,10 @@ import { saveXForm, loadXForm } from '../services/xformCache';
 import { parseXFormMeta } from '../services/xmlUtils';
 import type { SubmissionResult } from '../services/xmlUtils';
 import type { KoboAsset } from '../services/apiClient';
+import {
+  ALL_WIDGETS_DEMO_XML,
+  DEMO_ALL_WIDGETS_XFORM_LINK,
+} from '../demo/allWidgetsForm';
 
 export type UseFormLoadArgs = {
   asset: KoboAsset;
@@ -116,22 +120,27 @@ export function useFormLoad({
 
     const cancellable = createCancellableFormLoad(async () => {
       let xml: string;
-      try {
-        xml = await fetchXFormXml(asset.xform_link);
-        await saveXForm(asset.uid, xml);
+      if (asset.xform_link === DEMO_ALL_WIDGETS_XFORM_LINK) {
+        // Embedded demo form — no server, no fetch, nothing to cache.
+        xml = ALL_WIDGETS_DEMO_XML;
+      } else {
+        try {
+          xml = await fetchXFormXml(asset.xform_link);
+          await saveXForm(asset.uid, xml);
 
-        if (draft) {
-          const freshVersion = parseXFormMeta(xml).version ?? '';
-          const savedVersion = draft.manifest.formVersion;
-          if (savedVersion && freshVersion && savedVersion !== freshVersion) {
-            setStaleBannerVisible(true);
-            setStaleVersions({ saved: savedVersion, current: freshVersion });
+          if (draft) {
+            const freshVersion = parseXFormMeta(xml).version ?? '';
+            const savedVersion = draft.manifest.formVersion;
+            if (savedVersion && freshVersion && savedVersion !== freshVersion) {
+              setStaleBannerVisible(true);
+              setStaleVersions({ saved: savedVersion, current: freshVersion });
+            }
           }
+        } catch {
+          const cached = await loadXForm(asset.uid);
+          if (!cached) throw new Error('Formulario no disponible offline');
+          xml = cached.xml;
         }
-      } catch {
-        const cached = await loadXForm(asset.uid);
-        if (!cached) throw new Error('Formulario no disponible offline');
-        xml = cached.xml;
       }
 
       const newStore = await buildStore(xml);
@@ -214,6 +223,7 @@ export function useFormLoad({
   const handleFinalize = async () => {
     if (!storeRef.current) return;
 
+    storeRef.current.finalize();
     const xml = storeRef.current.serializeToXml();
     // TODO: extract binary attachments from tree for full fidelity
     const result: SubmissionResult = { xml, attachments: [] };

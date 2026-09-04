@@ -20,6 +20,7 @@ import { listForms } from '../services/apiClient';
 import type { KoboAsset } from '../services/apiClient';
 import type { RootStackParamList } from '../navigation/types';
 import { createScreenStyles } from '../theme/screenStyles';
+import { DEMO_ALL_WIDGETS_ASSET } from '../demo/allWidgetsForm';
 
 function createStyles(t: Theme) {
   const screen = createScreenStyles(t);
@@ -60,7 +61,7 @@ export function FormListScreen() {
   const styles = useThemedStyles(createStyles);
   const theme = useTheme();
 
-  const [forms, setForms] = useState<KoboAsset[]>([]);
+  const [forms, setForms] = useState<KoboAsset[]>([DEMO_ALL_WIDGETS_ASSET]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
@@ -71,9 +72,12 @@ export function FormListScreen() {
     setError(null);
     try {
       const result = await listForms();
-      setForms(result.forms);
+      setForms([DEMO_ALL_WIDGETS_ASSET, ...result.forms]);
       setNextUrl(result.nextUrl);
     } catch (e) {
+      // The demo form stays visible even without a configured/reachable
+      // Kobo server — it's the whole point (no network/credentials needed).
+      setForms([DEMO_ALL_WIDGETS_ASSET]);
       setError(e instanceof Error ? e.message : 'Failed to load forms');
     } finally {
       setLoading(false);
@@ -113,13 +117,7 @@ export function FormListScreen() {
           <Text style={styles.loadingText}>Cargando formularios...</Text>
         </View>
       )}
-      {!loading && error && (
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>{error}</Text>
-          <PressableButton label="Reintentar" onPress={() => void load()} />
-        </View>
-      )}
-      {!loading && !error && (
+      {!loading && (
         <FlatList
           data={forms}
           keyExtractor={(item) => item.uid}
@@ -134,6 +132,14 @@ export function FormListScreen() {
               <Text style={styles.rowText}>{item.name}</Text>
             </TouchableOpacity>
           )}
+          ListHeaderComponent={
+            error ? (
+              <View style={styles.centered}>
+                <Text style={styles.errorText}>{error}</Text>
+                <PressableButton label="Reintentar" onPress={() => void load()} />
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             !loading ? (
               <View style={styles.centered}>
