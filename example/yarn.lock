@@ -1038,9 +1038,9 @@
     "@turf/length" "^7.3.5"
     "@turf/nearest-point-on-line" "^7.3.5"
 
-"@nuup/ts-rosa@github:nuupco/ts-rosa#v0.1.11":
-  version "0.1.11"
-  resolved "https://codeload.github.com/nuupco/ts-rosa/tar.gz/921afa2cae9acfe642dcb116a51a166804130c50"
+"@nuup/ts-rosa@github:nuupco/ts-rosa#6925ce3":
+  version "0.5.0"
+  resolved "https://codeload.github.com/nuupco/ts-rosa/tar.gz/6925ce3fd5830b55167582343553b56c7046aabd"
   dependencies:
     "@xmldom/xmldom" "^0.9.0"
     crypto-js "^4.2.0"
@@ -1052,7 +1052,7 @@
 "@nuup/xform-native@file:..":
   version "1.1.0"
   dependencies:
-    "@nuup/ts-rosa" "github:nuupco/ts-rosa#v0.1.11"
+    "@nuup/ts-rosa" "github:nuupco/ts-rosa#6925ce3"
     "@xmldom/xmldom" "^0.9.0"
 
 "@react-native-community/datetimepicker@^9.1.0":
@@ -2119,6 +2119,13 @@ expo-secure-store@~56.0.0:
   version "56.0.4"
   resolved "https://registry.yarnpkg.com/expo-secure-store/-/expo-secure-store-56.0.4.tgz#5f897b4446c208e4670a71c7d8b1cf1467161dd2"
   integrity sha512-hjEi/gmpdFFJ9lYbdp3k3p/WchV7Gi0Qt8jt/m/0WJadqQrskafHAlDxbZkII1cN3Yd7zp9Lvkeq3UfGhSwirQ==
+
+expo-sensors@~56.0.6:
+  version "56.0.6"
+  resolved "https://registry.yarnpkg.com/expo-sensors/-/expo-sensors-56.0.6.tgz#6744e400c99b280055ce3e6449b602008ffca834"
+  integrity sha512-06a3m+OLA6W0P58KROIqd3NdfamDcKNXcipLV2WAFJcZdtJh67RAkT9TW/vgw0HjYNY3d7Cb05YNp9dNELDH9A==
+  dependencies:
+    invariant "^2.2.4"
 
 expo-server@^56.0.6:
   version "56.0.6"
