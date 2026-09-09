@@ -99,21 +99,6 @@ describe('AudioWidget — MediaCaptureCard wiring', () => {
 });
 
 describe('VideoWidget — MediaCaptureCard wiring', () => {
-  it('camera preview keeps a fixed 240x180 size with radius.md', async () => {
-    const store = makeStore('/data/video', 'binary');
-    store.stepForward();
-    const ev = getRef(store);
-    await render(<VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />);
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('video-record-button'));
-    });
-    const camera = screen.getByTestId('video-camera-view');
-    const flat = flatten(camera.props.style);
-    expect(flat.width).toBe(240);
-    expect(flat.height).toBe(180);
-    expect(flat.borderRadius).toBe(tokens.radius.md);
-  });
-
   it('video player preview keeps a fixed 240x180 size with radius.md', async () => {
     const store = makeStore('/data/video', 'binary', { value: 'file://existing.mp4' });
     store.stepForward();
@@ -129,15 +114,15 @@ describe('VideoWidget — MediaCaptureCard wiring', () => {
     expect(flat.borderRadius).toBe(tokens.radius.md);
   });
 
-  it('Stop action uses tone:"error" (PressableButton error text color)', async () => {
-    const store = makeStore('/data/video', 'binary');
+  it('Close action uses tone:"error" (PressableButton error text color)', async () => {
+    const store = makeStore('/data/video', 'binary', { value: 'file://existing.mp4' });
     store.stepForward();
     const ev = getRef(store);
     await render(<VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />);
     await act(async () => {
-      fireEvent.press(screen.getByTestId('video-record-button'));
+      fireEvent.press(screen.getByTestId('video-play-button'));
     });
-    const flat = flatten(screen.getByText('Stop').props.style);
+    const flat = flatten(screen.getByText('Close').props.style);
     expect(flat.color).toBe(tokens.color.roles.error);
   });
 });

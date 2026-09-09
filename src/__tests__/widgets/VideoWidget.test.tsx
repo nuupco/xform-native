@@ -14,6 +14,7 @@ import { makeFakeSession } from '../../test-support/makeFakeSession';
 import { VideoWidget } from '../../widgets/VideoWidget';
 
 const camera = require('expo-camera');
+const picker = require('expo-image-picker');
 
 afterEach(async () => {
   await cleanup();
@@ -71,7 +72,11 @@ describe('VideoWidget', () => {
     expect(screen.getByTestId('video-record-button')).toBeTruthy();
   });
 
-  it('Record -> Stop stores URI via answerQuestion', async () => {
+  it('Record opens the native camera and stores the returned URI via answerQuestion', async () => {
+    picker.__mockLaunchCamera.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: 'file://video.mp4' }],
+    });
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
@@ -82,9 +87,9 @@ describe('VideoWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
     });
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('video-stop-button'));
-    });
+    expect(picker.launchCameraAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ mediaTypes: ['videos'], videoMaxDuration: 60 }),
+    );
     expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://video.mp4');
   });
 
@@ -98,7 +103,7 @@ describe('VideoWidget', () => {
     expect(screen.getByTestId('video-play-button')).toBeTruthy();
   });
 
-  it('readonly mode disables Record and Stop; Play remains available', async () => {
+  it('readonly mode disables Record; Play remains available', async () => {
     const store = makeStore('file://existing.mp4', true);
     store.stepForward();
     const ev = getRef(store);
@@ -123,21 +128,8 @@ describe('VideoWidget', () => {
     expect(screen.getByTestId('video-player')).toBeTruthy();
   });
 
-  it('shows Stop while recording and hides Record', async () => {
-    const store = makeStore();
-    store.stepForward();
-    const ev = getRef(store);
-    await render(
-      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
-    );
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('video-record-button'));
-    });
-    expect(screen.getByTestId('video-stop-button')).toBeTruthy();
-    expect(screen.queryByTestId('video-record-button')).toBeNull();
-  });
-
-  it('cancel recording does not store URI', async () => {
+  it('canceling the native camera does not store a URI', async () => {
+    picker.__mockLaunchCamera.mockResolvedValueOnce({ canceled: true });
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
@@ -148,37 +140,15 @@ describe('VideoWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
     });
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('video-cancel-button'));
-    });
     expect(answerSpy).not.toHaveBeenCalled();
     expect(screen.getByTestId('video-record-button')).toBeTruthy();
   });
 
-  it('unmounting mid-recording stops recording and does not set state after unmount', async () => {
-    const camera = require('expo-camera');
-    const store = makeStore();
-    store.stepForward();
-    const ev = getRef(store);
-    const warnSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const { unmount } = await render(
-      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
-    );
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('video-record-button'));
-    });
-    await act(async () => {
-      unmount();
-    });
-    expect(camera.__mockStopRecording).toHaveBeenCalled();
-    const stateWarning = warnSpy.mock.calls.some((call) =>
-      String(call[0]).includes('unmounted component'),
-    );
-    expect(stateWarning).toBe(false);
-    warnSpy.mockRestore();
-  });
-
   it('re-record overwrites previous value', async () => {
+    picker.__mockLaunchCamera.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: 'file://video.mp4' }],
+    });
     const store = makeStore('file://old.mp4');
     store.stepForward();
     const ev = getRef(store);
@@ -189,13 +159,10 @@ describe('VideoWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
     });
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('video-stop-button'));
-    });
     expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://video.mp4');
   });
 
-  it('camera denied only: notice names camera specifically and recording does not start', async () => {
+  it('camera denied only: notice names camera specifically and the native camera never opens', async () => {
     camera.getCameraPermissionsAsync.mockResolvedValueOnce({
       status: 'denied',
       granted: false,
@@ -211,10 +178,10 @@ describe('VideoWidget', () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
     });
     expect(screen.getByText('Sin permiso de cámara')).toBeTruthy();
-    expect(camera.__mockRecordAsync).not.toHaveBeenCalled();
+    expect(picker.launchCameraAsync).not.toHaveBeenCalled();
   });
 
-  it('microphone denied only: notice names microphone specifically and recordAsync is never called', async () => {
+  it('microphone denied only: notice names microphone specifically and the native camera never opens', async () => {
     camera.getMicrophonePermissionsAsync.mockResolvedValueOnce({
       status: 'denied',
       granted: false,
@@ -230,10 +197,10 @@ describe('VideoWidget', () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
     });
     expect(screen.getByText('Sin permiso de micrófono')).toBeTruthy();
-    expect(camera.__mockRecordAsync).not.toHaveBeenCalled();
+    expect(picker.launchCameraAsync).not.toHaveBeenCalled();
   });
 
-  it('both denied: notice reflects camera (checked first) and recording does not start', async () => {
+  it('both denied: notice reflects camera (checked first) and the native camera never opens', async () => {
     camera.getCameraPermissionsAsync.mockResolvedValueOnce({
       status: 'denied',
       granted: false,
@@ -251,10 +218,14 @@ describe('VideoWidget', () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
     });
     expect(screen.getByText('Sin permiso de cámara')).toBeTruthy();
-    expect(camera.__mockRecordAsync).not.toHaveBeenCalled();
+    expect(picker.launchCameraAsync).not.toHaveBeenCalled();
   });
 
-  it('both granted proceeds unchanged: recordAsync is invoked', async () => {
+  it('both granted proceeds unchanged: launchCameraAsync is invoked', async () => {
+    picker.__mockLaunchCamera.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: 'file://video.mp4' }],
+    });
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
@@ -264,7 +235,7 @@ describe('VideoWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
     });
-    expect(screen.getByTestId('video-camera-view')).toBeTruthy();
+    expect(picker.launchCameraAsync).toHaveBeenCalled();
   });
 
   it('camera blocked shows "Abrir ajustes" and no dismiss', async () => {

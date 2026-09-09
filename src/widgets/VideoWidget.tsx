@@ -1,8 +1,20 @@
 /**
  * VideoWidget — binary video capture/playback (REQ-V01..V04).
  *
- * Gated on expo-camera (optional peer dep). Falls back to
- * UnsupportedWidget when the dep is absent at runtime.
+ * Capture opens the system's native camera app via expo-image-picker's
+ * `launchCameraAsync({ mediaTypes: ['videos'], ... })` (optional peer dep) —
+ * same module/pattern ImageWidget uses for photos, just with `mediaTypes`
+ * pointed at video. There is no in-app camera preview to keep mounted: the
+ * native camera UI owns its own record/stop/cancel controls and the call
+ * resolves once the user is done.
+ *
+ * Permission gating stays on expo-camera (also optional peer dep) because
+ * expo-image-picker exposes camera permission functions but no microphone
+ * ones — recording video needs both camera AND mic permission, so
+ * expo-camera remains the single source for both gates even though it no
+ * longer performs the capture itself. Falls back to UnsupportedWidget when
+ * expo-camera is absent at runtime.
+ *
  * Playback uses expo-video's `useVideoPlayer` hook + `<VideoView>` component
  * (optional peer dep; expo-av dropped per the SDK-56 migration). The hook is
  * called unconditionally through the lazily-`require`d module reference
@@ -10,14 +22,13 @@
  * why this is hooks-rules-safe with the optional-peer-dep firewall.
  *
  * Restyle (design decision 7, per-widget mapping table, PR12): chrome moves
- * onto `MediaCaptureCard`. The live camera preview (while recording) and the
- * video player (while playing back) are neither of MediaCaptureCard's
- * icon/title/hint slots — following BarcodeWidget's precedent (PR11), both
- * render through `state:'captured'` + `preview` as a generic "custom
- * content" region. Camera/video preview keep the fixed 240x180 size,
+ * onto `MediaCaptureCard`. The video player (while playing back) is neither
+ * of MediaCaptureCard's icon/title/hint slots — following BarcodeWidget's
+ * precedent (PR11), it renders through `state:'captured'` + `preview` as a
+ * generic "custom content" region. It keeps the fixed 240x180 size,
  * upgraded to `radius.md` per the mapping table (was `radius.sm`).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
@@ -44,6 +55,21 @@ function getCameraModule(): any | null {
     }
   }
   return _CameraModule;
+}
+
+let _ImagePickerModule: any | null = null;
+let _pickerLoaded: boolean | undefined;
+
+function getImagePicker(): any | null {
+  if (_pickerLoaded === undefined) {
+    try {
+      _ImagePickerModule = require('expo-image-picker');
+      _pickerLoaded = true;
+    } catch {
+      _pickerLoaded = false;
+    }
+  }
+  return _ImagePickerModule;
 }
 
 let _AvModule: any | null = null;
@@ -125,6 +151,7 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
   // peer-dependency gating early return below.
   const styles = useThemedStyles(createStyles);
   const camera = getCameraModule();
+  const picker = getImagePicker();
   const av = getAvModule();
   const resolved = store.adapter.resolveValue(nodeRef);
   const storedUri: string | null =
@@ -132,16 +159,11 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
   const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
-  const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   // Hooks-rules-safe unconditional call through the lazily-`require`d
   // module reference — `av`'s truthiness never varies across this
   // component instance's lifetime (see AudioWidget's equivalent comment).
   const player = av?.useVideoPlayer?.(storedUri ? { uri: storedUri } : null);
-  const cameraRef = useRef<any>(null);
-  const activeCameraRef = useRef<any>(null);
-  const isCancelledRef = useRef(false);
-  const mountedRef = useRef(true);
 
   const cameraAdapter = useMemo(
     () => ({
@@ -175,70 +197,19 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
       ? 'mic'
       : null;
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      isCancelledRef.current = true;
-      if (activeCameraRef.current) {
-        try {
-          activeCameraRef.current.stopRecording();
-        } catch {
-          // Ignore if not currently recording
-        }
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isRecording || !cameraRef.current) return;
-    activeCameraRef.current = cameraRef.current;
-    isCancelledRef.current = false;
-    cameraRef.current
-      .recordAsync({ maxDuration: 60 })
-      .then((result: { uri?: string } | undefined) => {
-        if (!isCancelledRef.current && result?.uri) {
-          store.answerQuestion(nodeRef, result.uri);
-        }
-      })
-      .catch(() => {
-        // Recording failed — ignore
-      })
-      .finally(() => {
-        if (mountedRef.current) {
-          setIsRecording(false);
-        }
-      });
-  }, [isRecording, nodeRef, store]);
-
   const handleRecord = useCallback(async () => {
-    if (!camera || readonly) return;
+    if (!camera || !picker || readonly) return;
     const cameraGranted = await cameraGate.ensure();
     if (!cameraGranted) return;
     const micGranted = await micGate.ensure();
     if (!micGranted) return;
-    setIsRecording(true);
-  }, [camera, readonly, cameraGate, micGate]);
-
-  const handleStop = useCallback(() => {
-    if (!cameraRef.current) return;
-    isCancelledRef.current = false;
-    try {
-      cameraRef.current.stopRecording();
-    } catch {
-      // Ignore if not currently recording
-    }
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    if (!cameraRef.current) return;
-    isCancelledRef.current = true;
-    try {
-      cameraRef.current.stopRecording();
-    } catch {
-      // Ignore if not currently recording
-    }
-  }, []);
+    const result = await picker.launchCameraAsync({
+      mediaTypes: ['videos'],
+      videoMaxDuration: 60,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    store.answerQuestion(nodeRef, result.assets[0].uri);
+  }, [camera, picker, readonly, cameraGate, micGate, nodeRef, store]);
 
   const handlePlay = useCallback(() => {
     if (!av || !storedUri || !player) return;
@@ -263,10 +234,9 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
     return <UnsupportedWidget dataType="binary" />;
   }
 
-  const { CameraView } = camera;
   const VideoView = av?.VideoView;
 
-  if (!readonly && !isRecording && blockingGate && blockingGateKind) {
+  if (!readonly && blockingGate && blockingGateKind) {
     const copy =
       blockingGateKind === 'camera'
         ? getCameraNoticeCopy(blockingGate.status)
@@ -318,25 +288,6 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
         }
         actions={[
           { label: 'Close', onPress: handleClosePlayer, tone: 'error', testID: 'video-close-player-button' },
-        ]}
-      />
-    );
-  }
-
-  if (isRecording) {
-    return (
-      <MediaCaptureCard
-        testID="video-widget"
-        state="captured"
-        icon={<VideoIcon />}
-        title="No video recorded"
-        disabled={readonly}
-        preview={
-          <CameraView ref={cameraRef} style={styles.preview} testID="video-camera-view" />
-        }
-        actions={[
-          { label: 'Stop', onPress: handleStop, tone: 'error', testID: 'video-stop-button' },
-          { label: 'Cancel', onPress: handleCancel, testID: 'video-cancel-button' },
         ]}
       />
     );
