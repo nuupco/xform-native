@@ -28,6 +28,7 @@ import type { KoboAsset } from '../services/apiClient';
 import {
   ALL_WIDGETS_DEMO_XML,
   DEMO_ALL_WIDGETS_XFORM_LINK,
+  demoMediaResolver,
 } from '../demo/allWidgetsForm';
 
 export type UseFormLoadArgs = {
@@ -88,6 +89,9 @@ export function useFormLoad({
     (xml: string) =>
       createFormStore(xml, {
         ...(draft ? { instanceXml: draft.instanceXml } : {}),
+        ...(asset.xform_link === DEMO_ALL_WIDGETS_XFORM_LINK
+          ? { mediaResolver: { resolve: demoMediaResolver } }
+          : {}),
         externalInstanceResolver: {
           resolve: async (uri: string) => {
             // jr://file-csv/<name>.csv, jr://file/<name> — both map to a

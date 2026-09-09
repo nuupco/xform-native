@@ -8,10 +8,11 @@
  * fixture de test, es contenido legible pensado para QA manual.
  *
  * El grupo de select1 "image-map" referencia un SVG (jr://images/test.svg)
- * que no existe en disco: al no poder resolver la imagen, el widget cae al
- * render 'default' — esperado, documentado también en el gap list de
- * xform-widgets-coverage.test.tsx para binary/hidden-answer (no aplica acá,
- * pero el mismo patrón de fallback-sin-crash es el que se espera ver).
+ * resuelto por demoMediaResolver (ver abajo), que lo escribe una sola vez a
+ * un archivo real bajo cacheDirectory y devuelve su file:// — Android's
+ * native fetch (OkHttp-backed) no soporta el protocolo data:
+ * ("MalformedURLException: unknown protocol: data"), así que un data: URI
+ * falla ahí aunque funcione en Jest/Node.
  */
 import type { KoboAsset } from '../services/apiClient';
 
@@ -25,6 +26,40 @@ export const DEMO_ALL_WIDGETS_ASSET: KoboAsset = {
   deployment_status: 'demo',
   xform_link: DEMO_ALL_WIDGETS_XFORM_LINK,
 };
+
+/** The jr:// reference the o_image_map field's itext label carries. */
+export const DEMO_IMAGE_MAP_JR_URI = 'jr://images/test.svg';
+
+/** Two tappable regions, `id` matching o_image_map's choice `value`s exactly. */
+const DEMO_IMAGE_MAP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <rect id="cafe" x="0" y="0" width="100" height="100" fill="#6f4e37" />
+  <rect id="cacao" x="100" y="0" width="100" height="100" fill="#3c2415" />
+</svg>`;
+
+let _demoImageMapFileUri: string | null = null;
+
+/** The jr:// reference video_intro's itext label carries (g_structure). */
+export const DEMO_NOTE_VIDEO_JR_URI = 'jr://videos/introduccion.mp4';
+
+// Small, public sample video — no bundled binary asset needed. Remote https:
+// URIs work fine with fetch()/VideoView unlike the image-map SVG's data: URI
+// (Android's OkHttp-backed fetch rejects data:, see the docblock above).
+const DEMO_NOTE_VIDEO_URL = 'https://www.w3schools.com/html/mov_bbb.mp4';
+
+/** Resolves the demo's jr:// media references to real, loadable URIs. */
+export async function demoMediaResolver(uri: string): Promise<string | null> {
+  if (uri === DEMO_NOTE_VIDEO_JR_URI) return DEMO_NOTE_VIDEO_URL;
+  if (uri !== DEMO_IMAGE_MAP_JR_URI) return null;
+  if (_demoImageMapFileUri) return _demoImageMapFileUri;
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const FileSystem = require('expo-file-system/legacy');
+  const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? 'file:///tmp/';
+  const fileUri = `${dir}demo-image-map.svg`;
+  await FileSystem.writeAsStringAsync(fileUri, DEMO_IMAGE_MAP_SVG);
+  _demoImageMapFileUri = fileUri;
+  return fileUri;
+}
 
 export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
@@ -125,7 +160,57 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
             <trigger_default/>
             <note_default/>
           </g_misc>
+          <g_structure>
+            <g_plain>
+              <st_plain_a/>
+              <st_plain_b/>
+            </g_plain>
+            <g_fieldlist>
+              <st_fl_a/>
+              <st_fl_b/>
+            </g_fieldlist>
+            <video_intro/>
+          </g_structure>
+          <rep_loose jr:template="">
+            <st_loose/>
+          </rep_loose>
+          <g_rep_inside>
+            <rep_in_group jr:template="">
+              <st_rep_in_group/>
+            </rep_in_group>
+          </g_rep_inside>
+          <rep_with_group jr:template="">
+            <g_in_repeat>
+              <st_group_in_repeat/>
+            </g_in_repeat>
+          </rep_with_group>
+          <rep_outer jr:template="">
+            <rep_inner jr:template="">
+              <st_nested_repeat/>
+            </rep_inner>
+          </rep_outer>
         </data>
+      </instance>
+
+      <!-- Secondary instance for appearance="map" (o_map below): only
+           dynamic itemsets carry a <geometry> per choice (ts-rosa's
+           SelectChoice.geometry is itemset-only, see SelectOneWidget's
+           docblock) — static <item> choices never resolve geometry, so this
+           variant needs an itemset sourced from an inline instance like this
+           one instead of plain <item> elements. -->
+      <instance id="parcelas">
+        <root>
+          <item>
+            <value>norte</value>
+            <label>Parcela norte</label>
+            <geometry>20.6597 -103.3496</geometry>
+          </item>
+          <item>
+            <value>sur</value>
+            <label>Parcela sur</label>
+            <geometry>20.5679 -103.3891</geometry>
+          </item>
+        </root>
       </instance>
 
       <bind nodeset="/data/g_string/s_default" type="string"/>
@@ -210,11 +295,25 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
       <bind nodeset="/data/g_misc/trigger_default" type="string"/>
       <bind nodeset="/data/g_misc/note_default" type="string" readonly="true()"/>
 
+      <bind nodeset="/data/g_structure/g_plain/st_plain_a" type="string"/>
+      <bind nodeset="/data/g_structure/g_plain/st_plain_b" type="string"/>
+      <bind nodeset="/data/g_structure/g_fieldlist/st_fl_a" type="string"/>
+      <bind nodeset="/data/g_structure/g_fieldlist/st_fl_b" type="string"/>
+      <bind nodeset="/data/g_structure/video_intro" type="string" readonly="true()"/>
+      <bind nodeset="/data/rep_loose/st_loose" type="string"/>
+      <bind nodeset="/data/g_rep_inside/rep_in_group/st_rep_in_group" type="string"/>
+      <bind nodeset="/data/rep_with_group/g_in_repeat/st_group_in_repeat" type="string"/>
+      <bind nodeset="/data/rep_outer/rep_inner/st_nested_repeat" type="string"/>
+
       <itext>
         <translation lang="es">
           <text id="o_image_map:label">
-            <value>Select1 image-map (SVG no resuelve → fallback a default)</value>
+            <value>Select1 image-map (tap the left/right half)</value>
             <value form="image">jr://images/test.svg</value>
+          </text>
+          <text id="video_intro:label">
+            <value>Observa este video antes de responder.</value>
+            <value form="video">jr://videos/introduccion.mp4</value>
           </text>
         </translation>
       </itext>
@@ -376,9 +475,12 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
       </select1>
       <select1 ref="/data/g_select1/o_map" appearance="map">
         <label>Mapa</label>
-        <hint>appearance="map"</hint>
-        <item><label>Parcela norte</label><value>norte</value></item>
-        <item><label>Parcela sur</label><value>sur</value></item>
+        <hint>appearance="map" — choices from the inline "parcelas" secondary instance, each with a geometry</hint>
+        <itemset nodeset="instance('parcelas')/root/item">
+          <value ref="value"/>
+          <label ref="label"/>
+          <geometry ref="geometry"/>
+        </itemset>
       </select1>
       <select1 ref="/data/g_select1/o_image_map" appearance="image-map">
         <label ref="jr:itext('o_image_map:label')"/>
@@ -606,6 +708,79 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
         <hint>string / input readonly, appearance="note"</hint>
       </input>
     </group>
+
+    <group ref="/data/g_structure/g_plain">
+      <label>Group simple (sin appearance)</label>
+      <input ref="/data/g_structure/g_plain/st_plain_a">
+        <label>Campo A</label>
+        <hint>group sin appearance — navega de a un campo</hint>
+      </input>
+      <input ref="/data/g_structure/g_plain/st_plain_b">
+        <label>Campo B</label>
+        <hint>group sin appearance — navega de a un campo</hint>
+      </input>
+    </group>
+
+    <group ref="/data/g_structure/g_fieldlist" appearance="field-list">
+      <label>Group con appearance="field-list"</label>
+      <input ref="/data/g_structure/g_fieldlist/st_fl_a">
+        <label>Campo A (field-list)</label>
+        <hint>debería verse todo junto en una pantalla (appearance=field-list) — si navega de a uno, es el gap conocido, no lo arregles, reportalo</hint>
+      </input>
+      <input ref="/data/g_structure/g_fieldlist/st_fl_b">
+        <label>Campo B (field-list)</label>
+        <hint>debería verse todo junto en una pantalla (appearance=field-list) — si navega de a uno, es el gap conocido, no lo arregles, reportalo</hint>
+      </input>
+    </group>
+
+    <group ref="/data/g_structure">
+      <label>Nota con media</label>
+      <input ref="/data/g_structure/video_intro" appearance="note">
+        <label ref="jr:itext('video_intro:label')"/>
+        <hint>note con media de video en el label — confirmar si NoteWidget la muestra o la ignora</hint>
+      </input>
+    </group>
+
+    <repeat nodeset="/data/rep_loose">
+      <label>Repeat suelto (sin group extra)</label>
+      <input ref="/data/rep_loose/st_loose">
+        <label>Campo dentro del repeat suelto</label>
+        <hint>repeat simple, jr:template en el modelo</hint>
+      </input>
+    </repeat>
+
+    <group ref="/data/g_rep_inside">
+      <label>Group que contiene un repeat</label>
+      <repeat nodeset="/data/g_rep_inside/rep_in_group">
+        <label>Item del repeat dentro del group</label>
+        <input ref="/data/g_rep_inside/rep_in_group/st_rep_in_group">
+          <label>Campo dentro de group → repeat</label>
+          <hint>group → repeat → campo</hint>
+        </input>
+      </repeat>
+    </group>
+
+    <repeat nodeset="/data/rep_with_group">
+      <label>Repeat que contiene un group</label>
+      <group ref="/data/rep_with_group/g_in_repeat">
+        <label>Group dentro del repeat</label>
+        <input ref="/data/rep_with_group/g_in_repeat/st_group_in_repeat">
+          <label>Campo dentro de repeat → group</label>
+          <hint>repeat → group → campo</hint>
+        </input>
+      </group>
+    </repeat>
+
+    <repeat nodeset="/data/rep_outer">
+      <label>Repeat externo</label>
+      <repeat nodeset="/data/rep_outer/rep_inner">
+        <label>Repeat interno (anidado)</label>
+        <input ref="/data/rep_outer/rep_inner/st_nested_repeat">
+          <label>Campo dentro de repeat anidado</label>
+          <hint>repeat dentro de repeat</hint>
+        </input>
+      </repeat>
+    </repeat>
 
   </h:body>
 </h:html>
