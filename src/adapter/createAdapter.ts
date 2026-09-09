@@ -12,7 +12,14 @@
 import type { FormSession, ControlType } from '@nuup/ts-rosa';
 import type { FormIndex } from '@nuup/ts-rosa';
 import { isAt, isBof, isEof } from '@nuup/ts-rosa';
-import { resolveReference, addRepeatInstance, countRepeatInstances } from '@nuup/ts-rosa';
+import {
+  resolveReference,
+  addRepeatInstance,
+  removeRepeatInstance as tsRosaRemoveRepeatInstance,
+  countRepeatInstances,
+  genericize,
+} from '@nuup/ts-rosa';
+import type { TreeReference } from '@nuup/ts-rosa';
 import type { NodeState, SelectChoice, AnswerResult, FormIndexLevel } from '@nuup/ts-rosa';
 import type { FormAdapter, AdaptedEvent, NodeRef, PathSegment } from './FormAdapter';
 import { encodeAnswer } from './encodeAnswer';
@@ -84,12 +91,20 @@ export function createAdapter(session: FormSession): FormAdapter {
     // `labelText` for every element kind, not just questions.
     if (ev.kind === 'group') {
       const resolved = navigator.resolvePath?.(fi.path);
+      // `appearance` only exists on the 'group'/'question' FormElement
+      // variants (not 'repeat'), so narrow explicitly rather than reading
+      // `.appearance` off the wider union directly (Form.tsx's field-list
+      // detection needs this to distinguish a field-list group from a
+      // plain one).
+      const groupElement =
+        resolved?.element.kind === 'group' ? resolved.element : null;
       adapted = {
         kind: 'group',
         ref,
-        label: resolved?.element.labelText ?? null,
+        label: groupElement?.labelText ?? null,
         hint: null,
         index: stepCount,
+        appearance: groupElement?.appearance ?? null,
       };
       return adapted;
     }
@@ -333,6 +348,30 @@ export function createAdapter(session: FormSession): FormAdapter {
       evaluator.initializeRepeatInstance(
         ref as Parameters<typeof evaluator.initializeRepeatInstance>[0]
       );
+    },
+
+    removeRepeatInstance(ref: NodeRef): void {
+      const node = tsRosaRemoveRepeatInstance(tree, ref as Parameters<typeof tsRosaRemoveRepeatInstance>[1]);
+      if (node === null) {
+        throw new Error(
+          'removeRepeatInstance: could not remove instance (invalid ref or no backing instance)'
+        );
+      }
+      evaluator.triggerRepeatRemoval(genericize(ref as TreeReference));
+    },
+
+    getRepeatInstanceRefs(ref: NodeRef): readonly NodeRef[] {
+      const count = countRepeatInstances(tree, ref as Parameters<typeof countRepeatInstances>[1]);
+      const levels = (ref as TreeReference).levels;
+      const lastLevelIndex = levels.length - 1;
+      if (lastLevelIndex < 0) return [];
+      const refs: NodeRef[] = [];
+      for (let i = 0; i < count; i++) {
+        const nextLevels = levels.slice();
+        nextLevels[lastLevelIndex] = { ...levels[lastLevelIndex]!, multiplicity: i };
+        refs.push({ ...(ref as TreeReference), levels: nextLevels } as unknown as NodeRef);
+      }
+      return refs;
     },
 
     getLabelMediaUri(form: string): string | null {

@@ -61,6 +61,7 @@ export type ScriptEventGroup = {
   ref: string;
   label: string | null;
   hint: string | null;
+  appearance?: string | null;
   ancestors?: readonly FakeAncestor[];
 };
 export type ScriptEventRepeat = {
@@ -328,6 +329,7 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
         kind: 'question' | 'group' | 'repeat';
         labelText: string | null;
         countExpr: string | null;
+        appearance?: string | null;
       };
       parentChain: readonly {
         kind: 'group' | 'repeat';
@@ -367,7 +369,12 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
           ev.kind === 'question'
             ? { kind: 'question' as const, labelText: ev.label, countExpr: null }
             : ev.kind === 'group'
-              ? { kind: 'group' as const, labelText: ev.label, countExpr: null }
+              ? {
+                kind: 'group' as const,
+                labelText: ev.label,
+                countExpr: null,
+                appearance: ev.appearance ?? null,
+              }
               : { kind: 'repeat' as const, labelText: ev.label, countExpr: null };
         return {
           element: leafElement,

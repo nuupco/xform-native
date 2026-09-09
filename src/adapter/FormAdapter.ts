@@ -82,7 +82,14 @@ export type AdaptedEvent =
       rangeBounds: { start?: number; end?: number; step?: number } | null;
       mediatype: string | null;
     }
-  | { kind: 'group'; ref: NodeRef; label: string | null; hint: string | null; index: number }
+  | {
+      kind: 'group';
+      ref: NodeRef;
+      label: string | null;
+      hint: string | null;
+      index: number;
+      appearance: string | null;
+    }
   | { kind: 'repeat'; ref: NodeRef; label: string | null; multiplicity: number; index: number }
   | { kind: 'prompt-new-repeat'; ref: NodeRef; label: string | null; index: number }
   | { kind: 'bof' }
@@ -125,6 +132,25 @@ export interface FormAdapter {
    * or a non-repeat ref).
    */
   createRepeatInstance(ref: NodeRef): void;
+  /**
+   * Delete an existing repeat instance identified by its concrete positional
+   * ref (Slice E — field-list embedded repeats). Re-indexes the remaining
+   * sibling instances (ts-rosa's `removeRepeatInstance` splices + shifts
+   * multiplicities) and re-runs the DAG cascade for anything depending on
+   * the repeat (counts, calculates) via `triggerRepeatRemoval`. Throws if
+   * `ref` does not resolve to an existing instance.
+   */
+  removeRepeatInstance(ref: NodeRef): void;
+  /**
+   * Concrete positional refs (multiplicity 0..count-1) for every EXISTING
+   * instance of the repeat named by `ref` (Slice E). `ref` may be any
+   * concrete or template-shaped ref for that repeat — only its path/name is
+   * used, not its own multiplicity. Built from `countRepeatInstances` +
+   * per-index ref construction rather than a navigator walk: this is a
+   * pure tree read, so it carries none of the navigator-cursor concerns
+   * `planFieldList`'s own look-ahead has to work around.
+   */
+  getRepeatInstanceRefs(ref: NodeRef): readonly NodeRef[];
   /**
    * Raw (unresolved) `jr://` media reference from the CURRENT question's
    * label itext, for the given media form ('image' | 'audio' | 'video' |
