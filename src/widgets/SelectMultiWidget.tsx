@@ -80,7 +80,7 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TextInput,
 } from 'react-native';
 import { refToString } from '@nuup/ts-rosa';
@@ -183,11 +183,16 @@ function createStyles(t: Theme) {
     // likert
     likertRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       justifyContent: 'space-around',
       alignItems: 'flex-start',
       marginVertical: t.spacing.sm,
     },
     // columns
+    columnsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
     columnsCell: {
       flex: 1,
       margin: 4,
@@ -364,7 +369,12 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     return (
       <View style={styles.container}>
         {counter}
-        <View testID="select-multi-likert-container" style={styles.likertRow}>
+        <ScrollView
+          testID="select-multi-likert-container"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.likertRow}
+        >
           {choices.map((choice, index) => (
             <SelectionRow
               key={`${choice.value}__${index}`}
@@ -377,7 +387,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
               onPress={() => handleToggle(choice.value)}
             />
           ))}
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -386,13 +396,9 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     return (
       <View style={styles.container}>
         {counter}
-        <FlatList
-          testID="select-multi-columns-list"
-          data={choices}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          numColumns={2}
-          renderItem={({ item }) => (
-            <View style={styles.columnsCell}>
+        <View testID="select-multi-columns-list" style={styles.columnsWrap}>
+          {choices.map((item, index) => (
+            <View key={`${item.value}__${index}`} style={styles.columnsCell}>
               <SelectionRow
                 testID={`select-multi-columns-option-${item.value}`}
                 control="checkbox"
@@ -402,8 +408,8 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
                 onPress={() => handleToggle(item.value)}
               />
             </View>
-          )}
-        />
+          ))}
+        </View>
       </View>
     );
   }
@@ -412,13 +418,9 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     return (
       <View style={styles.container}>
         {counter}
-        <FlatList
-          testID="select-multi-columns-pack-list"
-          data={choices}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          numColumns={2}
-          renderItem={({ item }) => (
-            <View style={styles.columnsPackCell}>
+        <View testID="select-multi-columns-pack-list" style={styles.columnsWrap}>
+          {choices.map((item, index) => (
+            <View key={`${item.value}__${index}`} style={styles.columnsPackCell}>
               <SelectionRow
                 testID={`select-multi-columns-pack-option-${item.value}`}
                 control="checkbox"
@@ -429,8 +431,8 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
                 onPress={() => handleToggle(item.value)}
               />
             </View>
-          )}
-        />
+          ))}
+        </View>
       </View>
     );
   }
@@ -439,13 +441,9 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     return (
       <View style={styles.container}>
         {counter}
-        <FlatList
-          testID="select-multi-compact-list"
-          data={choices}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          numColumns={2}
-          renderItem={({ item }) => (
-            <View style={styles.columnsCell}>
+        <View testID="select-multi-compact-list" style={styles.columnsWrap}>
+          {choices.map((item, index) => (
+            <View key={`${item.value}__${index}`} style={styles.columnsCell}>
               <SelectionRow
                 testID={`select-multi-compact-option-${item.value}`}
                 control="checkbox"
@@ -455,8 +453,8 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
                 onPress={() => handleToggle(item.value)}
               />
             </View>
-          )}
-        />
+          ))}
+        </View>
       </View>
     );
   }
@@ -465,7 +463,12 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     return (
       <View style={styles.container}>
         {counter}
-        <View testID="select-multi-list-container" style={styles.likertRow}>
+        <ScrollView
+          testID="select-multi-list-container"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.likertRow}
+        >
           {choices.map((choice, index) => (
             <SelectionRow
               key={`${choice.value}__${index}`}
@@ -478,7 +481,7 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
               onPress={() => handleToggle(choice.value)}
             />
           ))}
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -488,13 +491,9 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
     return (
       <View style={styles.container}>
         {counter}
-        <FlatList
-          testID="select-multi-columns-n-list"
-          data={choices}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          numColumns={numColumns}
-          renderItem={({ item }) => (
-            <View style={[styles.columnsCell, { minWidth: `${100 / numColumns}%` }]}>
+        <View testID="select-multi-columns-n-list" style={styles.columnsWrap}>
+          {choices.map((item, index) => (
+            <View key={`${item.value}__${index}`} style={[styles.columnsCell, { minWidth: `${100 / numColumns}%` }]}>
               <SelectionRow
                 testID={`select-multi-columns-n-option-${item.value}`}
                 control="checkbox"
@@ -504,8 +503,8 @@ export function SelectMultiWidget({ nodeRef, store, appearance }: SelectMultiWid
                 onPress={() => handleToggle(item.value)}
               />
             </View>
-          )}
-        />
+          ))}
+        </View>
       </View>
     );
   }

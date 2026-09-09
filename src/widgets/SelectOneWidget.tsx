@@ -74,7 +74,6 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  FlatList,
   ScrollView,
   TextInput,
 } from 'react-native';
@@ -171,6 +170,30 @@ function getGeoModule(): any | null {
   return _geoModule;
 }
 
+// Same basemap layers as GeoPointWidget/GeoShapeWidget/GeoTraceWidget — a
+// MapLibre.Map with no source/layer renders a blank canvas, it does not fall
+// back to any built-in tiles.
+const OSM_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{ id: 'osm-layer', type: 'raster', source: 'osm' }],
+};
+
+// ESRI World Imagery — free satellite tiles, no API key.
+// ESRI URL order is z/y/x (row before column).
+const ESRI_TILES = [
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+];
+const ESRI_MAX_ZOOM = 17;
+
 /** Parses a geopoint-convention string ("lat lon [alt [acc]]") to {lat, lon}. */
 function parseGeometry(geometry: string | null | undefined): { lat: number; lon: number } | null {
   if (!geometry) return null;
@@ -225,11 +248,16 @@ function createStyles(t: Theme) {
     // likert
     likertRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       justifyContent: 'space-around',
       alignItems: 'flex-start',
       marginVertical: t.spacing.sm,
     },
     // columns
+    columnsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
     columnsCell: {
       flex: 1,
       margin: 4,
@@ -466,7 +494,12 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
   if (variant === 'likert') {
     return (
       <View style={styles.container}>
-        <View testID="select-one-likert-container" style={styles.likertRow}>
+        <ScrollView
+          testID="select-one-likert-container"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.likertRow}
+        >
           {choices.map((choice, index) => (
             <SelectionRow
               key={`${choice.value}__${index}`}
@@ -479,7 +512,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
               onPress={() => handleSelect(choice.value)}
             />
           ))}
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -487,13 +520,9 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
   if (variant === 'columns') {
     return (
       <View style={styles.container}>
-        <FlatList
-          testID="select-one-columns-list"
-          data={choices}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          numColumns={2}
-          renderItem={({ item }) => (
-            <View style={styles.columnsCell}>
+        <View testID="select-one-columns-list" style={styles.columnsWrap}>
+          {choices.map((item, index) => (
+            <View key={`${item.value}__${index}`} style={styles.columnsCell}>
               <SelectionRow
                 testID={`select-one-columns-option-${item.value}`}
                 control="radio"
@@ -503,8 +532,8 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
                 onPress={() => handleSelect(item.value)}
               />
             </View>
-          )}
-        />
+          ))}
+        </View>
       </View>
     );
   }
@@ -512,13 +541,9 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
   if (variant === 'columns-pack') {
     return (
       <View style={styles.container}>
-        <FlatList
-          testID="select-one-columns-pack-list"
-          data={choices}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          numColumns={2}
-          renderItem={({ item }) => (
-            <View style={styles.columnsPackCell}>
+        <View testID="select-one-columns-pack-list" style={styles.columnsWrap}>
+          {choices.map((item, index) => (
+            <View key={`${item.value}__${index}`} style={styles.columnsPackCell}>
               <SelectionRow
                 testID={`select-one-columns-pack-option-${item.value}`}
                 control="radio"
@@ -529,8 +554,8 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
                 onPress={() => handleSelect(item.value)}
               />
             </View>
-          )}
-        />
+          ))}
+        </View>
       </View>
     );
   }
@@ -538,13 +563,9 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
   if (variant === 'compact') {
     return (
       <View style={styles.container}>
-        <FlatList
-          testID="select-one-compact-list"
-          data={choices}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          numColumns={2}
-          renderItem={({ item }) => (
-            <View style={styles.columnsCell}>
+        <View testID="select-one-compact-list" style={styles.columnsWrap}>
+          {choices.map((item, index) => (
+            <View key={`${item.value}__${index}`} style={styles.columnsCell}>
               <SelectionRow
                 testID={`select-one-compact-option-${item.value}`}
                 control="radio"
@@ -554,8 +575,8 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
                 onPress={() => handleSelect(item.value)}
               />
             </View>
-          )}
-        />
+          ))}
+        </View>
       </View>
     );
   }
@@ -590,7 +611,12 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
     const showLabel = variant === 'list';
     return (
       <View style={styles.container}>
-        <View testID="select-one-list-container" style={styles.likertRow}>
+        <ScrollView
+          testID="select-one-list-container"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.likertRow}
+        >
           {choices.map((choice, index) => (
             <SelectionRow
               key={`${choice.value}__${index}`}
@@ -603,7 +629,7 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
               onPress={() => handleSelect(choice.value)}
             />
           ))}
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -630,13 +656,9 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
     const numColumns = parseColumnsN(appearance);
     return (
       <View style={styles.container}>
-        <FlatList
-          testID="select-one-columns-n-list"
-          data={choices}
-          keyExtractor={(item, index) => `${item.value}__${index}`}
-          numColumns={numColumns}
-          renderItem={({ item }) => (
-            <View style={[styles.columnsCell, { minWidth: `${100 / numColumns}%` }]}>
+        <View testID="select-one-columns-n-list" style={styles.columnsWrap}>
+          {choices.map((item, index) => (
+            <View key={`${item.value}__${index}`} style={[styles.columnsCell, { minWidth: `${100 / numColumns}%` }]}>
               <SelectionRow
                 testID={`select-one-columns-n-option-${item.value}`}
                 control="radio"
@@ -646,8 +668,8 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
                 onPress={() => handleSelect(item.value)}
               />
             </View>
-          )}
-        />
+          ))}
+        </View>
       </View>
     );
   }
@@ -720,8 +742,29 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
           >
             <View style={styles.modalContent}>
               <GeoMapChrome>
-                <MapLibre.Map style={styles.map} testID="select-one-map">
+                <MapLibre.Map style={styles.map} mapStyle={OSM_STYLE} testID="select-one-map">
                   <MapLibre.Camera initialViewState={{ center: mapCenter, zoom: 12 }} />
+
+                  <MapLibre.RasterSource
+                    id="esri-satellite"
+                    tiles={ESRI_TILES}
+                    tileSize={256}
+                    maxzoom={ESRI_MAX_ZOOM}
+                  >
+                    <MapLibre.Layer id="esri-satellite-layer" type="raster" layerIndex={1} />
+                  </MapLibre.RasterSource>
+
+                  {geo.SATELLITE_TILE_URI_TEMPLATE && (
+                    <MapLibre.RasterSource
+                      id="esri-offline"
+                      tiles={[geo.SATELLITE_TILE_URI_TEMPLATE]}
+                      tileSize={256}
+                      maxzoom={ESRI_MAX_ZOOM}
+                    >
+                      <MapLibre.Layer id="esri-offline-layer" type="raster" layerIndex={2} />
+                    </MapLibre.RasterSource>
+                  )}
+
                   {plottable.map(({ choice, point }) => (
                     <MapLibre.Marker
                       key={choice.value}

@@ -28,9 +28,10 @@ function createStyles(t: Theme) {
   return StyleSheet.create({
     container: {
       marginVertical: t.spacing.xs,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: t.spacing.sm,
+      // No flexDirection: 'row' here — the single SegmentedButton child has
+      // no width of its own (its two Pressables are flex: 1), so a row
+      // parent gives it zero main-axis size to distribute. Default column
+      // layout's stretch cross-axis gives it the full container width.
     },
     disabled: {
       opacity: t.disabled.contentOpacity,
