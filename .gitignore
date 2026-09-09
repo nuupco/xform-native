@@ -34,5 +34,8 @@ npm-debug.log*
 # SDD metadata
 .atl/
 
+# CodeGraph index (local, machine-specific; breaks yarn's file: copy — see example/ install)
+.codegraph/
+
 # Bun (example app uses bun, main project uses npm)
 bun.lock
