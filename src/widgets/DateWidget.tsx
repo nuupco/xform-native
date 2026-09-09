@@ -36,7 +36,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { View, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { useTheme, useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { createFieldStyles } from './primitives/fieldStyles';
@@ -67,6 +67,15 @@ function createStyles(t: Theme) {
     focused: f.fieldFocused,
     readonly: f.fieldDisabled,
     pickerButton: f.fieldAffordance,
+    pickerDoneButton: {
+      alignSelf: 'flex-end',
+      paddingVertical: t.spacing.xs,
+      paddingHorizontal: t.spacing.sm,
+    },
+    pickerDoneText: {
+      color: t.color.roles.primary,
+      fontWeight: '600',
+    },
   });
 }
 
@@ -247,9 +256,7 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
   // when the optional peer dep is installed — same TextInput/mask path as
   // 'default' otherwise (see docblock).
 
-  function handleNativePickerChange(_event: unknown, selectedDate?: Date) {
-    setShowNativePicker(false);
-    if (!selectedDate) return;
+  function commitDate(selectedDate: Date) {
     const utcDate = new Date(
       Date.UTC(
         selectedDate.getFullYear(),
@@ -259,6 +266,26 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
     );
     setText(formatDateDisplay(utcDate));
     store.answerQuestion(nodeRef, utcDate);
+  }
+
+  // Android's dialog picker fires 'onChange' exactly once (on confirm or
+  // cancel) and dismisses itself, so closing here is correct there. iOS's
+  // spinner/inline picker fires 'onChange' on every scroll of the wheel and
+  // never dismisses itself — closing on the first event would hide it before
+  // the user finishes choosing, so iOS instead relies on the "Listo" button
+  // (handleIosPickerDone) to close.
+  function handleNativePickerChange(event: { type: string }, selectedDate?: Date) {
+    if (Platform.OS === 'android') {
+      setShowNativePicker(false);
+      if (event.type === 'dismissed' || !selectedDate) return;
+      commitDate(selectedDate);
+      return;
+    }
+    if (selectedDate) commitDate(selectedDate);
+  }
+
+  function handleIosPickerDone() {
+    setShowNativePicker(false);
   }
 
   const placeholder =
@@ -320,12 +347,24 @@ export function DateWidget({ nodeRef, store, appearance }: DateWidgetProps) {
         )}
       </View>
       {showPickerButton && showNativePicker && (
-        <DateTimePicker
-          testID="date-native-picker"
-          value={value instanceof Date ? value : new Date()}
-          mode="date"
-          onChange={handleNativePickerChange}
-        />
+        <>
+          <DateTimePicker
+            testID="date-native-picker"
+            value={value instanceof Date ? value : new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            onChange={handleNativePickerChange}
+          />
+          {Platform.OS === 'ios' && (
+            <Pressable
+              testID="date-picker-done-button"
+              onPress={handleIosPickerDone}
+              style={styles.pickerDoneButton}
+            >
+              <Text style={styles.pickerDoneText}>Done</Text>
+            </Pressable>
+          )}
+        </>
       )}
     </View>
   );

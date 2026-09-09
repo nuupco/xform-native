@@ -39,9 +39,12 @@ import { FormSessionStore } from '../../store/FormSessionStore';
 import { makeFakeSession } from '../../test-support/makeFakeSession';
 import { DateWidget } from '../../widgets/DateWidget';
 
+const originalPlatformOS = require('react-native').Platform.OS;
+
 afterEach(async () => {
   await cleanup();
   jest.clearAllMocks();
+  require('react-native').Platform.OS = originalPlatformOS;
 });
 
 function makeStore(value: unknown = null) {
@@ -116,6 +119,64 @@ describe('DateWidget with native picker available', () => {
       new Date(Date.UTC(2024, 5, 15)),
     );
     expect(screen.getByTestId('date-input').props.value).toBe('2024-06-15');
+  });
+
+  it('closes the picker automatically on Android after a single onChange', async () => {
+    require('react-native').Platform.OS = 'android';
+    const store = makeStore();
+    store.stepForward();
+    const ev = store.adapter.getCurrentEvent();
+    if (ev.kind !== 'question') throw new Error('expected question');
+
+    await render(
+      <DateWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('date-picker-button'));
+    });
+    expect(screen.getByTestId('date-native-picker')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('date-native-picker'));
+    });
+
+    expect(screen.queryByTestId('date-native-picker')).toBeNull();
+  });
+
+  it('keeps the picker open on iOS after onChange, closing only via the Done button', async () => {
+    require('react-native').Platform.OS = 'ios';
+    const store = makeStore();
+    store.stepForward();
+    const ev = store.adapter.getCurrentEvent();
+    if (ev.kind !== 'question') throw new Error('expected question');
+    const answerSpy = jest.spyOn(store, 'answerQuestion');
+
+    await render(
+      <DateWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('date-picker-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('date-native-picker'));
+    });
+
+    // iOS's spinner/inline picker fires onChange on every scroll and never
+    // dismisses itself — it must stay open (and keep committing) until the
+    // user explicitly confirms.
+    expect(answerSpy).toHaveBeenCalledWith(
+      ev.ref,
+      new Date(Date.UTC(2024, 5, 15)),
+    );
+    expect(screen.getByTestId('date-native-picker')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('date-picker-done-button'));
+    });
+
+    expect(screen.queryByTestId('date-native-picker')).toBeNull();
   });
 
   it('does not render the picker button for month-year variant', async () => {
