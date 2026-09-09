@@ -1,199 +1,159 @@
 /**
  * SignatureWidget — binary signature capture (REQ-M07..M10).
+ * Gated on react-native-signature-canvas (optional peer dep, itself
+ * requiring react-native-webview). Falls back to UnsupportedWidget when
+ * either dep is absent at runtime.
  *
- * Gated on react-native-svg (optional peer dep). Falls back to
- * UnsupportedWidget when the dep is absent at runtime.
+ * Signing happens inside a fullscreen modal (AppModal, same shape as
+ * GeoPointWidget/SelectOneWidget's map modal) instead of an inline canvas —
+ * the form flow only ever shows a MediaCaptureCard (empty/captured), never
+ * the drawing surface itself.
  *
- * Theming (Phase 3, design doc per-widget mapping table): the canvas is an
- * svg drawing surface, not a `MediaCaptureCard` preview, so it keeps its own
- * themed styles (`roles.surface` when editable for ink contrast,
- * `roles.surfaceVariant` when readonly, stroke color from `roles.onSurface`).
- * Only the action row (Clear/Save) reuses `PressableButton` directly — the
- * same primitive `MediaCaptureCard` itself wraps for its own action row
- * (decision 7, "(action row only)" annotation) — rather than force-fitting
- * the whole canvas-based widget into `MediaCaptureCard`'s empty/captured/
- * active preview shape, which doesn't model a live drawing surface.
+ * Migrated off the custom PanResponder + react-native-svg canvas (real
+ * coordinate bug per facebook/react-native#15290, plus per-point re-render
+ * lag) onto react-native-signature-canvas, a maintained WebView wrapper
+ * around signature_pad.js. react-native-webview is a required transitive
+ * dependency of that package (it renders the pad inside a WebView), so it
+ * is declared alongside it as an optional peer here.
  */
-import { useCallback, useRef, useState } from 'react';
-import {
-  View,
-  PanResponder,
-  StyleSheet,
-  type GestureResponderEvent,
-  type PanResponderGestureState,
-} from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { useThemedStyles, useTheme, type Theme } from '../theme/ThemeContext';
 import { PressableButton } from './primitives/PressableButton';
-
-let _SvgModule: any | null = null;
-let _svgLoaded: boolean | undefined;
-
-function getSvg(): any | null {
-  if (_svgLoaded === undefined) {
-    try {
-      _SvgModule = require('react-native-svg');
-      _svgLoaded = true;
-    } catch {
-      _svgLoaded = false;
-    }
-  }
-  return _SvgModule;
-}
-
-interface Stroke {
-  path: string;
-  color: string;
-  width: number;
-}
+import { MediaCaptureCard } from './primitives/MediaCaptureCard';
+import { AppModal } from './primitives/Modal';
 
 export interface SignatureWidgetProps {
-  nodeRef: NodeRef;
-  store: FormSessionStore;
-  appearance?: string | null;
+  nodeRef: NodeRef; store: FormSessionStore; appearance?: string | null;
 }
 
 function createStyles(t: Theme) {
   return StyleSheet.create({
-    container: { gap: t.spacing.sm },
-    canvas: {
-      height: 200,
-      borderWidth: 1,
-      borderColor: t.color.roles.outline,
-      borderRadius: t.radius.sm,
-      backgroundColor: t.color.roles.surface,
-    },
-    canvasReadonly: {
-      height: 200,
-      borderWidth: 1,
-      borderColor: t.color.roles.outline,
-      borderRadius: t.radius.sm,
-      backgroundColor: t.color.roles.surfaceVariant,
-    },
-    buttonRow: {
-      flexDirection: 'row',
-      gap: t.spacing.sm,
-    },
+    previewCanvas: { height: 100, width: 200, borderRadius: t.radius.sm, backgroundColor: t.color.roles.surfaceVariant },
+    modalContent: { flex: 1, gap: t.spacing.sm, padding: t.spacing.md },
+    modalCanvas: { flex: 1, borderWidth: 1, borderColor: t.color.roles.outline, borderRadius: t.radius.sm, backgroundColor: t.color.roles.surface },
+    buttonRow: { flexDirection: 'row', gap: t.spacing.sm },
   });
 }
 
+function isSignatureDataUri(value: unknown): value is string {
+  return typeof value === 'string' && value.startsWith('data:image/');
+}
+
 export function SignatureWidget({ nodeRef, store }: SignatureWidgetProps) {
-  // Theming (D2): useThemedStyles MUST stay the first statement, before the
-  // peer-dependency gating early return below, to preserve hook-order
-  // stability (select-widgets-hook-order invariant).
   const styles = useThemedStyles(createStyles);
   const theme = useTheme();
-  const svg = getSvg();
+  const SignatureCanvas = getSignatureCanvas();
   const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
+  const resolved = store.adapter.resolveValue(nodeRef);
+  const penColor = theme.color.roles.onSurface;
+  const canvasBackground = theme.color.roles.surface;
 
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const currentPath = useRef<string[]>([]);
-  const strokeColor = theme.color.roles.onSurface;
+  const hasSignature = isSignatureDataUri(resolved);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => !readonly,
-      onMoveShouldSetPanResponder: () => !readonly,
-      onPanResponderGrant: (_evt: GestureResponderEvent) => {
-        currentPath.current = [];
-      },
-      onPanResponderMove: (
-        _evt: GestureResponderEvent,
-        gs: PanResponderGestureState,
-      ) => {
-        const { moveX, moveY } = gs;
-        const cmd =
-          currentPath.current.length === 0
-            ? `M${moveX},${moveY}`
-            : `L${moveX},${moveY}`;
-        currentPath.current.push(cmd);
-        // Trigger re-render by updating strokes
-        setStrokes((prev) => {
-          const copy = [...prev];
-          const last = copy[copy.length - 1];
-          if (last && last.path === '') {
-            copy[copy.length - 1] = {
-              ...last,
-              path: currentPath.current.join(' '),
-            };
-          }
-          return copy;
-        });
-      },
-      onPanResponderRelease: () => {
-        const pathStr = currentPath.current.join(' ');
-        if (pathStr.length === 0) return;
-        setStrokes((prev) => [
-          ...prev,
-          { path: pathStr, color: strokeColor, width: 2 },
-        ]);
-        currentPath.current = [];
-      },
-    }),
-  ).current;
+  const [modalVisible, setModalVisible] = useState(false);
+  const canvasRef = useRef<any>(null);
 
-  const handleClear = useCallback(() => {
-    setStrokes([]);
+  // signature_pad has no supported way to reload a PNG back into editable
+  // strokes, so "Editar" always reopens with a blank pad — the user redraws
+  // from scratch rather than continuing the previous signature.
+  const openModal = useCallback(() => {
+    setModalVisible(true);
   }, []);
 
-  const handleExport = useCallback(() => {
-    // In a real implementation, this would use react-native-view-shot
-    // to capture the SVG canvas as a PNG file. For now, export the
-    // stroke data as a JSON-serialized URI marker.
-    const data = JSON.stringify(strokes);
-    const uri = `signature:${data}`;
-    store.answerQuestion(nodeRef, uri);
-  }, [nodeRef, store, strokes]);
+  const handleClear = useCallback(() => {
+    canvasRef.current?.clearSignature();
+  }, []);
+  const handleCancel = useCallback(() => { setModalVisible(false); }, []);
+  // onOK fires asynchronously (WebView -> native bridge) once readSignature()
+  // resolves — the actual save/close happens here, not in handleSave.
+  const handleOK = useCallback((signature: string) => {
+    store.answerQuestion(nodeRef, signature);
+    setModalVisible(false);
+  }, [nodeRef, store]);
+  const handleSave = useCallback(() => {
+    canvasRef.current?.readSignature();
+  }, []);
+  const handleDelete = useCallback(() => { store.answerQuestion(nodeRef, null); }, [nodeRef, store]);
 
-  if (!svg) {
-    return <UnsupportedWidget dataType="binary" />;
-  }
+  const webStyle = useMemo(
+    () => `.m-signature-pad--footer { display: none; margin: 0; } body,html { background-color: ${canvasBackground}; }`,
+    [canvasBackground],
+  );
 
-  const { Svg, Path } = svg;
+  if (!SignatureCanvas) return <UnsupportedWidget dataType="binary" />;
 
   return (
-    <View style={styles.container} testID="signature-widget">
-      <View
-        style={readonly ? styles.canvasReadonly : styles.canvas}
-        {...panResponder.panHandlers}
-        testID="signature-canvas"
-      >
-        <Svg
-          width="100%"
-          height={200}
-          viewBox="0 0 400 200"
-          testID="svg-drawing"
-        >
-          {strokes.map((stroke, i) => (
-            <Path
-              key={i}
-              d={stroke.path}
-              stroke={stroke.color}
-              strokeWidth={stroke.width}
-              fill="none"
-              testID={`stroke-${i}`}
+    <View testID="signature-widget">
+      <MediaCaptureCard
+        testID="signature-card"
+        state={hasSignature ? 'captured' : 'empty'}
+        icon={<Text>✍️</Text>}
+        title="Sin firma"
+        hint={readonly ? undefined : 'Toca para firmar'}
+        disabled={readonly}
+        preview={
+          hasSignature ? (
+            <Image
+              source={{ uri: resolved as string }}
+              style={styles.previewCanvas}
+              resizeMode="contain"
+              testID="signature-preview"
             />
-          ))}
-        </Svg>
-      </View>
-      {!readonly && (
-        <View style={styles.buttonRow}>
-          <PressableButton
-            label="Clear"
-            onPress={handleClear}
-            variant="text"
-            testID="signature-clear-button"
-          />
-          <PressableButton
-            label="Save"
-            onPress={handleExport}
-            variant="filled"
-            testID="signature-export-button"
-          />
+          ) : undefined
+        }
+        actions={readonly ? [] : hasSignature ? [
+          { label: 'Firmar de nuevo', onPress: openModal, testID: 'signature-edit-button' },
+          { label: 'Borrar', onPress: handleDelete, tone: 'error', testID: 'signature-delete-button' },
+        ] : [
+          { label: 'Firmar', onPress: openModal, testID: 'signature-open-button' },
+        ]}
+      />
+
+      <AppModal
+        visible={modalVisible}
+        onRequestClose={handleCancel}
+        testID="signature-modal"
+        fullScreen
+        animationType="slide"
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalCanvas} testID="signature-canvas">
+            <SignatureCanvas
+              ref={canvasRef}
+              onOK={handleOK}
+              penColor={penColor}
+              backgroundColor={canvasBackground}
+              webStyle={webStyle}
+              autoClear={false}
+              testID="signature-canvas-webview"
+            />
+          </View>
+          <View style={styles.buttonRow}>
+            <PressableButton label="Cancelar" onPress={handleCancel} variant="text" testID="signature-cancel-button" />
+            <PressableButton label="Limpiar" onPress={handleClear} variant="text" testID="signature-clear-button" />
+            <PressableButton label="Guardar" onPress={handleSave} variant="filled" testID="signature-save-button" />
+          </View>
         </View>
-      )}
+      </AppModal>
     </View>
   );
+}
+
+let _SignatureCanvasModule: any | null = null;
+let _signatureCanvasLoaded: boolean | undefined;
+function getSignatureCanvas(): any | null {
+  if (_signatureCanvasLoaded === undefined) {
+    try {
+      require('react-native-webview');
+      _SignatureCanvasModule = require('react-native-signature-canvas').default;
+      _signatureCanvasLoaded = true;
+    } catch {
+      _signatureCanvasLoaded = false;
+    }
+  }
+  return _SignatureCanvasModule;
 }

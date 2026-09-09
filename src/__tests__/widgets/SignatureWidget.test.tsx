@@ -13,12 +13,14 @@ import { FormSessionStore } from '../../store/FormSessionStore';
 import { makeFakeSession } from '../../test-support/makeFakeSession';
 import { SignatureWidget } from '../../widgets/SignatureWidget';
 
+const { __FAKE_SIGNATURE_DATA_URI } = require('react-native-signature-canvas');
+
 afterEach(async () => {
   await cleanup();
   jest.clearAllMocks();
 });
 
-function makeStore() {
+function makeStore(value: string | null = '') {
   return new FormSessionStore(
     makeFakeSession({
       events: [
@@ -47,7 +49,7 @@ function makeStore() {
       relevance: { '/data/sig': true },
       choices: {},
       answerResults: { '/data/sig': AnswerResult.OK },
-      values: { '/data/sig': '' },
+      values: { '/data/sig': value },
     }),
   );
 }
@@ -59,7 +61,7 @@ function getRef(store: FormSessionStore) {
 }
 
 describe('SignatureWidget', () => {
-  it('renders canvas and action buttons', async () => {
+  it('renders MediaCaptureCard in empty state with a "Firmar" button', async () => {
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
@@ -67,11 +69,10 @@ describe('SignatureWidget', () => {
       <SignatureWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     expect(screen.getByTestId('signature-widget')).toBeTruthy();
-    expect(screen.getByTestId('signature-clear-button')).toBeTruthy();
-    expect(screen.getByTestId('signature-export-button')).toBeTruthy();
+    expect(screen.getByTestId('signature-open-button')).toBeTruthy();
   });
 
-  it('export button calls answerQuestion with signature URI', async () => {
+  it('opens the fullscreen modal on "Firmar" and saves the signed PNG data URI', async () => {
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
@@ -80,29 +81,63 @@ describe('SignatureWidget', () => {
       <SignatureWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
     await act(async () => {
-      fireEvent.press(screen.getByTestId('signature-export-button'));
+      fireEvent.press(screen.getByTestId('signature-open-button'));
     });
-    expect(answerSpy).toHaveBeenCalledWith(
-      ev.ref,
-      expect.stringContaining('signature:'),
-    );
+    expect(screen.getByTestId('signature-canvas')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('signature-save-button'));
+    });
+    expect(answerSpy).toHaveBeenCalledWith(ev.ref, __FAKE_SIGNATURE_DATA_URI);
   });
 
-  it('clear button resets canvas', async () => {
+  it('clear button clears the in-progress pad without closing the modal', async () => {
     const store = makeStore();
     store.stepForward();
     const ev = getRef(store);
     await render(
       <SignatureWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
     );
-    // First export something to create strokes, then clear
     await act(async () => {
-      fireEvent.press(screen.getByTestId('signature-export-button'));
+      fireEvent.press(screen.getByTestId('signature-open-button'));
     });
     await act(async () => {
       fireEvent.press(screen.getByTestId('signature-clear-button'));
     });
-    // Canvas should still be rendered
-    expect(screen.getByTestId('signature-widget')).toBeTruthy();
+    expect(screen.getByTestId('signature-canvas')).toBeTruthy();
+  });
+
+  it('cancel button closes the modal without saving', async () => {
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const answerSpy = jest.spyOn(store, 'answerQuestion');
+    await render(
+      <SignatureWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('signature-open-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('signature-cancel-button'));
+    });
+    expect(answerSpy).not.toHaveBeenCalled();
+    expect(screen.getByTestId('signature-open-button')).toBeTruthy();
+  });
+
+  it('shows captured state with an Image preview and Firmar de nuevo/Borrar actions when a signature exists', async () => {
+    const store = makeStore('data:image/png;base64,abc123');
+    store.stepForward();
+    const ev = getRef(store);
+    const answerSpy = jest.spyOn(store, 'answerQuestion');
+    await render(
+      <SignatureWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    expect(screen.getByTestId('signature-preview')).toBeTruthy();
+    expect(screen.getByTestId('signature-edit-button')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('signature-delete-button'));
+    });
+    expect(answerSpy).toHaveBeenCalledWith(ev.ref, null);
   });
 });
