@@ -329,6 +329,8 @@ export interface FormProps {
   /** Additive (design decision 7): forwarded to BofSurface/EofSurface subtitle; omitted → subtitle hidden. */
   formTitle?: string;
   formVersion?: string;
+  /** Additive: when true, skips the BofSurface "start" screen and advances past `bof` as soon as the form mounts. Defaults to false (BofSurface shown). */
+  autoStart?: boolean;
 }
 
 export function Form({
@@ -338,6 +340,7 @@ export function Form({
   validators: validatorsProp,
   formTitle,
   formVersion,
+  autoStart = false,
 }: FormProps) {
   const styles = useThemedStyles(createStyles);
   const snapshot = useFormSession(store);
@@ -515,6 +518,13 @@ export function Form({
     setAdvanceBlocked(null);
     store.stepForward();
   }, [store]);
+
+  // autoStart: skip BofSurface, advancing past `bof` exactly once per mount
+  // (guarded by event.kind, not a ref — re-firing is harmless since
+  // handleNext is a no-op once the store has moved past bof).
+  useEffect(() => {
+    if (autoStart && event.kind === 'bof') handleNext();
+  }, [autoStart, event.kind, handleNext]);
 
   const handleCreateRepeat = useCallback(() => {
     const ev = store.adapter.getCurrentEvent();

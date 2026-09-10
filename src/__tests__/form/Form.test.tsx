@@ -763,6 +763,23 @@ describe('Form e2e cascade', () => {
     expect(screen.getByText('Formulario completo')).toBeTruthy();
   });
 
+  it('autoStart=true skips BofSurface and lands directly on the first question', async () => {
+    const store = makeRealStore(E2E_XML);
+    await render(<Form store={store} autoStart />);
+
+    expect(screen.queryByText('Inicio del formulario')).toBeNull();
+    expect(screen.queryByTestId('bof-start-button')).toBeNull();
+    expect(screen.getByText('Name')).toBeTruthy();
+  });
+
+  it('autoStart=false (default) still shows BofSurface', async () => {
+    const store = makeRealStore(E2E_XML);
+    await render(<Form store={store} />);
+
+    expect(screen.getByText('Inicio del formulario')).toBeTruthy();
+    expect(screen.queryByText('Name')).toBeNull();
+  });
+
   it('relevance skip: field hidden when age &lt; 18', async () => {
     const store = makeRealStore(E2E_XML);
     await render(<Form store={store} />);
