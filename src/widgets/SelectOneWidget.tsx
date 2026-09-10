@@ -79,7 +79,7 @@ import {
 } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { resolveVariant } from './engine/appearance';
-import { useThemedStyles, type Theme } from '../theme/ThemeContext';
+import { useTheme, useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { createFieldStyles } from './primitives/fieldStyles';
 import { SelectionRow } from './primitives/SelectionRow';
 import { SearchIcon } from './primitives/Icon';
@@ -357,6 +357,7 @@ function createStyles(t: Theme) {
 
 export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetProps) {
   const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);
   const choices = store.adapter.getChoices(nodeRef);
@@ -817,11 +818,20 @@ export function SelectOneWidget({ nodeRef, store, appearance }: SelectOneWidgetP
             >
               {matched.map(({ shape, choice }) => {
                 const Component = svg[IMAGE_MAP_TAG_COMPONENT[shape.tag]!];
+                const selected = choice.value === currentValue;
                 return (
                   <Component
                     key={shape.id}
                     {...shape.attrs}
+                    // Selection is otherwise invisible — the shape's own SVG
+                    // attrs never reflect the answered value, so the tapped
+                    // region must be re-colored here to give any feedback.
+                    fill={selected ? theme.color.roles.primary : shape.attrs['fill']}
+                    fillOpacity={selected ? 0.5 : shape.attrs['fill-opacity']}
+                    stroke={selected ? theme.color.roles.primary : shape.attrs['stroke']}
+                    strokeWidth={selected ? 2 : shape.attrs['stroke-width']}
                     testID={`select-one-image-map-region-${choice.value}`}
+                    accessibilityState={{ selected }}
                     onPress={() => handleSelect(choice.value)}
                   />
                 );

@@ -546,6 +546,30 @@ describe('selectOne/select1/image-map', () => {
     expect(spy).toHaveBeenCalledWith(ref, 'b');
   });
 
+  it('highlights the selected region once its choice is the current answer', async () => {
+    const { store, ref } = makeImageMapStore();
+    jest.spyOn(store.adapter, 'getLabelMediaUri').mockReturnValue('jr://images/test.svg');
+    jest.spyOn(store.adapter, 'resolveValue').mockReturnValue('b');
+    (store as unknown as { mediaResolver: unknown }).mediaResolver = {
+      resolve: jest.fn().mockResolvedValue('file:///test.svg'),
+    };
+    (global as unknown as { fetch: unknown }).fetch = jest
+      .fn()
+      .mockResolvedValue({ text: () => Promise.resolve(SVG_MARKUP) });
+
+    await render(<SelectOneWidget nodeRef={ref} store={store} appearance="image-map" />);
+    await screen.findByTestId('svg-canvas');
+
+    // The unmatched region ("a" is not the current answer) keeps its own SVG
+    // fill untouched; the matched region ("B" / "b") must be recolored —
+    // otherwise tapping a shape gives no visible feedback at all.
+    expect(screen.getByTestId('svg-path').props.fill).toBeUndefined();
+    expect(screen.getByTestId('svg-rect').props.fill).toBeTruthy();
+    expect(screen.getByTestId('svg-rect').props.accessibilityState).toEqual({
+      selected: true,
+    });
+  });
+
   it('falls back to the default radio list when no mediaResolver is configured', async () => {
     const { store, ref } = makeImageMapStore();
     jest.spyOn(store.adapter, 'getLabelMediaUri').mockReturnValue('jr://images/test.svg');
