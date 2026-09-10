@@ -171,6 +171,12 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
             </g_fieldlist>
             <video_intro/>
           </g_structure>
+          <g_fieldlist_repeat>
+            <st_flr_control/>
+            <flr_items jr:template="">
+              <st_flr_item/>
+            </flr_items>
+          </g_fieldlist_repeat>
           <rep_loose jr:template="">
             <st_loose/>
           </rep_loose>
@@ -300,6 +306,8 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
       <bind nodeset="/data/g_structure/g_fieldlist/st_fl_a" type="string"/>
       <bind nodeset="/data/g_structure/g_fieldlist/st_fl_b" type="string"/>
       <bind nodeset="/data/g_structure/video_intro" type="string" readonly="true()"/>
+      <bind nodeset="/data/g_fieldlist_repeat/st_flr_control" type="string"/>
+      <bind nodeset="/data/g_fieldlist_repeat/flr_items/st_flr_item" type="string"/>
       <bind nodeset="/data/rep_loose/st_loose" type="string"/>
       <bind nodeset="/data/g_rep_inside/rep_in_group/st_rep_in_group" type="string"/>
       <bind nodeset="/data/rep_with_group/g_in_repeat/st_group_in_repeat" type="string"/>
@@ -731,6 +739,21 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
         <label>Campo B (field-list)</label>
         <hint>debería verse todo junto en una pantalla (appearance=field-list) — si navega de a uno, es el gap conocido, no lo arregles, reportalo</hint>
       </input>
+    </group>
+
+    <group ref="/data/g_fieldlist_repeat" appearance="field-list">
+      <label>Group con appearance="field-list" que contiene un repeat</label>
+      <input ref="/data/g_fieldlist_repeat/st_flr_control">
+        <label>Campo de control (field-list)</label>
+        <hint>debería mostrarse en la misma pantalla que el repeat de abajo</hint>
+      </input>
+      <repeat nodeset="/data/g_fieldlist_repeat/flr_items">
+        <label>Item</label>
+        <input ref="/data/g_fieldlist_repeat/flr_items/st_flr_item">
+          <label>Campo dentro del repeat (field-list)</label>
+          <hint>agregar/quitar instancias no debería sacarte de la pantalla</hint>
+        </input>
+      </repeat>
     </group>
 
     <group ref="/data/g_structure">

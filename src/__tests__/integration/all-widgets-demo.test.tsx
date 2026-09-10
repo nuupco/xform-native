@@ -62,15 +62,15 @@ describe('all-widgets-demo — ALL_WIDGETS_DEMO_XML walks and resolves cleanly',
     }
 
     expect(store.adapter.getCurrentEvent().kind).toBe('eof');
-    // 72 original widget-coverage questions + 9 new structure-section
-    // questions (2 plain group + 2 field-list group + 1 note-with-video +
-    // 1 loose repeat + 1 group-in-repeat + 1 repeat-in-group + 1
-    // nested-repeat leaf) = 81.
-    expect(questionCount).toBe(81);
-    // rep_loose, g_rep_inside/rep_in_group, rep_with_group, rep_outer,
-    // rep_outer/rep_inner (created once each since every repeat here is
-    // walked exactly one instance deep).
-    expect(repeatInstancesCreated).toBe(5);
+    // 72 original widget-coverage questions + 11 new structure-section
+    // questions (2 plain group + 2 field-list group + 1 field-list control
+    // + 1 field-list repeat leaf + 1 note-with-video + 1 loose repeat + 1
+    // group-in-repeat + 1 repeat-in-group + 1 nested-repeat leaf) = 83.
+    expect(questionCount).toBe(83);
+    // g_fieldlist_repeat/flr_items, rep_loose, g_rep_inside/rep_in_group,
+    // rep_with_group, rep_outer, rep_outer/rep_inner (created once each
+    // since every repeat here is walked exactly one instance deep).
+    expect(repeatInstancesCreated).toBe(6);
   });
 
   it('note field with video-form itext label resolves its raw jr:// media reference', async () => {
