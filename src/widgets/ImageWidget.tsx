@@ -96,7 +96,7 @@ function createStyles(t: Theme) {
       height: 120,
     },
     annotateOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     annotateButtonRow: {
       flexDirection: 'row',

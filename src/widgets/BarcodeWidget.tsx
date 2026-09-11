@@ -62,7 +62,7 @@ function createStyles(t: Theme) {
       backgroundColor: t.color.roles.surfaceVariant,
     },
     reticleOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       alignItems: 'center',
       justifyContent: 'center',
     },
