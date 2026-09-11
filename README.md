@@ -8,11 +8,30 @@ React Native XForm renderer built on [`@nuup/ts-rosa`](https://github.com/nuupco
 
 ## Installation
 
+The package isn't published to npm — install it straight from GitHub. `lib/` (the built output) is committed to the repo, so no build step runs on install.
+
 ```bash
-npm install @nuup/xform-native @nuup/ts-rosa
+npm install github:nuupco/xform-native#main @nuup/ts-rosa
+```
+
+Or pin to a specific commit/tag instead of `#main` for reproducible installs:
+
+```bash
+npm install github:nuupco/xform-native#<commit-or-tag> @nuup/ts-rosa
+```
+
+`package.json` entry, equivalent to the command above:
+
+```json
+"dependencies": {
+  "@nuup/xform-native": "github:nuupco/xform-native#main",
+  "@nuup/ts-rosa": "github:nuupco/ts-rosa#v0.5.2"
+}
 ```
 
 > `@nuup/ts-rosa` is the XForm engine (parser + session). You need it to create a `FormSession` from XML.
+
+Then install the peer dependencies your form actually uses — see [Optional Peer Dependencies](#optional-peer-dependencies) below (`react` and `react-native` are always required; the rest are optional and gate specific widgets).
 
 ## Quick Start
 
@@ -81,14 +100,63 @@ Media, geo, and barcode widgets are gated behind optional peer dependencies. If 
 | `@maplibre/maplibre-react-native` | GeoPointWidget, GeoShapeWidget, GeoTraceWidget | `npm install @maplibre/maplibre-react-native` |
 | `@react-native-community/datetimepicker` | DateWidget (`default` variant, adds native picker button) | `npm install @react-native-community/datetimepicker` |
 
-## CLI
+### Installing `@nuup/xform-native-geo`
 
-A minimal CLI is included for widget discovery:
+`@nuup/xform-native-geo` powers `GeoPointWidget`, `GeoShapeWidget`, and `GeoTraceWidget` (MapLibre + `expo-location`). It lives in this same repo, under `packages/xform-native-geo`, and isn't published to npm either — install it as a **git subdirectory dependency** (npm ≥ 6.8 supports this natively via the `?subdirectory=` query on a git URL):
 
 ```bash
-npx @nuup/xform-native list        # list all widgets
-npx @nuup/xform-native add StringWidget   # show copy instructions
+npm install "github:nuupco/xform-native#main&subdirectory=packages/xform-native-geo"
 ```
+
+`package.json` entry:
+
+```json
+"dependencies": {
+  "@nuup/xform-native-geo": "github:nuupco/xform-native#main&subdirectory=packages/xform-native-geo"
+}
+```
+
+It ships as plain TypeScript source (no build step needed). It also needs its own peer dependencies:
+
+```bash
+npm install @maplibre/maplibre-react-native expo-location expo-file-system
+```
+
+Without `@nuup/xform-native-geo` installed, the three geo widgets fall back to `UnsupportedWidget` — the rest of the library works fine.
+
+## CLI
+
+The package ships a `xform-native` bin (`bin/cli.js`) for widget discovery — it does **not** install anything itself, only tells you which file to copy and which optional peer dependency it needs. Once `@nuup/xform-native` is installed (see above), run it with `npx`:
+
+```bash
+npx xform-native list
+```
+
+```
+Available widgets:
+  StringWidget
+  IntWidget
+  DecimalWidget
+  ...
+  GeoPointWidget
+  GeoShapeWidget
+  GeoTraceWidget
+  BarcodeWidget
+```
+
+```bash
+npx xform-native add GeoPointWidget
+```
+
+```
+To use GeoPointWidget, copy the source:
+  cp node_modules/@nuup/xform-native/src/widgets/GeoPointWidget.tsx ./src/components/GeoPointWidget.tsx
+
+Optional peer dependencies required:
+  @nuup/xform-native-geo
+```
+
+Use `add` when you want to fork/customize a single widget instead of using the one exported by the library; for normal usage you just `import { GeoPointWidget } from '@nuup/xform-native'` and never touch the CLI.
 
 ## API Reference
 
