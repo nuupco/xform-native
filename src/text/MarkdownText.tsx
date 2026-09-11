@@ -50,12 +50,12 @@ function headerStyle(level: 1 | 2 | 3 | 4 | 5 | 6): TextStyle {
 }
 
 function spanStyle(span: MarkdownSpan): TextStyle | undefined {
-  const style: TextStyle = {};
+  const style: Record<string, unknown> = {};
   if (span.bold) style.fontWeight = '700';
   if (span.italic) style.fontStyle = 'italic';
   if (span.color !== undefined) style.color = span.color;
   if (span.fontSize !== undefined) style.fontSize = span.fontSize;
-  return Object.keys(style).length > 0 ? style : undefined;
+  return Object.keys(style).length > 0 ? (style as TextStyle) : undefined;
 }
 
 function isFastPath(blocks: MarkdownBlock[]): blocks is [{ headerLevel: 0; spans: [{ text: string }] }] {
