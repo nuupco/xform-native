@@ -2,7 +2,8 @@
 node_modules/
 
 # Build output (react-native-builder-bob)
-lib/
+# lib/ is committed (git-installable, no npm publish yet) — see package.json "prepare"
+lib/**/*.map
 build/
 dist/
 *.tsbuildinfo
