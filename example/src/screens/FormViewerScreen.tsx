@@ -8,6 +8,7 @@ import {
   Form,
   useThemedStyles,
   PressableButton,
+  type FormSlots,
   type Theme,
 } from '@nuup/xform-native';
 import { FormLoadingOverlay } from '../components/FormLoadingOverlay';
@@ -17,7 +18,16 @@ import {
   DemoOverridesProvider,
   demoValidatorOverrides,
 } from '../demo/formOverrides';
+import { PickProductScreen } from '../demo/PickProductScreen';
 import type { RootStackParamList } from '../navigation/types';
+
+// Demo wiring for appearance="inject-values" (see allWidgetsForm's
+// "/data/g_product" group and README's "inject-values group appearance"):
+// module-level so it's not recreated every render (Form has no need to see
+// it change identity).
+const demoFormSlots: FormSlots = {
+  injectValues: (ctx) => <PickProductScreen {...ctx} />,
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -109,7 +119,11 @@ export function FormViewerScreen() {
         {!loading && !error && store && (
           <View style={styles.form}>
             <DemoOverridesProvider>
-              <Form store={store} validators={demoValidatorOverrides} />
+              <Form
+                store={store}
+                validators={demoValidatorOverrides}
+                slots={demoFormSlots}
+              />
             </DemoOverridesProvider>
           </View>
         )}

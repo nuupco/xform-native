@@ -171,6 +171,10 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
             </g_fieldlist>
             <video_intro/>
           </g_structure>
+          <g_product>
+            <product_id/>
+            <product_name/>
+          </g_product>
           <g_fieldlist_repeat>
             <st_flr_control/>
             <flr_items jr:template="">
@@ -306,6 +310,8 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
       <bind nodeset="/data/g_structure/g_fieldlist/st_fl_a" type="string"/>
       <bind nodeset="/data/g_structure/g_fieldlist/st_fl_b" type="string"/>
       <bind nodeset="/data/g_structure/video_intro" type="string" readonly="true()"/>
+      <bind nodeset="/data/g_product/product_id" type="string"/>
+      <bind nodeset="/data/g_product/product_name" type="string"/>
       <bind nodeset="/data/g_fieldlist_repeat/st_flr_control" type="string"/>
       <bind nodeset="/data/g_fieldlist_repeat/flr_items/st_flr_item" type="string"/>
       <bind nodeset="/data/rep_loose/st_loose" type="string"/>
@@ -761,6 +767,16 @@ export const ALL_WIDGETS_DEMO_XML = `<?xml version="1.0"?>
       <input ref="/data/g_structure/video_intro" appearance="note">
         <label ref="jr:itext('video_intro:label')"/>
         <hint>note con media de video en el label — confirmar si NoteWidget la muestra o la ignora</hint>
+      </input>
+    </group>
+
+    <group ref="/data/g_product" appearance="inject-values">
+      <label>Producto (inject-values)</label>
+      <input ref="/data/g_product/product_id">
+        <label>ID</label>
+      </input>
+      <input ref="/data/g_product/product_name">
+        <label>Nombre</label>
       </input>
     </group>
 
