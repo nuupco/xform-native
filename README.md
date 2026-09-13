@@ -251,6 +251,75 @@ const slots: FormSlots = {
 <Form store={store} slots={slots} />;
 ```
 
+### `inject-values` group appearance
+
+Problem: some forms need to pause mid-flow so the host app can run its own
+UI (e.g. a native "pick a product from the catalog" screen, a barcode
+lookup, a call to a backend) and then drop the resulting values straight
+into a batch of fields, without the user ever seeing those fields as normal
+form questions.
+
+Mark the group `appearance="inject-values"` in the XForm. The group must be
+**flat** — direct `question` children only; a nested `repeat` is a form
+configuration error and is not supported (it is logged as a dev warning and
+skipped, never rendered, never included in the pending fields).
+
+```xml
+<group ref="/data/product" appearance="inject-values">
+  <label>Producto</label>
+  <bind nodeset="/data/product/id" type="string"/>
+  <input ref="/data/product/id"><label>ID</label></input>
+  <input ref="/data/product/name"><label>Nombre</label></input>
+</group>
+```
+
+`Form` never renders this group or any of its children on its own — reaching
+it pauses the render/navigation entirely until the host calls `submit()`
+from the `injectValues` slot. There is no default UI for this pause (an
+inject-values group with no `injectValues` slot wired simply renders
+nothing at that step) — wiring the slot is the only way to use the feature.
+
+```tsx
+import { Form } from '@nuup/xform-native';
+import type { FormSlots } from '@nuup/xform-native';
+
+const slots: FormSlots = {
+  injectValues: ({ fields, submit }) => (
+    // `fields` is every direct question child of the paused group. Each
+    // field is a flat, JSON-serializable object — `ref`, `name`, `label`,
+    // `dataType`, `controlType`, `required`, `relevant`, and
+    // `constraintMessage` — enough to build your own screen and submission
+    // logic (validate, render a summary, send it to a backend) without
+    // importing anything from `@nuup/ts-rosa` directly. `required`,
+    // `relevant`, and `constraintMessage` are state the engine already
+    // evaluated — this slot never runs new validation, it just hands you
+    // the current answer.
+    //
+    // Because everything except `ref` is plain string/boolean/null data,
+    // you can `JSON.stringify(fields.map(({ ref, ...rest }) => rest))` and
+    // send it wherever your own submission flow needs it; `ref` stays
+    // around only as the key `submit()` expects back.
+    <PickProductScreen
+      onPicked={(product) => {
+        const values = new Map(fields.map((f) => [
+          f.ref,
+          f.name === '/data/product/id' ? product.id : product.name,
+        ]));
+        submit(values); // injects the batch and advances past the group
+      }}
+    />
+  ),
+};
+
+<Form store={store} slots={slots} />;
+```
+
+`submit` injects every value in one store commit (a single re-render, not
+one per field), lets ts-rosa's calculate cascade re-run exactly as it would
+for any normal answered question, and then advances past the whole group —
+call it once, whenever your own flow is ready (immediately, or after the
+user navigates through several of your own screens).
+
 ### Validation hooks
 
 `Form`'s `validators` prop lets you inject a validation callback per
