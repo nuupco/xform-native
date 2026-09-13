@@ -26,7 +26,12 @@ import { PressableButton } from '../widgets/primitives/PressableButton';
 import { NavRow } from './NavRow';
 import { SectionIndicator } from './SectionIndicator';
 import { WidgetErrorBoundary } from './WidgetErrorBoundary';
-import { renderSlot, type FormSlots } from './slots';
+import {
+  renderSlot,
+  INJECT_VALUES_APPEARANCE,
+  type FormSlots,
+  type InjectValuesField,
+} from './slots';
 import {
   defaultAdvanceValidator,
   resolveValidator,
@@ -318,6 +323,82 @@ function flattenPlanQuestions(blocks: readonly FieldListBlock[]): QuestionEvent[
   return out;
 }
 
+interface InjectValuesPlan {
+  fields: readonly InjectValuesField[];
+  /** Real navigator steps from the group's own position to one past its natural end — same role as `FieldListPlan.totalSteps`. */
+  totalSteps: number;
+}
+
+/**
+ * Look-ahead for appearance="inject-values" (design: "inject-values group").
+ * Side-effect-free, same walk-forward-then-rewind pattern as `planFieldList`:
+ * `adapter.stepForward()`/`stepBackward()` mutate only the navigator + the
+ * adapter's own step counter, never the store's version/subscribers, so
+ * nothing outside this function observes the walk.
+ *
+ * Unlike `planFieldList`, this NEVER aborts the plan — the design contract
+ * is that an inject-values group is always fully skipped from the render
+ * tree, whether or not it is configured correctly. A flat run of direct
+ * `question` children is collected as `fields`; encountering anything else
+ * inside the group's subtree (a nested group/repeat/prompt-new-repeat, or a
+ * non-direct question) is a form configuration error — unsupported nested
+ * repeats are explicitly out of scope — so it is logged once as a dev error
+ * and simply skipped rather than partially rendered or thrown. Either way,
+ * the walk keeps advancing until it steps OUT of the group's own subtree
+ * (via `isDescendantOf`), so `totalSteps` always covers the whole group,
+ * however deep or malformed it turns out to be.
+ */
+function planInjectValues(store: FormSessionStore, group: GroupEvent): InjectValuesPlan {
+  const adapter = store.adapter;
+  const containerRef = group.ref;
+  const fields: InjectValuesField[] = [];
+  let steps = 0;
+  let sawInvalidNesting = false;
+
+  for (;;) {
+    adapter.stepForward();
+    steps++;
+    const ev = adapter.getCurrentEvent();
+    const evRef = ev.kind === 'bof' || ev.kind === 'eof' ? undefined : ev.ref;
+    const stillInside = evRef !== undefined && isDescendantOf(evRef, containerRef);
+
+    if (!stillInside) break;
+
+    if (ev.kind === 'question' && isDirectChildOf(ev.ref, containerRef)) {
+      // Already-evaluated engine state (no new validation) — same
+      // read-only `getNodeState` call `renderQuestionField` uses.
+      const nodeState = store.adapter.getNodeState(ev.ref);
+      fields.push({
+        ref: ev.ref,
+        name: fieldNameOf(ev.ref),
+        label: ev.label,
+        dataType: ev.dataType,
+        controlType: ev.controlType,
+        required: nodeState.required,
+        relevant: nodeState.relevant,
+        constraintMessage: nodeState.constraintMsg,
+      });
+      continue;
+    }
+    // Anything else inside the subtree (nested group/repeat/prompt-new-repeat,
+    // or a non-direct question) — flag it and keep consuming the subtree so
+    // the group is fully skipped rather than partially rendered.
+    sawInvalidNesting = true;
+  }
+
+  for (let i = 0; i < steps; i++) adapter.stepBackward();
+
+  if (sawInvalidNesting) {
+    console.error(
+      `[xform-native] group "${fieldNameOf(containerRef)}" has appearance="${INJECT_VALUES_APPEARANCE}" ` +
+        'but is not flat — it contains a nested group/repeat. inject-values groups must contain only ' +
+        'direct question children; the nested content was skipped. Nested repeats are not supported.'
+    );
+  }
+
+  return { fields, totalSteps: steps };
+}
+
 export interface FormProps {
   store: FormSessionStore;
   /** Additive (widget-registry, D5): frozen at mount, wins tie-break over context entries. */
@@ -395,7 +476,18 @@ export function Form({
       step();
       return;
     }
-    if ((ev.kind === 'group' || ev.kind === 'repeat') && (ev.label === null || ev.label === '')) {
+    // inject-values (design: "inject-values group") must always settle here
+    // regardless of its own label — label-skip exists to skip past a purely
+    // structural, unlabeled container, but this appearance's whole point is
+    // to PAUSE at the group so the host can be handed its pending fields;
+    // silently label-skipping past it (e.g. because the form author left
+    // its label empty) would break the feature outright.
+    const isInjectValues = ev.kind === 'group' && ev.appearance === INJECT_VALUES_APPEARANCE;
+    if (
+      !isInjectValues &&
+      (ev.kind === 'group' || ev.kind === 'repeat') &&
+      (ev.label === null || ev.label === '')
+    ) {
       step();
       return;
     }
@@ -421,6 +513,19 @@ export function Form({
       : null;
   const fieldListPlanRef = useRef<FieldListPlan | null>(null);
   fieldListPlanRef.current = fieldListPlan;
+
+  // Same recompute-every-render, side-effect-free pattern as fieldListPlan,
+  // for appearance="inject-values" (design: "inject-values group"). Kept in
+  // a ref for the same reason: handleInjectValuesSubmit is a useCallback
+  // frozen with only `store` as a dep, and needs the CURRENT plan (in
+  // particular `totalSteps`) at the moment the host actually calls
+  // `submit()`, which may be long after this render pass.
+  const injectValuesPlan =
+    event.kind === 'group' && event.appearance === INJECT_VALUES_APPEARANCE
+      ? planInjectValues(store, event)
+      : null;
+  const injectValuesPlanRef = useRef<InjectValuesPlan | null>(null);
+  injectValuesPlanRef.current = injectValuesPlan;
 
   // EofSurface answered/skipped summary (design decision 8): a form-local
   // record of this session's navigation path — not a "whole form" total,
@@ -558,6 +663,25 @@ export function Form({
     [store]
   );
 
+  // Resolves an inject-values group's pause (design: "inject-values group"):
+  // injects the host-provided batch in one store commit, then steps the
+  // navigator past the WHOLE group in one shot — skipping it and every
+  // child (injected or not) from the render tree, exactly like the
+  // field-list branch of handleNext skips its own group via `totalSteps`.
+  // Reads the plan from the ref (not the render-scoped `injectValuesPlan`
+  // const) since the host may call `submit()` long after this render pass —
+  // e.g. after its own screen/flow finishes.
+  const handleInjectValuesSubmit = useCallback(
+    (values: ReadonlyMap<NodeRef, unknown>) => {
+      const plan = injectValuesPlanRef.current;
+      if (plan === null) return; // defensive: not currently paused at an inject-values group
+      directionRef.current = 'forward';
+      store.injectValues(Array.from(values, ([ref, value]) => ({ ref, value })));
+      for (let i = 0; i < plan.totalSteps; i++) store.stepForward();
+    },
+    [store]
+  );
+
   const handleBack = useCallback(() => {
     directionRef.current = 'backward';
     store.stepBackward();
@@ -668,6 +792,20 @@ export function Form({
       case 'question':
         return renderQuestionField(ev, advanceBlocked);
       case 'group':
+        // inject-values (design: "inject-values group"): this group and ALL
+        // of its children are NEVER rendered — not even via `renderGroup`,
+        // which is for the normal group/repeat layout this appearance
+        // deliberately opts out of. Only the `injectValues` slot can surface
+        // anything for this step; with no slot wired, `defaultElement: null`
+        // means Form renders nothing here (see slots.ts doc comment).
+        if (ev.appearance === INJECT_VALUES_APPEARANCE) {
+          const plan = injectValuesPlan ?? { fields: [], totalSteps: 0 };
+          return renderSlot(slots?.injectValues, {
+            fields: plan.fields,
+            submit: handleInjectValuesSubmit,
+            defaultElement: null,
+          });
+        }
         return renderSlot(slots?.renderGroup, {
           event: ev,
           defaultElement:

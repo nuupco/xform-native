@@ -162,6 +162,10 @@ export type {
   FormSectionIndicatorSlotContext,
 } from './form/slots';
 
+// inject-values group appearance: host-driven pause + batch value injection
+export { INJECT_VALUES_APPEARANCE } from './form/slots';
+export type { InjectValuesField, InjectValuesSlotContext } from './form/slots';
+
 // Phase 7 PR3: section/repeat position indicator (design decisions 7-14, 17)
 export { SectionIndicator } from './form/SectionIndicator';
 export type { SectionIndicatorProps } from './form/SectionIndicator';
