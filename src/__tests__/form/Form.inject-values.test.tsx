@@ -243,6 +243,69 @@ describe('Form — group appearance="inject-values"', () => {
 });
 
 // ---------------------------------------------------------------------------
+// non-relevant inject-values group: relevance-skip takes precedence over the
+// pause — the group is just another non-relevant group, never reaching the
+// injectValues slot.
+// ---------------------------------------------------------------------------
+
+const INJECT_VALUES_NOT_RELEVANT_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Inject Values Not Relevant</h:title>
+    <model>
+      <instance>
+        <data id="inject-values-not-relevant">
+          <before/>
+          <g1>
+            <product_id/>
+            <product_name/>
+          </g1>
+          <after/>
+        </data>
+      </instance>
+      <bind nodeset="/data/before" type="string"/>
+      <bind nodeset="/data/g1" relevant="false()"/>
+      <bind nodeset="/data/g1/product_id" type="string"/>
+      <bind nodeset="/data/g1/product_name" type="string"/>
+      <bind nodeset="/data/after" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/before"><label>Before</label></input>
+    <group ref="/data/g1" appearance="inject-values">
+      <label>Producto</label>
+      <input ref="/data/g1/product_id"><label>ID</label></input>
+      <input ref="/data/g1/product_name"><label>Nombre</label></input>
+    </group>
+    <input ref="/data/after"><label>After</label></input>
+  </h:body>
+</h:html>`;
+
+describe('Form — inject-values group that is not relevant', () => {
+  it('skips the group entirely without pausing or calling the injectValues slot', async () => {
+    const store = makeRealStore(INJECT_VALUES_NOT_RELEVANT_XML);
+    const injectValues = jest.fn(() => (
+      <TouchableOpacity testID="inject-panel" onPress={() => {}}>
+        <Text>inject-panel</Text>
+      </TouchableOpacity>
+    ));
+
+    await render(<Form store={store} slots={{ injectValues }} />);
+    await start();
+
+    expect(screen.getByText('Before')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+
+    // Landed straight on "After" — the non-relevant group was stepped over
+    // like any other non-relevant group, never reaching the pause.
+    expect(screen.getByText('After')).toBeTruthy();
+    expect(injectValues).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // nested repeat inside an inject-values group: unsupported by design —
 // logged as a dev error and skipped, never included in `fields`, never
 // crashes the render.
