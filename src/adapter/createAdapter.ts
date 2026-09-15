@@ -18,10 +18,13 @@ import {
   removeRepeatInstance as tsRosaRemoveRepeatInstance,
   countRepeatInstances,
   genericize,
+  parseAbsoluteRef,
+  refToString,
+  AnswerResult,
 } from '@nuup/ts-rosa';
-import type { TreeReference } from '@nuup/ts-rosa';
-import type { NodeState, SelectChoice, AnswerResult, FormIndexLevel } from '@nuup/ts-rosa';
-import type { FormAdapter, AdaptedEvent, NodeRef, PathSegment } from './FormAdapter';
+import type { TreeReference, TreeReferenceLevel, ValidateOutcome, FormElement } from '@nuup/ts-rosa';
+import type { NodeState, SelectChoice, FormIndexLevel } from '@nuup/ts-rosa';
+import type { FormAdapter, AdaptedEvent, NodeRef, PathSegment, ValidationFailure } from './FormAdapter';
 import { encodeAnswer } from './encodeAnswer';
 
 export function createAdapter(session: FormSession): FormAdapter {
@@ -212,6 +215,119 @@ export function createAdapter(session: FormSession): FormAdapter {
   }
 
   // ---------------------------------------------------------------------------
+  // validateAll / isComplete — full-form sweep across every concrete repeat
+  // instance (not just the default/first one).
+  //
+  // ts-rosa's evaluator.validate(allNodesets) mirrors JavaRosa's
+  // TriggerableDag.validate() faithfully (required/rank/constraint, in that
+  // order) but resolves each nodeset with resolveReference, which for an
+  // unbound repeat level always picks DEFAULT_MULTIPLICITY (instance 0) —
+  // so passing bindings' generic nodesets as-is would silently skip every
+  // repeat instance past the first. Instead we expand each binding's generic
+  // ref into one concrete ref PER EXISTING INSTANCE first (mirroring
+  // resolveAll's own root/rest-levels walk, but building refs instead of
+  // resolving nodes), then pass fully concrete nodeset strings through
+  // evaluator.validate() so its required/rank/constraint checks (which are
+  // not otherwise exposed across the ADR-2 firewall) run per instance.
+  // ---------------------------------------------------------------------------
+  // Every ACTUAL <repeat> path in the form (generic, unbracketed, e.g.
+  // "/data/repeat") — computed once from the immutable body tree. Needed
+  // because evaluator.validate()'s constraint lookup keys on the nodeset
+  // STRING VERBATIM (constraintBindings.get(nodeset)), matching only the
+  // exact literal bind path with no positional predicate anywhere in it.
+  // Bracketing a plain scalar/group level (which always has exactly one
+  // instance) would silently break that lookup for no benefit, so only
+  // real repeat levels get bracketed below.
+  // Lazy + memoized: only real sessions (not the FakeSession test double,
+  // which never calls validateAll/isComplete) pay for this walk, and only
+  // once per adapter lifetime.
+  let repeatPathsCache: Set<string> | null = null;
+  function getRepeatPaths(): Set<string> {
+    if (repeatPathsCache !== null) return repeatPathsCache;
+    const repeatPaths = new Set<string>();
+    (function collectRepeatPaths(elements: readonly FormElement[]): void {
+      for (const el of elements) {
+        if (el.kind === 'repeat') {
+          repeatPaths.add(refToString(el.ref));
+          collectRepeatPaths(el.children);
+        } else if (el.kind === 'group') {
+          collectRepeatPaths(el.children);
+        }
+      }
+    })(session.definition.body);
+    repeatPathsCache = repeatPaths;
+    return repeatPaths;
+  }
+
+  function expandGenericRef(ref: TreeReference): TreeReference[] {
+    const [firstLevel, ...restLevels] = ref.levels;
+    if (firstLevel === undefined) return [ref];
+
+    let prefixes: TreeReferenceLevel[][] = [[firstLevel]];
+    for (const lvl of restLevels) {
+      const next: TreeReferenceLevel[][] = [];
+      for (const prefix of prefixes) {
+        const probeRef = { ...ref, levels: [...prefix, lvl] } as TreeReference;
+        const count = countRepeatInstances(tree, probeRef);
+        for (let m = 0; m < count; m++) {
+          next.push([...prefix, { ...lvl, multiplicity: m }]);
+        }
+      }
+      prefixes = next;
+    }
+    return prefixes.map((levels) => ({ ...ref, levels: Object.freeze(levels) }) as TreeReference);
+  }
+
+  // XPath positions are 1-indexed; TreeReference multiplicities are
+  // 0-indexed — mirrors parseAbsoluteRef's own `pos - 1` convention exactly,
+  // so this is safe to feed back into evaluator.validate(). Only a level
+  // that is an actual <repeat> gets a bracket: bracketing anything else
+  // would still resolve correctly (a scalar has exactly one instance) but
+  // breaks the constraint dict lookup, which needs the untouched literal
+  // bind path (see repeatPaths comment above).
+  function levelsToNodesetString(levels: readonly TreeReferenceLevel[]): string {
+    const repeatPaths = getRepeatPaths();
+    let genericPath = '';
+    const segments = levels.map((lvl, i) => {
+      genericPath += '/' + lvl.name;
+      return i > 0 && repeatPaths.has(genericPath) ? `${lvl.name}[${lvl.multiplicity + 1}]` : lvl.name;
+    });
+    return '/' + segments.join('/');
+  }
+
+  function collectAllNodesets(): string[] {
+    const out: string[] = [];
+    for (const binding of session.definition.bindings.values()) {
+      for (const concreteRef of expandGenericRef(binding.ref)) {
+        out.push(levelsToNodesetString(concreteRef.levels));
+      }
+    }
+    return out;
+  }
+
+  function toValidationFailure(outcome: ValidateOutcome): ValidationFailure {
+    const concreteRef = parseAbsoluteRef(outcome.failedNodeset);
+    const ref = concreteRef as NodeRef;
+    const type: ValidationFailure['type'] =
+      outcome.status === AnswerResult.REQUIRED_BUT_EMPTY
+        ? 'required'
+        : outcome.status === AnswerResult.RANK_INVALID
+          ? 'rank'
+          : 'constraint';
+    // constraintMsg is a static per-bind string (DataBinding), not runtime
+    // NodeState — look it up by the binding's own generic key, not the
+    // concrete (possibly bracketed) failedNodeset string.
+    const message =
+      type === 'required'
+        ? 'This field is required'
+        : type === 'rank'
+          ? 'Invalid ranking order'
+          : (session.definition.bindings.get(refToString(genericize(concreteRef)))?.constraintMsg ??
+             'Invalid value');
+    return { ref, type, message };
+  }
+
+  // ---------------------------------------------------------------------------
   // Visited cache management
   // ---------------------------------------------------------------------------
   function recordCurrentIndex(): void {
@@ -376,6 +492,23 @@ export function createAdapter(session: FormSession): FormAdapter {
 
     getLabelMediaUri(form: string): string | null {
       return navigator.getQuestionAtIndex()?.getLabelMediaUri?.(form) ?? null;
+    },
+
+    validateAll(): readonly ValidationFailure[] {
+      let nodesets = collectAllNodesets();
+      const failures: ValidationFailure[] = [];
+      while (nodesets.length > 0) {
+        const outcome = evaluator.validate(nodesets);
+        if (outcome === null) break;
+        failures.push(toValidationFailure(outcome));
+        const idx = nodesets.indexOf(outcome.failedNodeset);
+        nodesets = nodesets.slice(idx + 1);
+      }
+      return failures;
+    },
+
+    isComplete(): boolean {
+      return evaluator.validate(collectAllNodesets()) === null;
     },
   };
 }
