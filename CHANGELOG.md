@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.2.0
+
+Full-form validation sweep on `FormAdapter`:
+
+- `validateAll(): readonly ValidationFailure[]` — checks required/constraint/
+  rank across EVERY question, including every concrete instance of every
+  repeat (not just the current step or the default/first repeat instance).
+  Does not move the walker's cursor.
+- `isComplete(): boolean` — convenience wrapper, `true` iff `validateAll()`
+  finds no failures.
+- `ValidationFailure` — `{ ref, type: 'required' | 'constraint' | 'rank', message }`.
+
+Known limitation (upstream, in `@nuup/ts-rosa`): a `constraint` on a field
+inside a repeat can only be reliably validated on that repeat's first
+instance — `evaluator.validate()`'s constraint lookup keys on the literal,
+unbracketed bind nodeset string, so any per-instance validation call misses
+it. `required` and `rank` are correctly checked across every instance.
+
 ## 1.1.0
 
 Additive-only (shadcn-lite): four opt-in composition seams for `Form`, all

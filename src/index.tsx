@@ -8,7 +8,7 @@ export { isWidgetAvailable } from './availability/registry';
 export type { IsWidgetAvailableOpts } from './availability/registry';
 
 // PR-2: adapter types (opaque, firewall-safe)
-export type { NodeRef, AdaptedEvent, FormAdapter, PathSegment } from './adapter/FormAdapter';
+export type { NodeRef, AdaptedEvent, FormAdapter, PathSegment, ValidationFailure } from './adapter/FormAdapter';
 
 // PR-2: adapter factory
 export { createAdapter } from './adapter/createAdapter';
