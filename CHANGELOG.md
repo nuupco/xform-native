@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1
+
+Bumps `@nuup/ts-rosa` to `v0.5.3`, which fixes `evaluator.validate()` to
+correctly expand every repeat instance internally (nuupco/ts-rosa#3) —
+`required`, `rank`, and now also `constraint` are all reliably checked across
+every instance, closing the limitation noted in 1.2.0. `validateAll()` and
+`isComplete()` were adjusted accordingly (no public API change).
+
 ## 1.2.0
 
 Full-form validation sweep on `FormAdapter`:

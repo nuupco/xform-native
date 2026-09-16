@@ -18,8 +18,8 @@ import {
   removeRepeatInstance as tsRosaRemoveRepeatInstance,
   countRepeatInstances,
   genericize,
-  parseAbsoluteRef,
   refToString,
+  refEquals,
   AnswerResult,
 } from '@nuup/ts-rosa';
 import type { TreeReference, TreeReferenceLevel, ValidateOutcome, FormElement } from '@nuup/ts-rosa';
@@ -295,18 +295,21 @@ export function createAdapter(session: FormSession): FormAdapter {
     return '/' + segments.join('/');
   }
 
-  function collectAllNodesets(): string[] {
-    const out: string[] = [];
+  // One entry per binding PER EXISTING CONCRETE INSTANCE (every repeat
+  // instance, not just the first). validate() is called once per entry
+  // below with a single-element array, so we never have to interpret or
+  // match ts-rosa's own internal string formatting for the nodeset it
+  // returns on failure — we already hold the exact TreeReference we asked
+  // about and can build the ValidationFailure straight from it.
+  function collectAllConcreteRefs(): TreeReference[] {
+    const out: TreeReference[] = [];
     for (const binding of session.definition.bindings.values()) {
-      for (const concreteRef of expandGenericRef(binding.ref)) {
-        out.push(levelsToNodesetString(concreteRef.levels));
-      }
+      out.push(...expandGenericRef(binding.ref));
     }
     return out;
   }
 
-  function toValidationFailure(outcome: ValidateOutcome): ValidationFailure {
-    const concreteRef = parseAbsoluteRef(outcome.failedNodeset);
+  function toValidationFailure(concreteRef: TreeReference, outcome: ValidateOutcome): ValidationFailure {
     const ref = concreteRef as NodeRef;
     const type: ValidationFailure['type'] =
       outcome.status === AnswerResult.REQUIRED_BUT_EMPTY
@@ -315,8 +318,7 @@ export function createAdapter(session: FormSession): FormAdapter {
           ? 'rank'
           : 'constraint';
     // constraintMsg is a static per-bind string (DataBinding), not runtime
-    // NodeState — look it up by the binding's own generic key, not the
-    // concrete (possibly bracketed) failedNodeset string.
+    // NodeState — look it up by the binding's own generic key.
     const message =
       type === 'required'
         ? 'This field is required'
@@ -325,6 +327,25 @@ export function createAdapter(session: FormSession): FormAdapter {
           : (session.definition.bindings.get(refToString(genericize(concreteRef)))?.constraintMsg ??
              'Invalid value');
     return { ref, type, message };
+  }
+
+  // Inverse of ts-rosa's OWN refToString (raw 0-indexed `[multiplicity]`,
+  // NOT parseAbsoluteRef's XPath-1-indexed convention) — needed only to
+  // interpret the `failedNodeset` that evaluator.validate() itself returns
+  // when called with a plain generic binding key below, since that string
+  // is built via nodeToRef + refToString internally, not by us.
+  function parseConcreteFailedNodeset(nodeset: string): TreeReference {
+    const levels: TreeReferenceLevel[] = nodeset
+      .split('/')
+      .filter((part) => part.length > 0)
+      .map((part) => {
+        const bracketIdx = part.indexOf('[');
+        if (bracketIdx === -1) return { name: part, multiplicity: -1, predicates: [] };
+        const name = part.slice(0, bracketIdx);
+        const multiplicity = parseInt(part.slice(bracketIdx + 1, part.length - 1), 10);
+        return { name, multiplicity, predicates: [] };
+      });
+    return { refLevel: -1, contextType: 'absolute', instanceName: null, levels };
   }
 
   // ---------------------------------------------------------------------------
@@ -495,20 +516,35 @@ export function createAdapter(session: FormSession): FormAdapter {
     },
 
     validateAll(): readonly ValidationFailure[] {
-      let nodesets = collectAllNodesets();
       const failures: ValidationFailure[] = [];
-      while (nodesets.length > 0) {
-        const outcome = evaluator.validate(nodesets);
-        if (outcome === null) break;
-        failures.push(toValidationFailure(outcome));
-        const idx = nodesets.indexOf(outcome.failedNodeset);
-        nodesets = nodesets.slice(idx + 1);
+      for (const concreteRef of collectAllConcreteRefs()) {
+        const outcome = evaluator.validate([levelsToNodesetString(concreteRef.levels)]);
+        if (outcome !== null) failures.push(toValidationFailure(concreteRef, outcome));
+      }
+      // Supplementary pass: a constraint on a field INSIDE a repeat can't be
+      // reached above — bracketing a concrete instance breaks the
+      // constraint-lookup dict, which is keyed on the literal generic bind
+      // path. Passing that literal generic key instead lets
+      // evaluator.validate() expand every instance internally (ts-rosa
+      // nuupco/ts-rosa#3), catching (at least) the first violating instance
+      // per binding.
+      for (const binding of session.definition.bindings.values()) {
+        const outcome = evaluator.validate([binding.nodeset]);
+        if (outcome === null || outcome.status !== AnswerResult.CONSTRAINT_VIOLATED) continue;
+        const ref = parseConcreteFailedNodeset(outcome.failedNodeset);
+        if (!failures.some((f) => refEquals(f.ref as TreeReference, ref))) {
+          failures.push(toValidationFailure(ref, outcome));
+        }
       }
       return failures;
     },
 
     isComplete(): boolean {
-      return evaluator.validate(collectAllNodesets()) === null;
+      // Passing every binding's own generic key lets validate() expand each
+      // one to every repeat instance internally (ts-rosa nuupco/ts-rosa#3
+      // fix) — no need to enumerate instances ourselves for a plain
+      // yes/no answer.
+      return evaluator.validate([...session.definition.bindings.keys()]) === null;
     },
   };
 }
