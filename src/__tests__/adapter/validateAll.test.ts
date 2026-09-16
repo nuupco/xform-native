@@ -165,4 +165,59 @@ describe('FormAdapter.validateAll / isComplete', () => {
     expect(failures[0]?.message).toBe('Must be at least the minimum');
     expect(adapter.isComplete()).toBe(false);
   });
+
+  it('catches a constraint violation on a NON-first repeat instance (ts-rosa nuupco/ts-rosa#3)', () => {
+    const REPEAT_CONSTRAINT_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Repeat Constraint</h:title>
+    <model>
+      <instance>
+        <data id="repeat-constraint">
+          <repeat jr:template=""><q/></repeat>
+        </data>
+      </instance>
+      <bind nodeset="/data/repeat/q" type="int" constraint=". &gt;= 18" jr:constraintMsg="too young"/>
+    </model>
+  </h:head>
+  <h:body>
+    <repeat nodeset="/data/repeat"><input ref="/data/repeat/q"><label>Q</label></input></repeat>
+  </h:body>
+</h:html>`;
+    const session = createFormSession(parseXml(REPEAT_CONSTRAINT_XML));
+    const adapter = createAdapter(session);
+
+    adapter.stepForward(); // -> prompt-new-repeat
+    let promptEv = adapter.getCurrentEvent();
+    if (promptEv.kind !== 'prompt-new-repeat') throw new Error('expected prompt-new-repeat');
+    adapter.createRepeatInstance(promptEv.ref);
+    adapter.stepForward();
+    let qEv = adapter.getCurrentEvent();
+    if (qEv.kind !== 'question') throw new Error('expected question');
+    expect(adapter.answerQuestion(qEv.ref, 20)).not.toBe('CONSTRAINT_VIOLATED'); // instance 0: valid
+
+    adapter.stepForward(); // -> prompt-new-repeat
+    promptEv = adapter.getCurrentEvent();
+    if (promptEv.kind !== 'prompt-new-repeat') throw new Error('expected prompt-new-repeat');
+    adapter.createRepeatInstance(promptEv.ref);
+    adapter.stepForward();
+    qEv = adapter.getCurrentEvent();
+    if (qEv.kind !== 'question') throw new Error('expected question');
+
+    // answerQuestion() blocks an immediately-invalid value at write time, so
+    // simulate the stale/hydrated-data case: 20 (valid) then poked to 5.
+    expect(adapter.answerQuestion(qEv.ref, 20)).not.toBe('CONSTRAINT_VIOLATED');
+    const repeatInstances = (session.tree.root.children as { name: string; multiplicity: number; children: { name: string; value: unknown }[] }[])
+      .filter((c) => c.name === 'repeat' && c.multiplicity >= 0);
+    const qNode = repeatInstances[1]?.children.find((c) => c.name === 'q');
+    if (qNode === undefined) throw new Error('expected instance 1 q node');
+    qNode.value = { kind: 'int', value: 5, displayText: '5' };
+
+    expect(adapter.isComplete()).toBe(false);
+    const failures = adapter.validateAll();
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.type).toBe('constraint');
+    expect(failures[0]?.message).toBe('too young');
+    expect(failures[0]?.ref.levels[1]).toMatchObject({ name: 'repeat', multiplicity: 1 });
+  });
 });

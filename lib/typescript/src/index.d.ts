@@ -1,7 +1,7 @@
 export { tokens } from './tokens/tokens.js';
 export { isWidgetAvailable } from './availability/registry.js';
 export type { IsWidgetAvailableOpts } from './availability/registry.js';
-export type { NodeRef, AdaptedEvent, FormAdapter, PathSegment } from './adapter/FormAdapter.js';
+export type { NodeRef, AdaptedEvent, FormAdapter, PathSegment, ValidationFailure } from './adapter/FormAdapter.js';
 export { createAdapter } from './adapter/createAdapter.js';
 export { FormSessionStore } from './store/FormSessionStore.js';
 export type { FormSessionSnapshot } from './store/FormSessionStore.js';
@@ -90,6 +90,8 @@ export type { SegmentedButtonProps, SegmentedButtonOption, } from './widgets/pri
 export { MediaCaptureCard } from './widgets/primitives/MediaCaptureCard.js';
 export type { MediaCaptureCardProps, MediaCaptureCardState, MediaCaptureCardAction, } from './widgets/primitives/MediaCaptureCard.js';
 export type { FormSlots, FormErrorBlock, FormNavigationSlotContext, FormErrorSlotContext, FormGroupSlotContext, FormSectionIndicatorSlotContext, } from './form/slots.js';
+export { INJECT_VALUES_APPEARANCE } from './form/slots.js';
+export type { InjectValuesField, InjectValuesSlotContext } from './form/slots.js';
 export { SectionIndicator } from './form/SectionIndicator.js';
 export type { SectionIndicatorProps } from './form/SectionIndicator.js';
 export { defaultAdvanceValidator, resolveValidator, ValidationRegistryProvider, useValidatorOverrides, } from './form/validation.js';

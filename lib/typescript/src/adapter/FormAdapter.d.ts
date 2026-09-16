@@ -97,6 +97,16 @@ export type AdaptedEvent = {
     kind: 'eof';
 };
 /**
+ * One failing field found by `validateAll()`. `ref` is the concrete
+ * instance that failed (a specific repeat instance, not the repeat's
+ * generic path), so a host can jump/scroll to it directly.
+ */
+export interface ValidationFailure {
+    readonly ref: NodeRef;
+    readonly type: 'required' | 'constraint' | 'rank';
+    readonly message: string;
+}
+/**
  * FormAdapter — the sole translation layer between ts-rosa session internals
  * and the widget/Form layer.
  */
@@ -162,5 +172,16 @@ export interface FormAdapter {
      * media of that form, or when not at a question position.
      */
     getLabelMediaUri(form: string): string | null;
+    /**
+     * Full-form validation sweep: checks required/constraint/rank across
+     * EVERY question, including every concrete instance of every repeat —
+     * unlike per-step advance validation (`defaultAdvanceValidator`), which
+     * only ever checks the single node the walker is currently sitting on.
+     * Does not move the cursor. Returns every failure, in document +
+     * repeat-instance order; empty array when the form is fully valid.
+     */
+    validateAll(): readonly ValidationFailure[];
+    /** `true` iff `validateAll()` finds no failures. Convenience wrapper. */
+    isComplete(): boolean;
 }
 //# sourceMappingURL=FormAdapter.d.ts.map
