@@ -453,6 +453,7 @@ export function makeFakeSession(script: FakeSessionScript): FormSession {
     navigator: navigator as never,
     serializeToXml: () => '',
     finalize: () => {},
+    getInstanceName: () => null,
   };
 }
 

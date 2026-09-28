@@ -183,5 +183,13 @@ export interface FormAdapter {
     validateAll(): readonly ValidationFailure[];
     /** `true` iff `validateAll()` finds no failures. Convenience wrapper. */
     isComplete(): boolean;
+    /**
+     * The form's instance name (the human-readable label shown in an
+     * instance/submission list), or `null` when the form defines none.
+     * Passthrough to ts-rosa's `FormSession.getInstanceName()`. Reflects
+     * post-revalidation-order semantics when called after `finalize()` —
+     * see `FormSessionStore.finalize()` / `.serializeToXml()`.
+     */
+    getInstanceName(): string | null;
 }
 //# sourceMappingURL=FormAdapter.d.ts.map

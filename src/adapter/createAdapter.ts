@@ -546,5 +546,9 @@ export function createAdapter(session: FormSession): FormAdapter {
       // yes/no answer.
       return evaluator.validate([...session.definition.bindings.keys()]) === null;
     },
+
+    getInstanceName(): string | null {
+      return session.getInstanceName();
+    },
   };
 }
