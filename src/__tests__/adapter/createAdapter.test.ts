@@ -186,6 +186,15 @@ describe('createAdapter — delegation', () => {
     // unanswered node.
     expect(val).toBeNull();
   });
+
+  it('getInstanceName delegates straight to session.getInstanceName()', () => {
+    const session = {
+      ...makeQuestionSession(),
+      getInstanceName: () => 'Household visit — Alice',
+    };
+    const adapter = createAdapter(session);
+    expect(adapter.getInstanceName()).toBe('Household visit — Alice');
+  });
 });
 
 // ---------------------------------------------------------------------------
