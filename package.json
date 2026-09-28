@@ -1,6 +1,6 @@
 {
   "name": "@nuup/xform-native",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "React Native XForm renderer built on @nuup/ts-rosa",
   "workspaces": [
     "packages/*"
@@ -55,7 +55,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@nuup/ts-rosa": "github:nuupco/ts-rosa#v0.7.2",
+    "@nuup/ts-rosa": "github:nuupco/ts-rosa#v0.7.3",
     "@xmldom/xmldom": "^0.9.0"
   },
   "peerDependencies": {
