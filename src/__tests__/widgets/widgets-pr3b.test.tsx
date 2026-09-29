@@ -399,7 +399,11 @@ describe('DateWidget', () => {
 
 describe('TimeWidget', () => {
   it('renders current time value as HH:MM string', async () => {
-    const d = new Date('1970-01-01T14:30:00.000Z');
+    // LOCAL wall-clock components (time-offset-awareness) — this value goes
+    // through the same encodeAnswer -> cast() pipeline as a real answer, so
+    // it round-trips (and displays) using the device's own current offset,
+    // exactly like a freshly-entered answer would.
+    const d = new Date(1970, 0, 1, 14, 30, 0, 0);
     const { store, ref } = makeStoreFor({
       ref: '/data/arrival',
       dataType: 'time',
@@ -409,7 +413,7 @@ describe('TimeWidget', () => {
     expect(screen.getByDisplayValue('14:30')).toBeTruthy();
   });
 
-  it('editing commits a Date object anchored to epoch date', async () => {
+  it('editing commits a Date object built from LOCAL wall-clock components (time-offset-awareness)', async () => {
     const { store, ref } = makeStoreFor({
       ref: '/data/arrival',
       dataType: 'time',
@@ -420,11 +424,15 @@ describe('TimeWidget', () => {
     fireEvent.changeText(screen.getByTestId('time-input'), '09:15');
     expect(spy).toHaveBeenCalledWith(
       ref,
-      expect.objectContaining({ getUTCHours: expect.any(Function) }),
+      expect.objectContaining({ getHours: expect.any(Function) }),
     );
+    // Local getters (not UTC) — parseTimeInput now builds the Date from LOCAL
+    // components so the runtime resolves the real absolute instant using the
+    // device's current offset, instead of treating entered wall-clock as
+    // literal UTC.
     const calledValue = spy.mock.calls[0]?.[1] as Date;
-    expect(calledValue.getUTCHours()).toBe(9);
-    expect(calledValue.getUTCMinutes()).toBe(15);
+    expect(calledValue.getHours()).toBe(9);
+    expect(calledValue.getMinutes()).toBe(15);
   });
 
   it('is disabled when readonly', async () => {
@@ -456,9 +464,10 @@ describe('TimeWidget', () => {
       fireEvent.changeText(input, '0930');
     });
     expect(screen.getByDisplayValue('09:30')).toBeTruthy();
+    // Local getters (time-offset-awareness) — see the previous test's comment.
     const calledValue = spy.mock.calls[spy.mock.calls.length - 1]?.[1] as Date;
-    expect(calledValue.getUTCHours()).toBe(9);
-    expect(calledValue.getUTCMinutes()).toBe(30);
+    expect(calledValue.getHours()).toBe(9);
+    expect(calledValue.getMinutes()).toBe(30);
   });
 });
 

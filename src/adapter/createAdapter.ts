@@ -466,6 +466,20 @@ export function createAdapter(session: FormSession): FormAdapter {
       return value;
     },
 
+    getAnswerOffset(ref: NodeRef): string | undefined {
+      const node = resolveReference(tree, ref);
+      const value = node?.value ?? null;
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        'kind' in value &&
+        (value as { kind: unknown }).kind === 'time'
+      ) {
+        return (value as { offset?: string }).offset;
+      }
+      return undefined;
+    },
+
     createRepeatInstance(ref: NodeRef): void {
       if (ref.levels.length === 0) {
         throw new Error('createRepeatInstance: ref has no levels (not a repeat reference)');

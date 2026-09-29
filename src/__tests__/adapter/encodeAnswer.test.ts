@@ -31,9 +31,16 @@ describe('toRawString', () => {
     expect(toRawString('date', d)).toBe('2024-03-15');
   });
 
-  it('formats Date for time dataType as HH:mm:ss.sssZ', () => {
-    const d = new Date('2024-03-15T10:30:00.000Z');
-    expect(toRawString('time', d)).toBe('10:30:00.000Z');
+  it('formats Date for time dataType using LOCAL getters + the device current UTC offset (not always Z)', () => {
+    // Local components, not UTC — this is the wall-clock time the user entered.
+    const d = new Date(2024, 2, 15, 10, 30, 0, 0);
+    const offsetMinutes = -d.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? '+' : '-';
+    const abs = Math.abs(offsetMinutes);
+    const oh = String(Math.floor(abs / 60)).padStart(2, '0');
+    const om = String(abs % 60).padStart(2, '0');
+    const expectedOffset = `${sign}${oh}:${om}`;
+    expect(toRawString('time', d)).toBe(`10:30:00.000${expectedOffset}`);
   });
 
   it('formats Date for dateTime dataType as full ISO string', () => {
