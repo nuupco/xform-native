@@ -851,7 +851,7 @@ describe('Form e2e cascade', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('nav-next'));
     });
-    expect(screen.getByText('Invalid value')).toBeTruthy();
+    expect(screen.getByText('Valor no válido')).toBeTruthy();
     expect(screen.getByText('Age')).toBeTruthy();
   });
 
@@ -1256,9 +1256,12 @@ describe('Form — REQ-3 auto-skip unlabeled groups', () => {
       fireEvent.press(screen.getByTestId('nav-back'));
     });
     expect(screen.getByText('Inicio del formulario')).toBeTruthy();
-    // One explicit stepBackward (q1 -> g1) + one auto-skip stepBackward
-    // (g1 -> bof) = 2. No further backward step is attempted past bof.
-    expect(spy).toHaveBeenCalledTimes(2);
+    // handleBack's own explicit step (q1 -> g1) now walks via `store.adapter`
+    // directly (field-list-aware unwind, bug 1 fix) rather than
+    // `store.stepBackward()`, so only the auto-skip effect's backward step
+    // (g1 -> bof) is observed here. No further backward step is attempted
+    // past bof.
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('scenario 9: unlabeled group immediately before eof settles cleanly at eof going forward', async () => {

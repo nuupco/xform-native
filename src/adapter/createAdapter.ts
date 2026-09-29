@@ -325,7 +325,7 @@ export function createAdapter(session: FormSession): FormAdapter {
         : type === 'rank'
           ? 'Invalid ranking order'
           : (session.definition.bindings.get(refToString(genericize(concreteRef)))?.constraintMsg ??
-             'Invalid value');
+             'Valor no válido');
     return { ref, type, message };
   }
 
