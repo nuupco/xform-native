@@ -37,8 +37,16 @@ function makeStore(opts: {
   constraintMsg?: string | null;
   lastResult?: { ref: NodeRef; result: AnswerResult } | null;
 }) {
+  const lastResult = opts.lastResult ?? null;
   return {
-    lastAnswerResult: opts.lastResult ?? null,
+    lastAnswerResult: lastResult,
+    // Bug 2 fix (field-list-nav-and-constraints): defaultAdvanceValidator
+    // now looks up per-field by ref via this method instead of comparing
+    // against the single global `lastAnswerResult` scalar. This fake mimics
+    // the real per-ref lookup using the same single `lastResult` fixture
+    // value the existing tests already configure.
+    getLastAnswerResult: (ref: NodeRef) =>
+      lastResult !== null && lastResult.ref === ref ? lastResult : null,
     adapter: {
       resolveValue: () => opts.value ?? '',
       getNodeState: () => ({
@@ -109,7 +117,7 @@ describe('defaultAdvanceValidator', () => {
       event,
       defaultValidate: () => null,
     });
-    expect(result).toEqual({ type: 'constraint', message: 'Invalid value' });
+    expect(result).toEqual({ type: 'constraint', message: 'Valor no válido' });
   });
 
   it('ignores CONSTRAINT_VIOLATED from a different ref', () => {

@@ -420,3 +420,188 @@ describe('Form — repeat containing a field-list group (already worked, regress
     expect(screen.getAllByTestId('string-input')).toHaveLength(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Bug 1 (field-list-nav-and-constraints): back navigation must be
+// field-list-aware, symmetric with handleNext's atomic forward jump. Stepping
+// back from just past a field-list group must land back on the GROUP's own
+// event (field-list rendering), not on an inner leaf question.
+// ---------------------------------------------------------------------------
+
+const FIELD_LIST_THEN_QUESTION_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Field List Then Question</h:title>
+    <model>
+      <instance>
+        <data id="field-list-then-question">
+          <g1>
+            <qa/>
+            <qb/>
+          </g1>
+          <q2/>
+        </data>
+      </instance>
+      <bind nodeset="/data/g1/qa" type="string"/>
+      <bind nodeset="/data/g1/qb" type="string"/>
+      <bind nodeset="/data/q2" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/g1" appearance="field-list">
+      <label>Sección</label>
+      <input ref="/data/g1/qa"><label>Campo A</label></input>
+      <input ref="/data/g1/qb"><label>Campo B</label></input>
+    </group>
+    <input ref="/data/q2"><label>Después</label></input>
+  </h:body>
+</h:html>`;
+
+describe('Form — back navigation out of a field-list group (bug 1)', () => {
+  it('stepping back from the question after the group lands back on the field-list group, not a single inner question', async () => {
+    const store = makeRealStore(FIELD_LIST_THEN_QUESTION_XML);
+    await render(<Form store={store} />);
+    await start();
+
+    // On the field-list screen; advance past the whole group at once.
+    expect(screen.getByText('Campo A')).toBeTruthy();
+    expect(screen.getByText('Campo B')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    expect(screen.getByText('Después')).toBeTruthy();
+
+    // Back out: must land on the field-list group again (both fields
+    // together), not on a single inner leaf question.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-back'));
+    });
+    expect(screen.getByText('Campo A')).toBeTruthy();
+    expect(screen.getByText('Campo B')).toBeTruthy();
+    expect(screen.getAllByTestId('string-input')).toHaveLength(2);
+  });
+});
+
+const NESTED_FIELD_LIST_THEN_QUESTION_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Nested Field List Then Question</h:title>
+    <model>
+      <instance>
+        <data id="nested-field-list-then-question">
+          <outer>
+            <qa/>
+            <inner>
+              <qb/>
+            </inner>
+          </outer>
+          <q2/>
+        </data>
+      </instance>
+      <bind nodeset="/data/outer/qa" type="string"/>
+      <bind nodeset="/data/outer/inner/qb" type="string"/>
+      <bind nodeset="/data/q2" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/outer" appearance="field-list">
+      <label>Afuera</label>
+      <input ref="/data/outer/qa"><label>Campo A</label></input>
+      <group ref="/data/outer/inner" appearance="field-list">
+        <label>Adentro</label>
+        <input ref="/data/outer/inner/qb"><label>Campo B</label></input>
+      </group>
+    </group>
+    <input ref="/data/q2"><label>Después</label></input>
+  </h:body>
+</h:html>`;
+
+describe('Form — back navigation out of a NESTED field-list group (bug 1, nested case)', () => {
+  it('stepping back from the question after the outer group lands on the OUTER field-list group (already flattened by handleNext), not the inner one', async () => {
+    const store = makeRealStore(NESTED_FIELD_LIST_THEN_QUESTION_XML);
+    await render(<Form store={store} />);
+    await start();
+
+    expect(screen.getByText('Campo A')).toBeTruthy();
+    expect(screen.getByText('Campo B')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+    expect(screen.getByText('Después')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-back'));
+    });
+    // Must land on the OUTER field-list group's own flattened screen — both
+    // fields, and the inner group's sub-heading — not stop on the inner
+    // group alone.
+    expect(screen.getByText('Campo A')).toBeTruthy();
+    expect(screen.getByText('Adentro')).toBeTruthy();
+    expect(screen.getByText('Campo B')).toBeTruthy();
+    expect(screen.getAllByTestId('string-input')).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bug 2 (field-list-nav-and-constraints): the batch-validate loop in
+// handleNext must surface EVERY field's own constraint violation, not just
+// the single most-recently-edited field anywhere in the session
+// (`FormSessionStore.lastAnswerResult` used to be a single global scalar).
+// ---------------------------------------------------------------------------
+
+const FIELD_LIST_TWO_CONSTRAINTS_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Field List Two Constraints</h:title>
+    <model>
+      <instance>
+        <data id="field-list-two-constraints">
+          <g1>
+            <qa/>
+            <qb/>
+          </g1>
+        </data>
+      </instance>
+      <bind nodeset="/data/g1/qa" type="int" constraint=". &gt; 10" jr:constraintMsg="Campo A debe ser mayor a 10"/>
+      <bind nodeset="/data/g1/qb" type="int" constraint=". &lt; 5" jr:constraintMsg="Campo B debe ser menor a 5"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/g1" appearance="field-list">
+      <label>Sección</label>
+      <input ref="/data/g1/qa"><label>Campo A</label></input>
+      <input ref="/data/g1/qb"><label>Campo B</label></input>
+    </group>
+  </h:body>
+</h:html>`;
+
+describe('Form — field-list batch validate surfaces every field\'s own constraint (bug 2)', () => {
+  it('shows BOTH constraint messages when both fields violate their own constraint in one Next pass', async () => {
+    const store = makeRealStore(FIELD_LIST_TWO_CONSTRAINTS_XML);
+    await render(<Form store={store} />);
+    await start();
+
+    const inputs = screen.getAllByTestId('int-input');
+    // qa violates first (entered first), qb violates last (most recently
+    // edited) — pre-fix, only qb's block would survive the single global
+    // `lastAnswerResult` scalar.
+    await act(async () => {
+      fireEvent.changeText(inputs[0]!, '1'); // violates ". > 10"
+    });
+    await act(async () => {
+      fireEvent.changeText(inputs[1]!, '100'); // violates ". < 5"
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+
+    // Both fields' own constraint block must survive the same batch-validate
+    // pass — pre-fix, only the most-recently-edited field's (qb's) block
+    // would survive `lastAnswerResult`'s single-global-scalar limitation.
+    // (constraintMsg resolves to the generic fallback here rather than the
+    // bind's own `jr:constraintMsg` text — a pre-existing, unrelated engine
+    // resolution quirk also visible on E2E_XML's own constraint test; not in
+    // this feature's scope.)
+    expect(screen.getAllByTestId('constraint-message')).toHaveLength(2);
+  });
+});

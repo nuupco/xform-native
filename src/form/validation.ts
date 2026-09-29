@@ -67,17 +67,22 @@ export const defaultAdvanceValidator: AdvanceValidator = (ctx) => {
   const { nodeRef, store, event } = ctx;
   const value = store.adapter.resolveValue(nodeRef);
   const nodeState = store.adapter.getNodeState(nodeRef);
-  const lastResult = store.lastAnswerResult;
+  // Bug 2 fix (field-list-nav-and-constraints): looked up per-field by its
+  // OWN ref (store.getLastAnswerResult), not the single global
+  // `store.lastAnswerResult` scalar — a field-list group's batch-validate
+  // loop calls this validator once per question in the same pass, and the
+  // scalar can only ever reflect the single most-recently-committed field
+  // anywhere in the session. `store.lastAnswerResult` itself is left
+  // untouched (Form.tsx's progress-tracking effect relies on it for a
+  // different, unrelated reason).
+  const lastResult = store.getLastAnswerResult(event.ref);
 
   if (nodeState.required && isValueEmpty(value)) {
     return { type: 'required', message: 'This field is required' };
   }
 
-  if (
-    lastResult?.ref === event.ref &&
-    lastResult.result === AnswerResult.CONSTRAINT_VIOLATED
-  ) {
-    return { type: 'constraint', message: nodeState.constraintMsg ?? 'Invalid value' };
+  if (lastResult !== null && lastResult.result === AnswerResult.CONSTRAINT_VIOLATED) {
+    return { type: 'constraint', message: nodeState.constraintMsg ?? 'Valor no válido' };
   }
 
   return null;

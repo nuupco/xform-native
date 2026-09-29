@@ -684,7 +684,65 @@ export function Form({
 
   const handleBack = useCallback(() => {
     directionRef.current = 'backward';
-    store.stepBackward();
+    const adapter = store.adapter;
+    adapter.stepBackward();
+
+    // Bug 1 fix: field-list-aware back navigation, symmetric with
+    // handleNext's atomic forward `totalSteps` jump. A nested field-list
+    // group is already folded into its OUTER field-list group's single plan
+    // (see scanFieldListBlocks), so handleNext only ever treats the
+    // OUTERMOST field-list group as one step — back navigation must unwind
+    // to that same outermost group's own event, never overshooting past it,
+    // rather than stopping on an inner nested one or a single leaf question.
+    //
+    // Walk done entirely via `adapter` (no store.stepForward/stepBackward,
+    // which would bump + re-render per intermediate step) — same
+    // side-effect-free-until-settled pattern planFieldList's own doc comment
+    // documents — then a single notifyExternalMutation() at the end.
+    let landed = adapter.getCurrentEvent();
+    let targetGroupRef: NodeRef | null = null;
+
+    for (;;) {
+      if (landed.kind === 'bof' || landed.kind === 'eof') break;
+      if (
+        targetGroupRef === null &&
+        landed.kind === 'group' &&
+        landed.appearance === 'field-list'
+      ) {
+        // Landed exactly on a field-list group's own event already.
+        break;
+      }
+
+      const searchRef: NodeRef = targetGroupRef ?? landed.ref;
+      let found: AdaptedEvent | null = null;
+      let stepsBack = 0;
+      for (;;) {
+        const cur = adapter.getCurrentEvent();
+        if (cur.kind === 'bof') break;
+        adapter.stepBackward();
+        stepsBack++;
+        const cand = adapter.getCurrentEvent();
+        if (cand.kind === 'bof') break;
+        if (cand.kind === 'group' && isDescendantOf(searchRef, cand.ref)) {
+          found = cand;
+          break;
+        }
+      }
+
+      if (found !== null && found.kind === 'group' && found.appearance === 'field-list') {
+        // Enclosing field-list group found — it may itself be nested inside
+        // an even-larger field-list group; keep unwinding from here.
+        targetGroupRef = found.ref;
+        landed = found;
+        continue;
+      }
+
+      // No (further) enclosing field-list group: undo this search and stop.
+      for (let i = 0; i < stepsBack; i++) adapter.stepForward();
+      break;
+    }
+
+    store.notifyExternalMutation();
   }, [store]);
 
   function renderQuestionField(ev: QuestionEvent, block: AdvanceBlock | null) {

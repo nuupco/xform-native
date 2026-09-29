@@ -14,9 +14,25 @@
  */
 
 import type { FormSession, AnswerResult } from '@nuup/ts-rosa';
+import { refToString } from '@nuup/ts-rosa';
 import { createAdapter } from '../adapter/createAdapter';
 import type { FormAdapter, NodeRef } from '../adapter/FormAdapter';
 import type { MediaResolver } from '../createFormStore';
+
+/**
+ * Stable string key for a `NodeRef`, tolerant of the in-repo test fixture
+ * (`makeFakeSession`) which uses plain path strings directly as `ref` —
+ * `refToString` cannot parse those. Mirrors Form.tsx's own `fieldNameOf`
+ * helper (kept separate: this module must not import from `../form/Form`).
+ */
+function refKey(ref: NodeRef): string {
+  if (typeof ref === 'string') return ref;
+  try {
+    return refToString(ref as Parameters<typeof refToString>[0]);
+  } catch {
+    return String(ref);
+  }
+}
 
 export interface FormSessionSnapshot {
   readonly version: number;
@@ -31,6 +47,21 @@ export class FormSessionStore {
 
   /** Last answerQuestion result (for Form-level validation feedback). */
   lastAnswerResult: { ref: NodeRef; result: AnswerResult } | null = null;
+
+  /**
+   * Bug 2 fix (field-list-nav-and-constraints): per-field-ref-keyed answer
+   * results, alongside (not replacing) `lastAnswerResult` above.
+   * `lastAnswerResult` is a single global scalar overwritten on every
+   * `answerQuestion` call — fine for the single-question-at-a-time advance
+   * validator AND for Form.tsx's progress-tracking effect (a DIFFERENT use,
+   * left untouched), but a field-list group's batch-validate loop
+   * (`handleNext`) checks EVERY field in the group in one pass, so only the
+   * single most-recently-committed field anywhere in the whole session
+   * could ever match `lastAnswerResult.ref === event.ref` — every other
+   * field's own CONSTRAINT_VIOLATED result was silently unreachable.
+   * `getLastAnswerResult` below looks up each field by its OWN ref instead.
+   */
+  private readonly _lastAnswerResultByRef = new Map<string, { ref: NodeRef; result: AnswerResult }>();
 
   private _snapshot: FormSessionSnapshot;
   private readonly _subscribers = new Set<() => void>();
@@ -65,8 +96,18 @@ export class FormSessionStore {
   answerQuestion(ref: NodeRef, value: unknown): AnswerResult {
     const result = this.adapter.answerQuestion(ref, value);
     this.lastAnswerResult = { ref, result };
+    this._lastAnswerResultByRef.set(refKey(ref), { ref, result });
     this._bump();
     return result;
+  }
+
+  /**
+   * This field's own last `answerQuestion` result, keyed by ref (not "the
+   * single last field edited anywhere") — see `_lastAnswerResultByRef`'s
+   * doc comment. Used by `defaultAdvanceValidator`'s field-list batch pass.
+   */
+  getLastAnswerResult(ref: NodeRef): { ref: NodeRef; result: AnswerResult } | null {
+    return this._lastAnswerResultByRef.get(refKey(ref)) ?? null;
   }
 
   stepForward(): void {
@@ -120,6 +161,7 @@ export class FormSessionStore {
     for (const { ref, value } of entries) {
       const result = this.adapter.answerQuestion(ref, value);
       this.lastAnswerResult = { ref, result };
+      this._lastAnswerResultByRef.set(refKey(ref), { ref, result });
     }
     this._bump();
   }
