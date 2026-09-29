@@ -40,7 +40,19 @@ export function toRawString(dataType: DataType, primitive: unknown): string | nu
       return primitive.toISOString().slice(0, 10);
     }
     if (dataType === 'time') {
-      return primitive.toISOString().slice(11);
+      // Local getters + the device's CURRENT UTC offset (not toISOString(),
+      // which always collapses to "Z") — so cast() resolves the correct
+      // absolute instant instead of misreading local wall-clock as UTC.
+      const h = String(primitive.getHours()).padStart(2, '0');
+      const mi = String(primitive.getMinutes()).padStart(2, '0');
+      const s = String(primitive.getSeconds()).padStart(2, '0');
+      const ms = String(primitive.getMilliseconds()).padStart(3, '0');
+      const offsetMinutes = -primitive.getTimezoneOffset();
+      const sign = offsetMinutes >= 0 ? '+' : '-';
+      const abs = Math.abs(offsetMinutes);
+      const oh = String(Math.floor(abs / 60)).padStart(2, '0');
+      const om = String(abs % 60).padStart(2, '0');
+      return `${h}:${mi}:${s}.${ms}${sign}${oh}:${om}`;
     }
     // dateTime and any other Date-bearing DataType: full ISO string.
     return primitive.toISOString();

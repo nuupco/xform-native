@@ -374,3 +374,69 @@ describe('createAdapter — group + repeat events', () => {
     expect(ev.label).toBe('Add item?');
   });
 });
+
+// ---------------------------------------------------------------------------
+// getAnswerOffset (time-offset-awareness read path)
+// ---------------------------------------------------------------------------
+function makeTimeQuestionSession(value: unknown) {
+  return makeFakeSession({
+    events: [
+      { kind: 'bof' },
+      {
+        kind: 'question',
+        ref: '/data/t',
+        dataType: 'time',
+        controlType: 'input',
+        label: 'Time',
+        hint: null,
+        appearance: null,
+      },
+      { kind: 'eof' },
+    ],
+    nodeStates: {
+      '/data/t': { relevant: true, enabled: true, required: false, readonly: false, constraintMsg: null, calculatedValue: null },
+    },
+    relevance: { '/data/t': true },
+    choices: {},
+    answerResults: { '/data/t': AnswerResult.OK },
+    values: { '/data/t': value },
+  });
+}
+
+describe('createAdapter — getAnswerOffset', () => {
+  it("returns the stored offset for a 'time' AnswerValue that carries one", () => {
+    const session = makeTimeQuestionSession({
+      kind: 'time',
+      value: new Date('1970-01-01T21:59:00.000Z'),
+      offset: '-06:00',
+      displayText: '15:59',
+    });
+    const adapter = createAdapter(session);
+    adapter.stepForward();
+    const ev = adapter.getCurrentEvent();
+    if (ev.kind !== 'question') throw new Error('expected question');
+    expect(adapter.getAnswerOffset(ev.ref)).toBe('-06:00');
+  });
+
+  it("returns undefined for a legacy 'time' AnswerValue with no offset field", () => {
+    const session = makeTimeQuestionSession({
+      kind: 'time',
+      value: new Date('1970-01-01T15:59:00.000Z'),
+      displayText: '15:59',
+    });
+    const adapter = createAdapter(session);
+    adapter.stepForward();
+    const ev = adapter.getCurrentEvent();
+    if (ev.kind !== 'question') throw new Error('expected question');
+    expect(adapter.getAnswerOffset(ev.ref)).toBeUndefined();
+  });
+
+  it('returns undefined for a non-time AnswerValue', () => {
+    const session = makeQuestionSession();
+    const adapter = createAdapter(session);
+    adapter.stepForward();
+    const ev = adapter.getCurrentEvent();
+    if (ev.kind !== 'question') throw new Error('expected question');
+    expect(adapter.getAnswerOffset(ev.ref)).toBeUndefined();
+  });
+});

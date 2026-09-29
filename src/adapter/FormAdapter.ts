@@ -137,6 +137,15 @@ export interface FormAdapter {
   answerQuestion(ref: NodeRef, value: unknown): AnswerResult;
   resolveValue(ref: NodeRef): unknown;
   /**
+   * The raw UTC offset string (e.g. "-06:00", "+02:00", "Z") that a `time`
+   * answer at `ref` was captured with, straight off the pre-unwrap
+   * `AnswerValue.offset` field (time-offset-awareness). `undefined` for any
+   * non-'time' answer, or for a legacy/offset-less 'time' answer — this is
+   * ADDITIVE and does not change `resolveValue`'s existing "raw primitive"
+   * contract (ADR-D-A3/A7); no other widget is affected.
+   */
+  getAnswerOffset(ref: NodeRef): string | undefined;
+  /**
    * Manually create a new instance of a repeat group at the given prompt ref
    * (Slice D — repeat-instance-creation). Throws if `ref` is not a valid
    * manual prompt-new-repeat creation context (e.g. a jr:count-bound repeat,

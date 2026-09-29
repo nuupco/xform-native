@@ -132,7 +132,7 @@ export declare const tokens: {
             readonly fontFamily: "Spline Mono";
         };
     };
-    readonly elevation: Record<0 | 1 | 2 | 3 | 4 | 5, import("./elevation.js").ElevationLevel>;
+    readonly elevation: Record<0 | 2 | 3 | 1 | 4 | 5, import("./elevation.js").ElevationLevel>;
     readonly disabled: {
         readonly contentOpacity: 0.38;
         readonly containerOpacity: 0.12;
