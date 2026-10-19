@@ -711,3 +711,81 @@ describe('Form — field-list batch validate surfaces every field\'s own constra
     expect(screen.getAllByTestId('constraint-message')).toHaveLength(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// an UNLABELED field-list group nested inside an unlabeled plain outer group
+// must settle on its own event when landed on via back-navigation, never
+// auto-label-skip one further step out (regression: the label-skip effect
+// previously undid handleBack's deliberate field-list landing, surfacing as
+// "a single back from inside the field-list always returns to the outer
+// group's start" for field-list groups without their own <label>).
+// ---------------------------------------------------------------------------
+
+const UNLABELED_FIELD_LIST_IN_UNLABELED_GROUP_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Unlabeled Field List In Unlabeled Group</h:title>
+    <model>
+      <instance>
+        <data id="unlabeled-field-list">
+          <outer>
+            <inner>
+              <qa/>
+              <qb/>
+            </inner>
+          </outer>
+          <qtail/>
+        </data>
+      </instance>
+      <bind nodeset="/data/outer/inner/qa" type="string"/>
+      <bind nodeset="/data/outer/inner/qb" type="string"/>
+      <bind nodeset="/data/qtail" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/outer">
+      <group ref="/data/outer/inner" appearance="field-list">
+        <input ref="/data/outer/inner/qa"><label>Campo A</label></input>
+        <input ref="/data/outer/inner/qb"><label>Campo B</label></input>
+      </group>
+    </group>
+    <input ref="/data/qtail"><label>Cola</label></input>
+  </h:body>
+</h:html>`;
+
+describe('Form — unlabeled field-list group settles on back-navigation (label-skip regression)', () => {
+  it('a single back from the trailing question lands on the field-list screen, not the outer group start', async () => {
+    const store = makeRealStore(UNLABELED_FIELD_LIST_IN_UNLABELED_GROUP_XML);
+    await render(<Form store={store} />);
+    await start();
+
+    // Settle on the field-list screen (outer has no label, so it's
+    // label-skipped; the field-list group itself has no label either, but
+    // must still settle per the fix under test).
+    expect(screen.getByText('Campo A')).toBeTruthy();
+    expect(screen.getByText('Campo B')).toBeTruthy();
+
+    const inputs = screen.getAllByTestId('string-input');
+    await act(async () => {
+      fireEvent.changeText(inputs[0]!, 'a value');
+      fireEvent.changeText(inputs[1]!, 'b value');
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-next'));
+    });
+
+    // Past the whole field-list group at once, onto the trailing question.
+    expect(screen.getByText('Cola')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-back'));
+    });
+
+    // Must settle back on the field-list group's own screen (both fields
+    // visible again, values preserved) — NOT jump past it to bof/outer.
+    expect(screen.getByText('Campo A')).toBeTruthy();
+    expect(screen.getByText('Campo B')).toBeTruthy();
+    expect(screen.getAllByTestId('string-input')[0]).toHaveProp('value', 'a value');
+    expect(screen.getAllByTestId('string-input')[1]).toHaveProp('value', 'b value');
+  });
+});
