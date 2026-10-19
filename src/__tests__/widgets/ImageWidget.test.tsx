@@ -13,6 +13,16 @@ import { FormSessionStore } from '../../store/FormSessionStore';
 import { makeFakeSession } from '../../test-support/makeFakeSession';
 import { ImageWidget } from '../../widgets/ImageWidget';
 
+// persistMediaFile now throws (rather than passing the raw URI through) when
+// expo-file-system is unavailable — mocked here so these pre-existing tests
+// keep exercising the success path they were written for.
+const mockFs = {
+  documentDirectory: 'file:///mock-documents/',
+  makeDirectoryAsync: jest.fn().mockResolvedValue(undefined),
+  copyAsync: jest.fn().mockResolvedValue(undefined),
+};
+jest.mock('expo-file-system/legacy', () => mockFs, { virtual: true });
+
 // Manual mock at src/__mocks__/expo-image-picker.js
 const picker = require('expo-image-picker');
 
@@ -98,7 +108,10 @@ describe('ImageWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('image-camera-button'));
     });
-    expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://captured.jpg');
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    const storedValue = answerSpy.mock.calls[0][1] as string;
+    expect(storedValue).not.toContain('/');
+    expect(storedValue.endsWith('.jpg')).toBe(true);
   });
 
   it('does not call answerQuestion on cancel', async () => {
@@ -181,7 +194,8 @@ describe('ImageWidget independent camera/library permission gating', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('image-library-button'));
     });
-    expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://library.jpg');
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    expect((answerSpy.mock.calls[0][1] as string).endsWith('.jpg')).toBe(true);
     expect(screen.queryByTestId('permission-notice')).toBeNull();
   });
 

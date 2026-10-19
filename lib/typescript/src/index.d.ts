@@ -58,6 +58,7 @@ export { SignatureWidget } from './widgets/SignatureWidget.js';
 export type { SignatureWidgetProps } from './widgets/SignatureWidget.js';
 export { FileWidget } from './widgets/FileWidget.js';
 export type { FileWidgetProps } from './widgets/FileWidget.js';
+export { mediaStorageDirectory, resolveMediaUri } from './widgets/media/mediaStorage.js';
 export { GeoPointWidget } from './widgets/GeoPointWidget.js';
 export type { GeoPointWidgetProps } from './widgets/GeoPointWidget.js';
 export { GeoShapeWidget } from './widgets/GeoShapeWidget.js';

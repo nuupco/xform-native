@@ -1,6 +1,6 @@
 {
   "name": "@nuup/xform-native",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "React Native XForm renderer built on @nuup/ts-rosa",
   "workspaces": [
     "packages/*"
@@ -63,6 +63,7 @@
     "expo-audio": "*",
     "expo-camera": "*",
     "expo-document-picker": "*",
+    "expo-file-system": "*",
     "expo-image-picker": "*",
     "expo-sensors": "*",
     "expo-video": "*",
@@ -92,6 +93,9 @@
       "optional": true
     },
     "expo-document-picker": {
+      "optional": true
+    },
+    "expo-file-system": {
       "optional": true
     },
     "expo-camera": {
