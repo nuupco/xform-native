@@ -9,6 +9,7 @@ import { Text } from 'react-native';
 import type { NodeRef, FormSessionStore } from '../index';
 import { UnsupportedWidget } from './UnsupportedWidget';
 import { MediaCaptureCard } from './primitives/MediaCaptureCard';
+import { persistMediaFile } from './media/mediaStorage';
 
 let _DocPicker: any | null = null;
 let _docLoaded: boolean | undefined;
@@ -41,7 +42,8 @@ export function FileWidget({ nodeRef, store, appearance: _appearance }: FileWidg
     const result = await picker.getDocumentAsync({ type: '*/*' });
     if (result.canceled || !result.assets?.[0]) return;
     const uri = result.assets[0].uri;
-    store.answerQuestion(nodeRef, uri);
+    const filename = await persistMediaFile(uri);
+    store.answerQuestion(nodeRef, filename);
   }, [picker, readonly, nodeRef, store]);
 
   if (!picker) {

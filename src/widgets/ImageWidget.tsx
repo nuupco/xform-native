@@ -46,6 +46,7 @@ import {
   type PermissionGateStatus,
 } from './primitives/usePermissionGate';
 import { PermissionNotice } from './primitives/PermissionNotice';
+import { persistMediaFile, resolveMediaUri } from './media/mediaStorage';
 
 let _SvgModule: any | null = null;
 let _svgLoaded: boolean | undefined;
@@ -158,7 +159,9 @@ export function ImageWidget({ nodeRef, store, appearance }: ImageWidgetProps) {
   const svg = getSvg();
   const resolved = store.adapter.resolveValue(nodeRef);
   const uri: string | null =
-    typeof resolved === 'string' && resolved.length > 0 ? resolved : null;
+    typeof resolved === 'string' && resolved.length > 0
+      ? resolveMediaUri(resolved)
+      : null;
   const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
@@ -230,11 +233,12 @@ export function ImageWidget({ nodeRef, store, appearance }: ImageWidgetProps) {
     : undefined;
 
   const handleResult = useCallback(
-    (result: { canceled: boolean; assets?: Array<{ uri: string }> }) => {
+    async (result: { canceled: boolean; assets?: Array<{ uri: string }> }) => {
       if (result.canceled || !result.assets?.[0]) return;
       const newUri = result.assets[0].uri;
       setThumbnailUri(newUri);
-      store.answerQuestion(nodeRef, newUri);
+      const filename = await persistMediaFile(newUri);
+      store.answerQuestion(nodeRef, filename);
     },
     [nodeRef, store],
   );
@@ -248,7 +252,7 @@ export function ImageWidget({ nodeRef, store, appearance }: ImageWidgetProps) {
       ...(isFrontCamera ? { cameraType: picker.CameraType?.front } : {}),
     });
     setAnnotateStrokes([]);
-    handleResult(result);
+    await handleResult(result);
   }, [picker, readonly, cameraGate, handleResult, isFrontCamera]);
 
   const handleLibrary = useCallback(async () => {
@@ -258,7 +262,7 @@ export function ImageWidget({ nodeRef, store, appearance }: ImageWidgetProps) {
       mediaTypes: ['images'],
       quality: 0.8,
     });
-    handleResult(result);
+    await handleResult(result);
   }, [picker, readonly, libraryGate, handleResult]);
 
   if (!picker) {

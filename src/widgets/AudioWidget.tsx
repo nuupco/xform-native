@@ -40,6 +40,7 @@ import {
   type PermissionGateStatus,
 } from './primitives/usePermissionGate';
 import { PermissionNotice } from './primitives/PermissionNotice';
+import { persistMediaFile, resolveMediaUri } from './media/mediaStorage';
 
 let _AudioModule: any | null = null;
 let _avLoaded: boolean | undefined;
@@ -101,7 +102,9 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
   const av = getAudioModule();
   const resolved = store.adapter.resolveValue(nodeRef);
   const storedUri: string | null =
-    typeof resolved === 'string' && resolved.length > 0 ? resolved : null;
+    typeof resolved === 'string' && resolved.length > 0
+      ? resolveMediaUri(resolved)
+      : null;
   const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
@@ -165,7 +168,8 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
       await recorder.stop();
       const uri = recorder.uri;
       if (uri) {
-        store.answerQuestion(nodeRef, uri);
+        const filename = await persistMediaFile(uri);
+        store.answerQuestion(nodeRef, filename);
       }
     } catch {
       // best-effort; nothing else to do on a failed stop

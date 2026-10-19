@@ -41,6 +41,7 @@ import {
   type PermissionGateStatus,
 } from './primitives/usePermissionGate';
 import { PermissionNotice } from './primitives/PermissionNotice';
+import { persistMediaFile, resolveMediaUri } from './media/mediaStorage';
 
 let _CameraModule: any | null = null;
 let _cameraLoaded: boolean | undefined;
@@ -155,7 +156,9 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
   const av = getAvModule();
   const resolved = store.adapter.resolveValue(nodeRef);
   const storedUri: string | null =
-    typeof resolved === 'string' && resolved.length > 0 ? resolved : null;
+    typeof resolved === 'string' && resolved.length > 0
+      ? resolveMediaUri(resolved)
+      : null;
   const nodeState = store.adapter.getNodeState(nodeRef);
   const readonly = nodeState.readonly;
 
@@ -208,7 +211,8 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
       videoMaxDuration: 60,
     });
     if (result.canceled || !result.assets?.[0]) return;
-    store.answerQuestion(nodeRef, result.assets[0].uri);
+    const filename = await persistMediaFile(result.assets[0].uri);
+    store.answerQuestion(nodeRef, filename);
   }, [camera, picker, readonly, cameraGate, micGate, nodeRef, store]);
 
   const handlePlay = useCallback(() => {

@@ -85,6 +85,7 @@ export { SignatureWidget } from './widgets/SignatureWidget';
 export type { SignatureWidgetProps } from './widgets/SignatureWidget';
 export { FileWidget } from './widgets/FileWidget';
 export type { FileWidgetProps } from './widgets/FileWidget';
+export { mediaStorageDirectory, resolveMediaUri } from './widgets/media/mediaStorage';
 
 // PR-4: GeoPointWidget + offline tile cache
 export { GeoPointWidget } from './widgets/GeoPointWidget';
