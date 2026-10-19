@@ -13,6 +13,16 @@ import { FormSessionStore } from '../../store/FormSessionStore';
 import { makeFakeSession } from '../../test-support/makeFakeSession';
 import { VideoWidget } from '../../widgets/VideoWidget';
 
+// persistMediaFile now throws (rather than passing the raw URI through) when
+// expo-file-system is unavailable — mocked here so these pre-existing tests
+// keep exercising the success path they were written for.
+const mockFs = {
+  documentDirectory: 'file:///mock-documents/',
+  makeDirectoryAsync: jest.fn().mockResolvedValue(undefined),
+  copyAsync: jest.fn().mockResolvedValue(undefined),
+};
+jest.mock('expo-file-system/legacy', () => mockFs, { virtual: true });
+
 const camera = require('expo-camera');
 const picker = require('expo-image-picker');
 
@@ -90,7 +100,32 @@ describe('VideoWidget', () => {
     expect(picker.launchCameraAsync).toHaveBeenCalledWith(
       expect.objectContaining({ mediaTypes: ['videos'], videoMaxDuration: 60 }),
     );
-    expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://video.mp4');
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    const storedValue = answerSpy.mock.calls[0][1] as string;
+    expect(storedValue).not.toContain('/');
+    expect(storedValue.endsWith('.mp4')).toBe(true);
+  });
+
+  // Correction (verifier blocker): a persistMediaFile failure must never
+  // reach store.answerQuestion with the raw, unpersisted recorder URI.
+  it('does not answer with the raw URI when persistMediaFile fails (copyAsync rejects)', async () => {
+    mockFs.copyAsync.mockRejectedValueOnce(new Error('disk full'));
+    picker.__mockLaunchCamera.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: 'file://video.mp4' }],
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const answerSpy = jest.spyOn(store, 'answerQuestion');
+    await render(
+      <VideoWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('video-record-button'));
+    });
+    expect(answerSpy).not.toHaveBeenCalled();
+    expect(screen.getByText(/No se pudo guardar el video/)).toBeTruthy();
   });
 
   it('Play button renders when a value URI exists', async () => {
@@ -159,7 +194,10 @@ describe('VideoWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('video-record-button'));
     });
-    expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://video.mp4');
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    const storedValue = answerSpy.mock.calls[0][1] as string;
+    expect(storedValue).not.toContain('/');
+    expect(storedValue.endsWith('.mp4')).toBe(true);
   });
 
   it('camera denied only: notice names camera specifically and the native camera never opens', async () => {

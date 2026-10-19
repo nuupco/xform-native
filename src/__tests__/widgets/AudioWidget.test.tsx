@@ -13,6 +13,16 @@ import { FormSessionStore } from '../../store/FormSessionStore';
 import { makeFakeSession } from '../../test-support/makeFakeSession';
 import { AudioWidget } from '../../widgets/AudioWidget';
 
+// persistMediaFile now throws (rather than passing the raw URI through) when
+// expo-file-system is unavailable — mocked here so this pre-existing test
+// keeps exercising the success path it was written for.
+const mockFs = {
+  documentDirectory: 'file:///mock-documents/',
+  makeDirectoryAsync: jest.fn().mockResolvedValue(undefined),
+  copyAsync: jest.fn().mockResolvedValue(undefined),
+};
+jest.mock('expo-file-system/legacy', () => mockFs, { virtual: true });
+
 const av = require('expo-audio');
 
 afterEach(async () => {
@@ -85,7 +95,32 @@ describe('AudioWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('audio-stop-button'));
     });
-    expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://recording.m4a');
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    const storedValue = answerSpy.mock.calls[0][1] as string;
+    expect(storedValue).not.toContain('/');
+    expect(storedValue.endsWith('.m4a')).toBe(true);
+  });
+
+  // Correction (verifier blocker): a persistMediaFile failure must never
+  // reach store.answerQuestion with the raw, unpersisted recorder URI —
+  // AudioWidget reuses the mic permission gate's existing 'error' status/UI.
+  it('does not answer with the raw URI when persistMediaFile fails (copyAsync rejects)', async () => {
+    mockFs.copyAsync.mockRejectedValueOnce(new Error('disk full'));
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const answerSpy = jest.spyOn(store, 'answerQuestion');
+    await render(
+      <AudioWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />,
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('audio-record-button'));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('audio-stop-button'));
+    });
+    expect(answerSpy).not.toHaveBeenCalled();
+    expect(screen.getByText('No se pudo iniciar la grabación')).toBeTruthy();
   });
 
   it('Play button renders when recording exists', async () => {

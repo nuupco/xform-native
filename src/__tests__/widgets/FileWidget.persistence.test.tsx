@@ -117,4 +117,26 @@ describe('FileWidget persistence (S2/S4a)', () => {
     expect(storedValue.startsWith('jr://')).toBe(false);
     expect(storedValue.endsWith('.pdf')).toBe(true);
   });
+
+  // Correction (verifier blocker): a persistMediaFile failure must never
+  // reach store.answerQuestion with the raw, unpersisted picker URI.
+  it('does not answer with the raw picker URI when persistMediaFile fails (copyAsync rejects)', async () => {
+    mockFs.copyAsync.mockRejectedValueOnce(new Error('disk full'));
+    docPicker.__mockGetDocument.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: 'file:///cache/DocumentPicker/report.pdf' }],
+    });
+    const store = makeStore();
+    store.stepForward();
+    const ev = getRef(store);
+    const answerSpy = jest.spyOn(store, 'answerQuestion');
+    await render(<FileWidget nodeRef={ev.ref} store={store} appearance={ev.appearance} />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('file-pick-button'));
+    });
+
+    expect(answerSpy).not.toHaveBeenCalled();
+    expect(await screen.findByText(/No se pudo guardar el archivo/)).toBeTruthy();
+  });
 });

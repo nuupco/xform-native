@@ -46,7 +46,7 @@ import {
   type PermissionGateStatus,
 } from './primitives/usePermissionGate';
 import { PermissionNotice } from './primitives/PermissionNotice';
-import { persistMediaFile, resolveMediaUri } from './media/mediaStorage';
+import { persistMediaFile, resolveMediaUri, MediaPersistenceError } from './media/mediaStorage';
 
 let _SvgModule: any | null = null;
 let _svgLoaded: boolean | undefined;
@@ -171,6 +171,10 @@ export function ImageWidget({ nodeRef, store, appearance }: ImageWidgetProps) {
   const isAnnotate = variant === 'annotate';
 
   const [thumbnailUri, setThumbnailUri] = useState<string | null>(uri);
+  // Set only when persistMediaFile fails (dep absent or copy error) — surfaced
+  // via the same PermissionNotice pattern used for permission failures below,
+  // instead of ever answering with the raw, unpersisted picker URI.
+  const [persistError, setPersistError] = useState(false);
 
   // Annotate overlay strokes (SVG + PanResponder — SignatureWidget's
   // pattern). Declared unconditionally so hook order/count stays stable
@@ -236,9 +240,18 @@ export function ImageWidget({ nodeRef, store, appearance }: ImageWidgetProps) {
     async (result: { canceled: boolean; assets?: Array<{ uri: string }> }) => {
       if (result.canceled || !result.assets?.[0]) return;
       const newUri = result.assets[0].uri;
-      setThumbnailUri(newUri);
-      const filename = await persistMediaFile(newUri);
-      store.answerQuestion(nodeRef, filename);
+      setPersistError(false);
+      try {
+        const filename = await persistMediaFile(newUri);
+        setThumbnailUri(newUri);
+        store.answerQuestion(nodeRef, filename);
+      } catch (err) {
+        if (err instanceof MediaPersistenceError) {
+          setPersistError(true);
+          return;
+        }
+        throw err;
+      }
     },
     [nodeRef, store],
   );
@@ -282,6 +295,27 @@ export function ImageWidget({ nodeRef, store, appearance }: ImageWidgetProps) {
       ? []
       : [{ label: 'Pick from Library', onPress: handleLibrary, testID: 'image-library-button' }]),
   ];
+
+  if (persistError) {
+    return (
+      <MediaCaptureCard
+        testID="image-widget"
+        state="captured"
+        icon={<Text>📷</Text>}
+        title="No photo yet"
+        disabled={readonly}
+        preview={
+          <PermissionNotice
+            title="No se pudo guardar la foto"
+            body="Ocurrió un error al guardar el archivo. Inténtalo de nuevo."
+            primaryLabel="Reintentar"
+            onPrimary={() => setPersistError(false)}
+          />
+        }
+        actions={baseActions}
+      />
+    );
+  }
 
   if (cameraBlocking || libraryBlocking) {
     const gate = cameraBlocking ? cameraGate : libraryGate;

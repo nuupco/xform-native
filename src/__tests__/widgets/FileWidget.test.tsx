@@ -13,6 +13,16 @@ import { FormSessionStore } from '../../store/FormSessionStore';
 import { makeFakeSession } from '../../test-support/makeFakeSession';
 import { FileWidget } from '../../widgets/FileWidget';
 
+// persistMediaFile now throws (rather than passing the raw URI through) when
+// expo-file-system is unavailable — mocked here so this pre-existing test
+// keeps exercising the success path it was written for.
+const mockFs = {
+  documentDirectory: 'file:///mock-documents/',
+  makeDirectoryAsync: jest.fn().mockResolvedValue(undefined),
+  copyAsync: jest.fn().mockResolvedValue(undefined),
+};
+jest.mock('expo-file-system/legacy', () => mockFs, { virtual: true });
+
 const docPicker = require('expo-document-picker');
 
 afterEach(async () => {
@@ -86,7 +96,10 @@ describe('FileWidget', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('file-pick-button'));
     });
-    expect(answerSpy).toHaveBeenCalledWith(ev.ref, 'file://document.pdf');
+    expect(answerSpy).toHaveBeenCalledTimes(1);
+    const storedValue = answerSpy.mock.calls[0][1] as string;
+    expect(storedValue).not.toContain('/');
+    expect(storedValue.endsWith('.pdf')).toBe(true);
   });
 
   it('does not call answerQuestion on cancel', async () => {

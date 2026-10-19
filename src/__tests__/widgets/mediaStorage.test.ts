@@ -17,7 +17,7 @@ jest.mock('expo-file-system/legacy', () => mockFs, { virtual: true });
 // Plain `require` (not a static ES `import`) — same rationale as
 // satelliteTileCache.test.ts: ES imports are hoisted above the `jest.mock`
 // factory's closed-over `mockFs` const.
-const { mediaStorageDirectory, resolveMediaUri, persistMediaFile } =
+const { mediaStorageDirectory, resolveMediaUri, persistMediaFile, MediaPersistenceError } =
   require('../../widgets/media/mediaStorage');
 
 beforeEach(() => {
@@ -47,4 +47,16 @@ describe('mediaStorage', () => {
     expect(uri).toBe('file:///mock-documents/xform-media/photo-123.jpg');
     expect(uri.startsWith('jr://')).toBe(false);
   });
+
+  // Correction (verifier blocker): persistMediaFile must never silently
+  // return the raw source URI on failure — it must throw so call sites can
+  // handle the failure explicitly instead of writing a bad answer.
+  it('throws MediaPersistenceError (never returns the raw source URI) when copyAsync rejects', async () => {
+    mockFs.copyAsync.mockRejectedValueOnce(new Error('disk full'));
+
+    await expect(persistMediaFile('file:///cache/ImagePicker/abc.jpeg')).rejects.toBeInstanceOf(
+      MediaPersistenceError,
+    );
+  });
+
 });

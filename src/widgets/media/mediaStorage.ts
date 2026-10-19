@@ -12,10 +12,12 @@
  * every other optional media dep in this package uses — see ImageWidget's
  * `getImagePicker`, etc.). Unlike those widgets, there is no
  * UnsupportedWidget fallback here: expo-file-system only affects *where* a
- * captured file durably lives, not whether capture itself works, so
- * `persistMediaFile` degrades gracefully to returning the original source
- * URI unchanged when the dep is absent (or the copy fails for any reason)
- * rather than making the whole widget unavailable.
+ * captured file durably lives, not whether capture itself works. However,
+ * `persistMediaFile` never silently degrades to the raw source URI when the
+ * dep is absent or the copy fails — doing so would leak an internal,
+ * OS-purgeable cache path into stored answers (see `MediaPersistenceError`
+ * below) — so it throws instead, and each widget's capture call site
+ * decides how to respond.
  */
 let _FileSystem: any | null = null;
 let _fsLoaded: boolean | undefined;
@@ -86,14 +88,27 @@ function generateId(): string {
  * a different concern — see `FormAdapter.ts`'s `getLabelMediaUri` doc
  * comment) — per the ODK/OpenRosa binary-answer convention (S2).
  *
- * Best-effort: if expo-file-system is unavailable, or the copy fails for any
- * reason, falls back to returning the original source URI unchanged so
- * capture still "works" (just without durable persistence) rather than
- * throwing.
+ * Throws `MediaPersistenceError` when expo-file-system is unavailable, or
+ * when the copy fails for any reason — it must NEVER return the raw
+ * `sourceUri` as if it were a persisted bare filename, since that would
+ * leak an internal, OS-purgeable picker/recorder cache path straight into
+ * `answerQuestion` (the exact bug this module exists to fix) and would
+ * double-prefix into garbage the next time `resolveMediaUri` reads it back.
+ * Callers must catch this and respond explicitly (see each widget's capture
+ * handler) rather than treating the rejection as a value to store.
  */
+export class MediaPersistenceError extends Error {
+  constructor(message: string, readonly cause?: unknown) {
+    super(message);
+    this.name = 'MediaPersistenceError';
+  }
+}
+
 export async function persistMediaFile(sourceUri: string): Promise<string> {
   const fs = getFileSystem();
-  if (!fs) return sourceUri;
+  if (!fs) {
+    throw new MediaPersistenceError('expo-file-system is unavailable; cannot persist media.');
+  }
   try {
     const dir = mediaStorageDirectory();
     await fs.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
@@ -101,7 +116,7 @@ export async function persistMediaFile(sourceUri: string): Promise<string> {
     const destination = `${dir}${filename}`;
     await fs.copyAsync({ from: sourceUri, to: destination });
     return filename;
-  } catch {
-    return sourceUri;
+  } catch (cause) {
+    throw new MediaPersistenceError('Failed to copy media into persistent storage.', cause);
   }
 }

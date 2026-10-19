@@ -40,7 +40,7 @@ import {
   type PermissionGateStatus,
 } from './primitives/usePermissionGate';
 import { PermissionNotice } from './primitives/PermissionNotice';
-import { persistMediaFile, resolveMediaUri } from './media/mediaStorage';
+import { persistMediaFile, resolveMediaUri, MediaPersistenceError } from './media/mediaStorage';
 
 let _AudioModule: any | null = null;
 let _avLoaded: boolean | undefined;
@@ -168,8 +168,17 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
       await recorder.stop();
       const uri = recorder.uri;
       if (uri) {
-        const filename = await persistMediaFile(uri);
-        store.answerQuestion(nodeRef, filename);
+        try {
+          const filename = await persistMediaFile(uri);
+          store.answerQuestion(nodeRef, filename);
+        } catch (err) {
+          if (!(err instanceof MediaPersistenceError)) throw err;
+          // Reuse the gate's existing 'error' status/copy/UI — the same
+          // "genuine runtime failure" surface `handleRecord` already uses
+          // (design decision 9) — rather than answering with the raw,
+          // unpersisted recorder URI.
+          gate.markError();
+        }
       }
     } catch {
       // best-effort; nothing else to do on a failed stop
@@ -177,7 +186,7 @@ export function AudioWidget({ nodeRef, store, appearance: _appearance }: AudioWi
       isRecordingRef.current = false;
       setIsRecording(false);
     }
-  }, [av, recorder, readonly, nodeRef, store]);
+  }, [av, recorder, readonly, nodeRef, store, gate]);
 
   const handlePlay = useCallback(() => {
     if (!av || !player || readonly) return;

@@ -41,7 +41,7 @@ import {
   type PermissionGateStatus,
 } from './primitives/usePermissionGate';
 import { PermissionNotice } from './primitives/PermissionNotice';
-import { persistMediaFile, resolveMediaUri } from './media/mediaStorage';
+import { persistMediaFile, resolveMediaUri, MediaPersistenceError } from './media/mediaStorage';
 
 let _CameraModule: any | null = null;
 let _cameraLoaded: boolean | undefined;
@@ -163,6 +163,10 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
   const readonly = nodeState.readonly;
 
   const [isPlaying, setIsPlaying] = useState(false);
+  // Set only when persistMediaFile fails — surfaced via the same
+  // PermissionNotice pattern used for permission failures below, instead of
+  // ever answering with the raw, unpersisted recorder URI.
+  const [persistError, setPersistError] = useState(false);
   // Hooks-rules-safe unconditional call through the lazily-`require`d
   // module reference — `av`'s truthiness never varies across this
   // component instance's lifetime (see AudioWidget's equivalent comment).
@@ -211,8 +215,17 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
       videoMaxDuration: 60,
     });
     if (result.canceled || !result.assets?.[0]) return;
-    const filename = await persistMediaFile(result.assets[0].uri);
-    store.answerQuestion(nodeRef, filename);
+    setPersistError(false);
+    try {
+      const filename = await persistMediaFile(result.assets[0].uri);
+      store.answerQuestion(nodeRef, filename);
+    } catch (err) {
+      if (err instanceof MediaPersistenceError) {
+        setPersistError(true);
+        return;
+      }
+      throw err;
+    }
   }, [camera, picker, readonly, cameraGate, micGate, nodeRef, store]);
 
   const handlePlay = useCallback(() => {
@@ -239,6 +252,27 @@ export function VideoWidget({ nodeRef, store, appearance: _appearance }: VideoWi
   }
 
   const VideoView = av?.VideoView;
+
+  if (persistError) {
+    return (
+      <MediaCaptureCard
+        testID="video-widget"
+        state="captured"
+        icon={<VideoIcon />}
+        title="No video recorded"
+        disabled={readonly}
+        preview={
+          <PermissionNotice
+            title="No se pudo guardar el video"
+            body="Ocurrió un error al guardar el archivo. Inténtalo de nuevo."
+            primaryLabel="Reintentar"
+            onPrimary={() => setPersistError(false)}
+          />
+        }
+        actions={[{ label: 'Record', onPress: handleRecord, testID: 'video-record-button' }]}
+      />
+    );
+  }
 
   if (!readonly && blockingGate && blockingGateKind) {
     const copy =
