@@ -55,6 +55,24 @@ describe('matchScore', () => {
   it('returns null appearance match when candidate appearance is null', () => {
     expect(matchScore({ appearance: 'rank' }, { ...args, appearance: null })).toBeNull();
   });
+
+  it('scores mediatype-only exact match as 1', () => {
+    expect(matchScore({ mediatype: 'image/*' }, { ...args, mediatype: 'image/*' })).toBe(1);
+  });
+
+  it('matches an image binary question but not an audio one for mediatype: image/*', () => {
+    const matcher = { dataType: 'binary' as const, mediatype: 'image/*' };
+    expect(
+      matchScore(matcher, { ...args, dataType: 'binary', mediatype: 'image/*' })
+    ).toBe(3);
+    expect(
+      matchScore(matcher, { ...args, dataType: 'binary', mediatype: 'audio/*' })
+    ).toBeNull();
+  });
+
+  it('returns null when mediatype is undefined on the candidate but required by the matcher', () => {
+    expect(matchScore({ mediatype: 'image/*' }, { ...args, mediatype: null })).toBeNull();
+  });
 });
 
 describe('pickBest', () => {

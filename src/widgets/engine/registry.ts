@@ -73,6 +73,7 @@ export function resolveWidget(
     controlType: args.controlType,
     dataType: args.dataType,
     appearance: args.appearance,
+    mediatype: args.mediatype,
   });
 
   if (best === null) return base;
