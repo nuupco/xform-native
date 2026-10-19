@@ -28,6 +28,20 @@ export declare class FormSessionStore {
         ref: NodeRef;
         result: AnswerResult;
     } | null;
+    /**
+     * Bug 2 fix (field-list-nav-and-constraints): per-field-ref-keyed answer
+     * results, alongside (not replacing) `lastAnswerResult` above.
+     * `lastAnswerResult` is a single global scalar overwritten on every
+     * `answerQuestion` call — fine for the single-question-at-a-time advance
+     * validator AND for Form.tsx's progress-tracking effect (a DIFFERENT use,
+     * left untouched), but a field-list group's batch-validate loop
+     * (`handleNext`) checks EVERY field in the group in one pass, so only the
+     * single most-recently-committed field anywhere in the whole session
+     * could ever match `lastAnswerResult.ref === event.ref` — every other
+     * field's own CONSTRAINT_VIOLATED result was silently unreachable.
+     * `getLastAnswerResult` below looks up each field by its OWN ref instead.
+     */
+    private readonly _lastAnswerResultByRef;
     private _snapshot;
     private readonly _subscribers;
     private readonly _session;
@@ -35,6 +49,15 @@ export declare class FormSessionStore {
     subscribe(cb: () => void): () => void;
     getSnapshot(): FormSessionSnapshot;
     answerQuestion(ref: NodeRef, value: unknown): AnswerResult;
+    /**
+     * This field's own last `answerQuestion` result, keyed by ref (not "the
+     * single last field edited anywhere") — see `_lastAnswerResultByRef`'s
+     * doc comment. Used by `defaultAdvanceValidator`'s field-list batch pass.
+     */
+    getLastAnswerResult(ref: NodeRef): {
+        ref: NodeRef;
+        result: AnswerResult;
+    } | null;
     stepForward(): void;
     stepBackward(): void;
     jumpToIndex(index: number): void;

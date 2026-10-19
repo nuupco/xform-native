@@ -1,6 +1,6 @@
 {
   "name": "@nuup/xform-native",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "React Native XForm renderer built on @nuup/ts-rosa",
   "workspaces": [
     "packages/*"

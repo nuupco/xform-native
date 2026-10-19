@@ -543,6 +543,112 @@ describe('Form — back navigation out of a NESTED field-list group (bug 1, nest
 });
 
 // ---------------------------------------------------------------------------
+// Bug 1 (sibling/nested field-list unwind): several SIBLING nested
+// field-list sub-groups folded into one outer field-list group's screen
+// (mirrors a real-world "daily readings" form: an outer field-list screen
+// containing 9 sibling field-list "day" sub-groups, each with its own few
+// questions, plus loose questions before/after them). The adapter can be
+// positioned exactly on one of those nested sub-groups' own group event, or
+// on its first question — not just via handleNext's atomic jump, but also
+// e.g. when a resumed session places the live cursor at the first
+// unanswered leaf. Pressing back from there must still climb all the way to
+// the OUTER group's own full folded screen, never stop on the inner
+// sibling sub-group alone.
+// ---------------------------------------------------------------------------
+
+const SIBLING_NESTED_FIELD_LIST_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Sibling Nested Field List</h:title>
+    <model>
+      <instance>
+        <data id="sibling-nested-field-list">
+          <outer>
+            <q0/>
+            <d1><qa1/></d1>
+            <d2><qa2/></d2>
+            <d3><qa3/></d3>
+            <qtail/>
+          </outer>
+          <q2/>
+        </data>
+      </instance>
+      <bind nodeset="/data/outer/q0" type="string"/>
+      <bind nodeset="/data/outer/d1/qa1" type="string"/>
+      <bind nodeset="/data/outer/d2/qa2" type="string"/>
+      <bind nodeset="/data/outer/d3/qa3" type="string"/>
+      <bind nodeset="/data/outer/qtail" type="string"/>
+      <bind nodeset="/data/q2" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/outer" appearance="field-list">
+      <label>Afuera</label>
+      <input ref="/data/outer/q0"><label>Q0</label></input>
+      <group ref="/data/outer/d1" appearance="field-list">
+        <label>Dia1</label>
+        <input ref="/data/outer/d1/qa1"><label>QA1</label></input>
+      </group>
+      <group ref="/data/outer/d2" appearance="field-list">
+        <label>Dia2</label>
+        <input ref="/data/outer/d2/qa2"><label>QA2</label></input>
+      </group>
+      <group ref="/data/outer/d3" appearance="field-list">
+        <label>Dia3</label>
+        <input ref="/data/outer/d3/qa3"><label>QA3</label></input>
+      </group>
+      <input ref="/data/outer/qtail"><label>QTAIL</label></input>
+    </group>
+    <input ref="/data/q2"><label>Despues</label></input>
+  </h:body>
+</h:html>`;
+
+describe('Form — back navigation across SIBLING nested field-list sub-groups (bug 1, sibling case)', () => {
+  it('positioned on a nested sub-group\'s first question (e.g. a resumed session landing on the first unanswered field of "dia1"): back climbs to the OUTER group\'s full screen, not just "dia1"', async () => {
+    const store = makeRealStore(SIBLING_NESTED_FIELD_LIST_XML);
+    // Step the raw adapter directly to qa1 (the first question of the
+    // nested "d1" sub-group), bypassing handleNext's atomic jump — the way
+    // a resumed session would place the cursor at the first unanswered leaf.
+    // Confirmed event order: bof -> outer(0) -> q0(1) -> d1(2) -> qa1(3).
+    store.stepForward();
+    store.stepForward();
+    store.stepForward();
+    store.stepForward();
+    await render(<Form store={store} />);
+    expect(screen.getByText('QA1')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-back'));
+    });
+
+    // Must land on the OUTER field-list group's own full folded screen —
+    // every sibling sub-group's fields, not just "dia1"'s single field.
+    expect(screen.getByText('Q0')).toBeTruthy();
+    expect(screen.getByText('QA1')).toBeTruthy();
+    expect(screen.getByText('QA2')).toBeTruthy();
+    expect(screen.getByText('QA3')).toBeTruthy();
+    expect(screen.getByText('QTAIL')).toBeTruthy();
+  });
+
+  it('positioned exactly on a nested sub-group\'s own group event ("dia2"): back still climbs to the OUTER group, not "dia2" alone', async () => {
+    const store = makeRealStore(SIBLING_NESTED_FIELD_LIST_XML);
+    // Confirmed event order: bof -> outer(0) -> q0(1) -> d1(2) -> qa1(3) -> d2(4).
+    for (let i = 0; i < 5; i++) store.stepForward();
+    await render(<Form store={store} />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('nav-back'));
+    });
+
+    expect(screen.getByText('Q0')).toBeTruthy();
+    expect(screen.getByText('QA1')).toBeTruthy();
+    expect(screen.getByText('QA2')).toBeTruthy();
+    expect(screen.getByText('QA3')).toBeTruthy();
+    expect(screen.getByText('QTAIL')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Bug 2 (field-list-nav-and-constraints): the batch-validate loop in
 // handleNext must surface EVERY field's own constraint violation, not just
 // the single most-recently-edited field anywhere in the session

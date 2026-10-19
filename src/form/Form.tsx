@@ -695,23 +695,29 @@ export function Form({
     // to that same outermost group's own event, never overshooting past it,
     // rather than stopping on an inner nested one or a single leaf question.
     //
+    // Bug fix (sibling/nested field-list unwind): the single `stepBackward()`
+    // above can land EXACTLY on a nested field-list sub-group's own event —
+    // e.g. when the adapter was positioned mid-group by something other than
+    // handleNext's atomic jump (a resumed session landing on the first
+    // unanswered leaf of one of several sibling sub-groups, such as "dia5"
+    // inside an outer "pantalla2"). Previously this was treated as the final
+    // answer and the climb stopped immediately — rendering the inner
+    // sub-group alone instead of the OUTER group's full folded screen. A
+    // field-list group landed on here is only ever a CANDIDATE: it must keep
+    // climbing to check for an enclosing field-list ancestor, exactly like
+    // any other found group below, and only stop once no further enclosing
+    // field-list group exists.
+    //
     // Walk done entirely via `adapter` (no store.stepForward/stepBackward,
     // which would bump + re-render per intermediate step) — same
     // side-effect-free-until-settled pattern planFieldList's own doc comment
     // documents — then a single notifyExternalMutation() at the end.
     let landed = adapter.getCurrentEvent();
-    let targetGroupRef: NodeRef | null = null;
+    let targetGroupRef: NodeRef | null =
+      landed.kind === 'group' && landed.appearance === 'field-list' ? landed.ref : null;
 
     for (;;) {
       if (landed.kind === 'bof' || landed.kind === 'eof') break;
-      if (
-        targetGroupRef === null &&
-        landed.kind === 'group' &&
-        landed.appearance === 'field-list'
-      ) {
-        // Landed exactly on a field-list group's own event already.
-        break;
-      }
 
       const searchRef: NodeRef = targetGroupRef ?? landed.ref;
       let found: AdaptedEvent | null = null;
