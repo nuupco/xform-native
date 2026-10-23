@@ -157,6 +157,52 @@ describe('Form — composition slots', () => {
     expect(screen.getByText('custom:required:This field is required')).toBeTruthy();
   });
 
+  it('renderQuestionLabel: receives label/hint/required + defaultElement matching today\'s LabelHint', async () => {
+    const store = makeStore(q1RequiredScript());
+    let capturedLabel: string | null = null;
+    let capturedHint: string | null = null;
+    let capturedRequired: boolean | null = null;
+
+    await render(
+      <Form
+        store={store}
+        slots={{
+          renderQuestionLabel: ({ label, hint, required, defaultElement }) => {
+            capturedLabel = label;
+            capturedHint = hint;
+            capturedRequired = required;
+            return <Text testID="custom-question-label">{defaultElement}</Text>;
+          },
+        }}
+      />
+    );
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('bof-start-button'));
+    });
+
+    expect(capturedLabel).toBe('Name');
+    expect(capturedHint).toBeNull();
+    expect(capturedRequired).toBe(true);
+    expect(screen.getByTestId('custom-question-label')).toBeTruthy();
+    // defaultElement renders exactly today's un-slotted LabelHint markup.
+    expect(screen.getByTestId('question-label')).toBeTruthy();
+    expect(screen.getByText('Name')).toBeTruthy();
+    expect(screen.getByTestId('required-indicator')).toBeTruthy();
+  });
+
+  it('renderQuestionLabel: omitting the slot is byte-identical to today (default LabelHint renders)', async () => {
+    const store = makeStore(q1RequiredScript());
+    await render(<Form store={store} />);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('bof-start-button'));
+    });
+
+    expect(screen.getByTestId('question-label')).toBeTruthy();
+    expect(screen.getByText('Name')).toBeTruthy();
+    expect(screen.getByTestId('required-indicator')).toBeTruthy();
+    expect(screen.queryByTestId('custom-question-label')).toBeNull();
+  });
+
   it('T23: custom renderGroup slot replaces default group layout', async () => {
     const store = makeStore(groupScript());
 

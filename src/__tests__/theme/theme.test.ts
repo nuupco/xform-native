@@ -67,6 +67,53 @@ describe('mergeTheme — secondary and tertiary overrides', () => {
   });
 });
 
+describe('mergeTheme — neutral (surface/text) overrides', () => {
+  it('merges each provided neutral role literally into color.roles (no derivation)', () => {
+    const theme = mergeTheme({
+      color: {
+        neutral: {
+          background: '#0A0A0A',
+          onBackground: '#EAEAEA',
+          surface: '#111111',
+          onSurface: '#F0F0F0',
+          surfaceVariant: '#1A1A1A',
+          onSurfaceVariant: '#CCCCCC',
+          outline: '#555555',
+          outlineVariant: '#333333',
+        },
+      },
+    });
+    expect(theme.color.roles.background).toBe('#0A0A0A');
+    expect(theme.color.roles.onBackground).toBe('#EAEAEA');
+    expect(theme.color.roles.surface).toBe('#111111');
+    expect(theme.color.roles.onSurface).toBe('#F0F0F0');
+    expect(theme.color.roles.surfaceVariant).toBe('#1A1A1A');
+    expect(theme.color.roles.onSurfaceVariant).toBe('#CCCCCC');
+    expect(theme.color.roles.outline).toBe('#555555');
+    expect(theme.color.roles.outlineVariant).toBe('#333333');
+  });
+
+  it('merges only the provided neutral roles, leaving the rest at their default', () => {
+    const theme = mergeTheme({ color: { neutral: { onSurface: '#FFFFFF' } } });
+    expect(theme.color.roles.onSurface).toBe('#FFFFFF');
+    expect(theme.color.roles.background).toBe(tokens.color.roles.background);
+    expect(theme.color.roles.surface).toBe(tokens.color.roles.surface);
+  });
+
+  it('does not affect primary/secondary/tertiary roles or legacy color.primary', () => {
+    const theme = mergeTheme({ color: { neutral: { surface: '#202020' } } });
+    expect(theme.color.roles.primary).toBe(tokens.color.roles.primary);
+    expect(theme.color.primary).toBe(tokens.color.primary);
+  });
+
+  it('omitting color.neutral is byte-identical to today\'s default output', () => {
+    expect(mergeTheme()).toEqual(tokens);
+    expect(mergeTheme({ color: { primary: '#7B2CBF' } }).color.roles.background).toBe(
+      tokens.color.roles.background
+    );
+  });
+});
+
 describe('mergeTheme — disallowed override keys are ignored', () => {
   it('ignores a typography override even if passed', () => {
     const theme = mergeTheme({
