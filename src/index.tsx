@@ -161,6 +161,7 @@ export type {
   FormErrorSlotContext,
   FormGroupSlotContext,
   FormSectionIndicatorSlotContext,
+  FormQuestionLabelSlotContext,
 } from './form/slots';
 
 // inject-values group appearance: host-driven pause + batch value injection

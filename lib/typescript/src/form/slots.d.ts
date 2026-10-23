@@ -52,6 +52,18 @@ export interface FormSectionIndicatorSlotContext {
     defaultElement: ReactNode;
 }
 /**
+ * Per-question label/hint slot context (the `<LabelHint>` rendered above
+ * every question's widget). Carries the same props `LabelHint` itself takes
+ * plus `defaultElement` (the exact `<LabelHint>` Form would have rendered),
+ * so a host can wrap/replace it, e.g. to theme label color in dark mode.
+ */
+export interface FormQuestionLabelSlotContext {
+    label: string | null;
+    hint: string | null;
+    required: boolean;
+    defaultElement: ReactNode;
+}
+/**
  * "inject-values" group appearance (design: "inject-values group").
  *
  * A group-only appearance the host app claims exclusively. When the render
@@ -127,6 +139,8 @@ export interface FormSlots {
     renderGroup?: (ctx: FormGroupSlotContext) => ReactNode;
     /** Additive (Phase 7 decision 8/10): override or opt out (return `null`) of the default `SectionIndicator`. */
     renderSectionIndicator?: (ctx: FormSectionIndicatorSlotContext) => ReactNode;
+    /** Additive: override the per-question label/hint (`<LabelHint>` above each question's widget). */
+    renderQuestionLabel?: (ctx: FormQuestionLabelSlotContext) => ReactNode;
     /** Additive (inject-values group appearance): the ONLY way to surface a paused inject-values group's fields — see `INJECT_VALUES_APPEARANCE`. */
     injectValues?: (ctx: InjectValuesSlotContext) => ReactNode;
 }
