@@ -784,7 +784,14 @@ export function Form({
         : {};
     return (
       <View key={ev.index} collapsable={false}>
-        <LabelHint label={ev.label} hint={ev.hint} required={nodeState.required} />
+        {renderSlot(slots?.renderQuestionLabel, {
+          label: ev.label,
+          hint: ev.hint,
+          required: nodeState.required,
+          defaultElement: (
+            <LabelHint label={ev.label} hint={ev.hint} required={nodeState.required} />
+          ),
+        })}
         <View style={block != null ? styles.widgetSlotError : undefined} collapsable={false}>
           <WidgetErrorBoundary
             key={ev.index}
