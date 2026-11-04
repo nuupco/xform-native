@@ -12,6 +12,7 @@
  * variant/tone/pressed/disabled matrix is unit-testable without simulating
  * native touch/press state through the renderer.
  */
+import type React from 'react';
 import {
   Pressable,
   Text,
@@ -127,7 +128,7 @@ export function PressableButton({
   fullWidth = false,
   testID,
   theme,
-}: PressableButtonProps) {
+}: PressableButtonProps): React.JSX.Element {
   const contextTheme = useTheme();
   const t = theme ?? contextTheme;
   return (

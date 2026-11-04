@@ -16,6 +16,7 @@
  * action copy, so a status→copy switch here would have to know about all
  * of them (design decision 6).
  */
+import type React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemedStyles, useTheme, type Theme } from '../../theme/ThemeContext';
 import { elevationStyle } from '../../theme/elevationStyle';
@@ -72,7 +73,7 @@ export function PermissionNotice({
   dismissLabel,
   onDismiss,
   testID = 'permission-notice',
-}: PermissionNoticeProps) {
+}: PermissionNoticeProps): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   const theme = useTheme();
   const showDismiss = Boolean(dismissLabel && onDismiss);

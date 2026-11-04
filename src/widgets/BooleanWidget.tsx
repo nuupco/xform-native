@@ -11,6 +11,7 @@
  * distinct from an explicit "No" — neither segment renders as selected.
  */
 
+import type React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
@@ -54,7 +55,10 @@ const BOOLEAN_OPTIONS: readonly [
   { value: 'false', label: 'No' },
 ];
 
-export function BooleanWidget({ nodeRef, store }: BooleanWidgetProps) {
+export function BooleanWidget({
+  nodeRef,
+  store,
+}: BooleanWidgetProps): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   useFormSession(store);
   const nodeState = store.adapter.getNodeState(nodeRef);

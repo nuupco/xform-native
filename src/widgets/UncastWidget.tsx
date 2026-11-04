@@ -4,6 +4,7 @@
  * Displays raw string value if available. Does not crash.
  */
 
+import type React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
@@ -16,7 +17,10 @@ export interface UncastWidgetProps {
   appearance?: string | null;
 }
 
-export function UncastWidget({ nodeRef, store }: UncastWidgetProps) {
+export function UncastWidget({
+  nodeRef,
+  store,
+}: UncastWidgetProps): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   useFormSession(store);
   const value = store.adapter.resolveValue(nodeRef);

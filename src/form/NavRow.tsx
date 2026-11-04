@@ -12,6 +12,7 @@
  * follow-up) — this component's own finish-variant rendering is complete and
  * tested here regardless.
  */
+import type React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { elevationStyle } from '../theme/elevationStyle';
@@ -39,7 +40,13 @@ function createStyles(t: Theme) {
   });
 }
 
-export function NavRow({ onBack, onNext, isLastStep, backDisabled, nextDisabled }: NavRowProps) {
+export function NavRow({
+  onBack,
+  onNext,
+  isLastStep,
+  backDisabled,
+  nextDisabled,
+}: NavRowProps): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
 
   return (

@@ -6,6 +6,7 @@
  * ConstraintSurface, RequiredSurface. All migrated to `useThemedStyles`;
  * Constraint/Required delegate to the shared `ErrorBanner` (PR2).
  */
+import type React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import { elevationStyle } from '../theme/elevationStyle';
@@ -79,7 +80,7 @@ export function BofSurface({
   onStart: () => void;
   formTitle?: string;
   formVersion?: string;
-}) {
+}): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   const subtitle = formTitle ? `${formTitle}${formVersion ? ` · ${formVersion}` : ''}` : null;
   return (
@@ -110,7 +111,7 @@ export function EofSurface({
   onFinish?: () => void;
   answeredCount?: number;
   skippedCount?: number;
-}) {
+}): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.center} testID="eof-surface" collapsable={false}>
@@ -137,11 +138,15 @@ export function EofSurface({
   );
 }
 
-export function ConstraintSurface({ message }: { message: string }) {
+export function ConstraintSurface({
+  message,
+}: {
+  message: string;
+}): React.JSX.Element {
   return <ErrorBanner testID="constraint-message" message={message} />;
 }
 
-export function RequiredSurface() {
+export function RequiredSurface(): React.JSX.Element {
   return <ErrorBanner testID="required-message" message="Este campo es obligatorio" />;
 }
 
@@ -153,7 +158,7 @@ export function LabelHint({
   label: string | null;
   hint: string | null;
   required?: boolean;
-}) {
+}): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.labelWrap} collapsable={false}>
@@ -174,7 +179,13 @@ export function LabelHint({
   );
 }
 
-export function RepeatPromptCard({ label, onPress }: { label: string; onPress: () => void }) {
+export function RepeatPromptCard({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   return (
     <Pressable testID="prompt-continue" onPress={onPress} style={styles.promptCard}>
@@ -186,7 +197,11 @@ export function RepeatPromptCard({ label, onPress }: { label: string; onPress: (
   );
 }
 
-export function WidgetErrorFallback({ fieldName }: { fieldName: string }) {
+export function WidgetErrorFallback({
+  fieldName,
+}: {
+  fieldName: string;
+}): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.errorFallback} testID="widget-error-fallback" collapsable={false}>

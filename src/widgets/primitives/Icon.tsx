@@ -7,6 +7,7 @@
  * `primaryContainer`-colored circle (same `require`-in-try pattern used by
  * `SignatureWidget`).
  */
+import type React from 'react';
 import { View, Text, type ViewStyle } from 'react-native';
 import { useTheme, defaultTheme, type Theme } from '../../theme/ThemeContext';
 
@@ -58,7 +59,7 @@ export function AlertIcon({
   color,
   size = 16,
   theme,
-}: IconProps) {
+}: IconProps): React.JSX.Element {
   const contextTheme = useIconTheme();
   const t = theme ?? contextTheme;
   const resolvedColor = color ?? t.color.roles.error;
@@ -101,7 +102,7 @@ export function PlusIcon({
   color,
   size = 20,
   theme,
-}: IconProps) {
+}: IconProps): React.JSX.Element {
   const contextTheme = useIconTheme();
   const t = theme ?? contextTheme;
   const resolvedColor = color ?? t.color.roles.primary;
@@ -145,7 +146,7 @@ export function LeafIcon({
   color,
   size = 64,
   theme,
-}: IconProps) {
+}: IconProps): React.JSX.Element {
   const contextTheme = useIconTheme();
   const t = theme ?? contextTheme;
   const resolvedColor = color ?? t.color.roles.primary;
@@ -197,7 +198,7 @@ export function CheckIcon({
   color,
   size = 20,
   theme,
-}: IconProps) {
+}: IconProps): React.JSX.Element {
   const contextTheme = useIconTheme();
   const t = theme ?? contextTheme;
   const resolvedColor = color ?? t.color.roles.primary;
@@ -238,7 +239,7 @@ export function MinusIcon({
   color,
   size = 20,
   theme,
-}: IconProps) {
+}: IconProps): React.JSX.Element {
   const contextTheme = useIconTheme();
   const t = theme ?? contextTheme;
   const resolvedColor = color ?? t.color.roles.onSurface;
@@ -265,7 +266,7 @@ function glyphIcon(glyph: string) {
     color,
     size = 20,
     theme,
-  }: IconProps) {
+  }: IconProps): React.JSX.Element {
     const contextTheme = useIconTheme();
     const t = theme ?? contextTheme;
     const resolvedColor = color ?? t.color.roles.onSurfaceVariant;
