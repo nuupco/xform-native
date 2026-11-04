@@ -22,6 +22,7 @@
  *   segments show, prefixed with a leading "…" (design decision 12).
  * - non-interactive: plain View/Text, no Pressable, no onPress.
  */
+import type React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import type { PathSegment } from '../adapter/FormAdapter';
@@ -66,7 +67,10 @@ export interface SectionIndicatorProps {
   testID?: string;
 }
 
-export function SectionIndicator({ path, testID = 'section-indicator' }: SectionIndicatorProps) {
+export function SectionIndicator({
+  path,
+  testID = 'section-indicator',
+}: SectionIndicatorProps): React.JSX.Element | null {
   const styles = useThemedStyles(createStyles);
 
   const labeled = path.filter((segment) => segment.label !== null);

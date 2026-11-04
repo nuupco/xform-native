@@ -5,6 +5,7 @@
  * No WebView, no third-party layout library. RN-core only.
  */
 
+import type React from 'react';
 import {
   Modal,
   View,
@@ -62,7 +63,7 @@ export function AppModal({
   children,
   animationType = 'fade',
   fullScreen = false,
-}: AppModalProps) {
+}: AppModalProps): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   return (
     <Modal

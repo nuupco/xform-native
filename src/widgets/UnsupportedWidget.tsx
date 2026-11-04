@@ -6,6 +6,7 @@
  * Usable standalone outside <Form>.
  */
 
+import type React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemedStyles, type Theme } from '../theme/ThemeContext';
 import type { DataType } from '@nuup/ts-rosa';
@@ -14,7 +15,9 @@ export interface UnsupportedWidgetProps {
   dataType: DataType | string;
 }
 
-export function UnsupportedWidget({ dataType }: UnsupportedWidgetProps) {
+export function UnsupportedWidget({
+  dataType,
+}: UnsupportedWidgetProps): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.container} testID="unsupported-widget">

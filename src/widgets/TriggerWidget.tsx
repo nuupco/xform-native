@@ -9,6 +9,7 @@
  * answer to null when tapped while already 'OK' (toggleable, not one-way).
  */
 
+import type React from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
 import { useFormSession } from '../store/useFormSession';
 import { useThemedStyles, useTheme, type Theme } from '../theme/ThemeContext';
@@ -64,7 +65,10 @@ function createStyles(t: Theme) {
   });
 }
 
-export function TriggerWidget({ nodeRef, store }: TriggerWidgetProps) {
+export function TriggerWidget({
+  nodeRef,
+  store,
+}: TriggerWidgetProps): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   const t = useTheme();
   useFormSession(store);

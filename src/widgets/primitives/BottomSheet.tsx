@@ -6,6 +6,7 @@
  * Layout only — no bridge logic, no Expo deps, RN-core only.
  */
 
+import type React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useThemedStyles, type Theme } from '../../theme/ThemeContext';
 import { elevationStyle } from '../../theme/elevationStyle';
@@ -58,7 +59,12 @@ function createStyles(t: Theme) {
   });
 }
 
-export function BottomSheet({ visible, onClose, children, testID }: BottomSheetProps) {
+export function BottomSheet({
+  visible,
+  onClose,
+  children,
+  testID,
+}: BottomSheetProps): React.JSX.Element {
   const styles = useThemedStyles(createStyles);
   return (
     <Modal

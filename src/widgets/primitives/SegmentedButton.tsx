@@ -9,6 +9,7 @@
  * selected — distinct from an explicit "No" — which is the entire reason
  * this primitive exists instead of a boolean-only `Switch`.
  */
+import type React from 'react';
 import { Pressable, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 import type { Theme } from '../../theme/ThemeContext';
 import { useTheme } from '../../theme/ThemeContext';
@@ -35,7 +36,7 @@ export function SegmentedButton<T extends string = string>({
   disabled = false,
   testID,
   theme,
-}: SegmentedButtonProps<T>) {
+}: SegmentedButtonProps<T>): React.JSX.Element {
   const contextTheme = useTheme();
   const t = theme ?? contextTheme;
 
