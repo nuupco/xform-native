@@ -107,6 +107,47 @@ export interface ValidationFailure {
 }
 
 /**
+ * OutlineNode — one relevant entry of the whole-form outline returned by
+ * `FormAdapter.getOutline()`. Plain primitives only (same firewall as
+ * `AdaptedEvent`). Non-relevant nodes are never listed, so there is no
+ * `relevant` flag.
+ *
+ * - `depth` is 0 for top-level nodes; a repeat instance is a `repeat` node
+ *   (its `ref` is the concrete instance) whose children are one deeper.
+ * - `label` of `group`/`repeat` is resolved with ts-rosa's `getLabelAt`
+ *   (active-language itext + `<output>` substitution; inline fallback).
+ * - `value` is the unwrapped raw answer (`resolveValue`); `displayValue` is
+ *   the selected choice label(s) for selects (joined with ", ") and the
+ *   stringified value for string/number/boolean answers, else `null`.
+ */
+export type OutlineNode =
+  | {
+      readonly kind: 'group';
+      readonly ref: NodeRef;
+      readonly label: string | null;
+      readonly depth: number;
+    }
+  | {
+      readonly kind: 'repeat';
+      readonly ref: NodeRef;
+      readonly label: string | null;
+      readonly depth: number;
+      readonly multiplicity: number;
+    }
+  | {
+      readonly kind: 'question';
+      readonly ref: NodeRef;
+      readonly label: string | null;
+      readonly depth: number;
+      readonly dataType: DataType;
+      readonly controlType: ControlType;
+      readonly required: boolean;
+      readonly answered: boolean;
+      readonly value: unknown;
+      readonly displayValue: string | null;
+    };
+
+/**
  * FormAdapter — the sole translation layer between ts-rosa session internals
  * and the widget/Form layer.
  */
@@ -127,8 +168,29 @@ export interface FormAdapter {
    * `resolvePath` support (defensive — keeps older test doubles working).
    */
   getCurrentPath(): readonly PathSegment[];
+  /**
+   * Every relevant group / repeat instance / question of the form in
+   * document order, WITHOUT moving the cursor (`visitedCache` and the step
+   * counter are untouched) and without writing to the instance. Repeats are
+   * expanded per existing instance; `prompt-new-repeat` stops are not
+   * listed. O(form size): memoize per `store.getSnapshot().version`.
+   */
+  getOutline(): readonly OutlineNode[];
   stepForward(): void;
   stepBackward(): void;
+  /**
+   * Jump to ANY currently relevant position by ref (not only visited ones).
+   * Returns `false` (cursor, step counter and cache untouched) when `ref`
+   * is not a listed outline node or is not relevant. A ref inside an
+   * `appearance="field-list"` / `"inject-values"` group lands on the
+   * outermost such group's own stop (that is where `Form` renders/plans
+   * it). `visitedCache` is rebuilt as the linear run of stops BOF→target
+   * (exactly what `stepForward` would have visited), `stepCount` = the
+   * target's ordinal, so `stepBackward`/`jumpToIndex(n <= target)` stay
+   * coherent. Like stepping, it creates missing jr:count repeat instances
+   * on the way.
+   */
+  jumpToRef(ref: NodeRef): boolean;
   /** Jump to a previously-visited position by its 0-based numeric index. */
   jumpToIndex(index: number): void;
   getNodeState(ref: NodeRef): NodeState;

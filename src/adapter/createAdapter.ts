@@ -10,8 +10,8 @@
  */
 
 import type { FormSession, ControlType } from '@nuup/ts-rosa';
-import type { FormIndex } from '@nuup/ts-rosa';
-import { isAt, isBof, isEof } from '@nuup/ts-rosa';
+import type { FormIndex, AtFormIndex } from '@nuup/ts-rosa';
+import { isAt, isBof, isEof, beginningOfForm } from '@nuup/ts-rosa';
 import {
   resolveReference,
   addRepeatInstance,
@@ -24,8 +24,10 @@ import {
 } from '@nuup/ts-rosa';
 import type { TreeReference, TreeReferenceLevel, ValidateOutcome, FormElement } from '@nuup/ts-rosa';
 import type { NodeState, SelectChoice, FormIndexLevel } from '@nuup/ts-rosa';
-import type { FormAdapter, AdaptedEvent, NodeRef, PathSegment, ValidationFailure } from './FormAdapter';
+import type { FormAdapter, AdaptedEvent, NodeRef, PathSegment, ValidationFailure, OutlineNode } from './FormAdapter';
 import { encodeAnswer } from './encodeAnswer';
+// Mirrors form/slots.ts INJECT_VALUES_APPEARANCE (adapter must not import the form layer).
+const INJECT_VALUES_APPEARANCE = 'inject-values';
 
 export function createAdapter(session: FormSession): FormAdapter {
   const { navigator, evaluator, tree } = session;
@@ -349,8 +351,51 @@ export function createAdapter(session: FormSession): FormAdapter {
   }
 
   // ---------------------------------------------------------------------------
+  // getOutline helpers (read-only: no cursor, cache or instance writes)
+  // ---------------------------------------------------------------------------
+  function unwrapValue(ref: NodeRef): unknown {
+    const node = resolveReference(tree, ref);
+    const value = node?.value ?? null;
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      'kind' in value &&
+      'value' in value
+    ) {
+      return (value as { value: unknown }).value;
+    }
+    return value;
+  }
+
+  function isAnswered(value: unknown): boolean {
+    if (value === null || value === undefined || value === '') return false;
+    if (Array.isArray(value)) return value.length > 0;
+    return true;
+  }
+
+  function outlineDisplayValue(ref: NodeRef, controlType: ControlType, value: unknown): string | null {
+    if (!isAnswered(value)) return null;
+    if (controlType === 'select1' || controlType === 'select') {
+      const tokens = Array.isArray(value) ? value.map(String) : String(value).split(/\s+/).filter(Boolean);
+      const choices = evaluator.getChoices(ref as Parameters<typeof evaluator.getChoices>[0]);
+      return tokens.map((t) => choices.find((c) => c.value === t)?.label ?? t).join(', ');
+    }
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
   // Visited cache management
   // ---------------------------------------------------------------------------
+  function samePath(a: readonly FormIndexLevel[], b: readonly FormIndexLevel[]): boolean {
+    return (
+      a.length === b.length &&
+      a.every((l, i) => l.elementIndex === b[i]!.elementIndex && l.multiplicity === b[i]!.multiplicity)
+    );
+  }
+
   function recordCurrentIndex(): void {
     const fi = navigator.getEvent().index;
     // If we're at a position beyond cache length, append
@@ -371,6 +416,102 @@ export function createAdapter(session: FormSession): FormAdapter {
       const ev = navigator.getEvent();
       if (!isAt(ev.index)) return [];
       return buildPath(ev.index);
+    },
+
+    getOutline(): readonly OutlineNode[] {
+      const out: OutlineNode[] = [];
+      let idx = navigator.incrementIndex(beginningOfForm);
+      while (isAt(idx)) {
+        const kind = navigator.eventAt(idx).kind;
+        const ref = idx.ref as NodeRef;
+        if (kind !== 'prompt-new-repeat' && evaluator.isEffectivelyRelevant(ref as Parameters<typeof evaluator.isEffectivelyRelevant>[0])) {
+          const depth = idx.path.length - 1;
+          if (kind === 'question') {
+            const q = navigator.getQuestionAtIndex(idx);
+            const controlType = (q?.getControlType() ?? 'input') as ControlType;
+            const value = unwrapValue(ref);
+            out.push({
+              kind: 'question',
+              ref,
+              label: q?.getQuestionText() ?? null,
+              depth,
+              dataType: q?.getDataType() ?? 'string',
+              controlType,
+              required: evaluator.getNodeState(ref as Parameters<typeof evaluator.getNodeState>[0])?.required ?? false,
+              answered: isAnswered(value),
+              value,
+              displayValue: outlineDisplayValue(ref, controlType, value),
+            });
+          } else if (kind === 'group') {
+            out.push({ kind: 'group', ref, label: navigator.getLabelAt(idx), depth });
+          } else if (kind === 'repeat') {
+            out.push({
+              kind: 'repeat',
+              ref,
+              label: navigator.getLabelAt(idx),
+              depth,
+              multiplicity: idx.path[idx.path.length - 1]?.multiplicity ?? 0,
+            });
+          }
+        }
+        idx = navigator.incrementIndex(idx);
+      }
+      return out;
+    },
+
+    jumpToRef(ref: NodeRef): boolean {
+      // 1) Locate the target without moving the cursor.
+      let target: AtFormIndex | null = null;
+      for (let i = navigator.incrementIndex(beginningOfForm); isAt(i); i = navigator.incrementIndex(i)) {
+        if (navigator.eventAt(i).kind !== 'prompt-new-repeat' && refEquals(i.ref, ref as TreeReference)) {
+          target = i;
+          break;
+        }
+      }
+      if (target === null) return false;
+
+      // 2) field-list / inject-values groups are rendered/planned at their
+      // own stop: land on the OUTERMOST such ancestor instead of the leaf.
+      let landingPath: readonly FormIndexLevel[] = target.path;
+      let landingKind: string = navigator.eventAt(target).kind;
+      for (let n = 1; n < target.path.length; n++) {
+        const prefix = target.path.slice(0, n);
+        const resolved = navigator.resolvePath?.(prefix);
+        const el = resolved?.element;
+        if (
+          resolved &&
+          el?.kind === 'group' &&
+          (el.appearance === 'field-list' || el.appearance === INJECT_VALUES_APPEARANCE)
+        ) {
+          landingPath = prefix;
+          landingKind = 'group';
+          break;
+        }
+      }
+
+      // 3) Walk BOF→landing with the real stepping (same stops, same
+      // relevance/jr:count rules as stepForward) while collecting the cache.
+      const savedIndex = navigator.getCurrentIndex();
+      const savedCache = visitedCache.slice();
+      const savedStep = stepCount;
+      navigator.jumpToBeginningOfForm();
+      const cache: FormIndex[] = [navigator.getCurrentIndex()];
+      for (;;) {
+        const ev = navigator.stepToNextEvent();
+        cache.push(ev.index);
+        if (ev.kind === 'end-of-form' || !isAt(ev.index)) {
+          navigator.jumpToIndex(savedIndex);
+          visitedCache.length = 0;
+          visitedCache.push(...savedCache);
+          stepCount = savedStep;
+          return false;
+        }
+        if (ev.kind === landingKind && samePath(ev.index.path, landingPath)) break;
+      }
+      visitedCache.length = 0;
+      visitedCache.push(...cache);
+      stepCount = cache.length - 1;
+      return true;
     },
 
     stepForward(): void {

@@ -358,6 +358,31 @@ store.stepBackward();
 store.answerQuestion(ref, value);
 ```
 
+### Outline and jump-to-ref (`getOutline`, `jumpToRef`)
+
+Two additive `FormAdapter` / `FormSessionStore` methods for a question-tree
+screen and a read-only document view:
+
+```ts
+const nodes = store.getOutline(); // readonly OutlineNode[]
+// group | repeat (one per instance) | question, in document order, with
+// `depth`, `label` and, for questions: `required`, `answered`, `value`,
+// `displayValue` (selected choice label(s) for selects), `dataType`, `controlType`.
+const ok = store.jumpToRef(nodes[3].ref); // false if not relevant / not found
+```
+
+- `getOutline()` never moves the cursor and never writes to the instance.
+  It lists only relevant nodes and skips `prompt-new-repeat` stops. It walks
+  the whole form, so memoize it per `store.getSnapshot().version`. Group and
+  repeat labels resolve itext and `<output>` (needs `@nuup/ts-rosa` >= 0.8.0).
+- With `createFormStore(xml, { instanceXml })` ts-rosa re-runs `calculate`
+  and first-load `setvalue` on load, so a calculated field shows its
+  recalculated value, not the stored one.
+- `jumpToRef(ref)` works for any relevant position, not only visited ones,
+  and keeps `stepBackward` / `jumpToIndex(n)` coherent. A ref inside a
+  `field-list` or `inject-values` group lands on that group. It skips the
+  per-step validation; `validateAll()` still covers the whole form.
+
 ### `useFormSession`
 
 Hook that re-renders when the store version bumps.

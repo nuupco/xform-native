@@ -16,7 +16,7 @@
 import type { FormSession, AnswerResult } from '@nuup/ts-rosa';
 import { refToString } from '@nuup/ts-rosa';
 import { createAdapter } from '../adapter/createAdapter';
-import type { FormAdapter, NodeRef } from '../adapter/FormAdapter';
+import type { FormAdapter, NodeRef, OutlineNode } from '../adapter/FormAdapter';
 import type { MediaResolver } from '../createFormStore';
 
 /**
@@ -118,6 +118,18 @@ export class FormSessionStore {
   stepBackward(): void {
     this.adapter.stepBackward();
     this._bump();
+  }
+
+  /** Read-only passthrough: no bump, the outline never mutates the session. */
+  getOutline(): readonly OutlineNode[] {
+    return this.adapter.getOutline();
+  }
+
+  /** Jump to any relevant position by ref; bumps only when the jump happened. */
+  jumpToRef(ref: NodeRef): boolean {
+    const jumped = this.adapter.jumpToRef(ref);
+    if (jumped) this._bump();
+    return jumped;
   }
 
   jumpToIndex(index: number): void {
