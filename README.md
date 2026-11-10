@@ -377,7 +377,11 @@ const ok = store.jumpToRef(nodes[3].ref); // false if not relevant / not found
   repeat labels resolve itext and `<output>` (needs `@nuup/ts-rosa` >= 0.8.0).
 - With `createFormStore(xml, { instanceXml })` ts-rosa re-runs `calculate`
   and first-load `setvalue` on load, so a calculated field shows its
-  recalculated value, not the stored one.
+  recalculated value, not the stored one. For a literal read-only view pass
+  `skipInitialCascade: true`: stored values are kept as-is (relevance is
+  still evaluated against them, so relevance that depends on a calculated
+  field the XML left empty may differ from the original fill). Use that
+  store only for reading. Requires `@nuup/ts-rosa` >= 0.9.0.
 - `jumpToRef(ref)` works for any relevant position, not only visited ones,
   and keeps `stepBackward` / `jumpToIndex(n)` coherent. A ref inside a
   `field-list` or `inject-values` group lands on that group. It skips the

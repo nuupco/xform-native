@@ -153,3 +153,34 @@ describe('FormAdapter.getOutline group/repeat labels', () => {
     expect(labels).toEqual(['Datos generales', null, 'Parcela']);
   });
 });
+
+describe('createFormStore skipInitialCascade (literal document view)', () => {
+  const CALC_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head><h:title>Calc</h:title><model>
+    <instance><data id="calc"><a/><c/></data></instance>
+    <bind nodeset="/data/a" type="int"/>
+    <bind nodeset="/data/c" type="int" calculate="/data/a * 2"/>
+  </model></h:head>
+  <h:body>
+    <input ref="/data/a"><label>A</label></input>
+    <input ref="/data/c"><label>C</label></input>
+  </h:body>
+</h:html>`;
+  const STORED = `<?xml version="1.0"?><data id="calc"><a>1</a><c>99</c></data>`;
+  const valueOfC = (s: Awaited<ReturnType<typeof createFormStore>>) =>
+    (s.adapter.getOutline().find((n) => n.label === 'C') as { value: unknown }).value;
+
+  it('shows the recalculated value by default (existing behavior)', async () => {
+    const store = await createFormStore(CALC_XML, { instanceXml: STORED });
+    expect(valueOfC(store)).toBe(2);
+  });
+
+  it('keeps the stored value with skipInitialCascade: true', async () => {
+    const store = await createFormStore(CALC_XML, {
+      instanceXml: STORED,
+      skipInitialCascade: true,
+    });
+    expect(valueOfC(store)).toBe(99);
+  });
+});
