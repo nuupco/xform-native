@@ -178,6 +178,19 @@ export interface FormAdapter {
   getOutline(): readonly OutlineNode[];
   stepForward(): void;
   stepBackward(): void;
+  /**
+   * Jump to ANY currently relevant position by ref (not only visited ones).
+   * Returns `false` (cursor, step counter and cache untouched) when `ref`
+   * is not a listed outline node or is not relevant. A ref inside an
+   * `appearance="field-list"` / `"inject-values"` group lands on the
+   * outermost such group's own stop (that is where `Form` renders/plans
+   * it). `visitedCache` is rebuilt as the linear run of stops BOF→target
+   * (exactly what `stepForward` would have visited), `stepCount` = the
+   * target's ordinal, so `stepBackward`/`jumpToIndex(n <= target)` stay
+   * coherent. Like stepping, it creates missing jr:count repeat instances
+   * on the way.
+   */
+  jumpToRef(ref: NodeRef): boolean;
   /** Jump to a previously-visited position by its 0-based numeric index. */
   jumpToIndex(index: number): void;
   getNodeState(ref: NodeRef): NodeState;

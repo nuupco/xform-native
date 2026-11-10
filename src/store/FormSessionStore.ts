@@ -125,6 +125,13 @@ export class FormSessionStore {
     return this.adapter.getOutline();
   }
 
+  /** Jump to any relevant position by ref; bumps only when the jump happened. */
+  jumpToRef(ref: NodeRef): boolean {
+    const jumped = this.adapter.jumpToRef(ref);
+    if (jumped) this._bump();
+    return jumped;
+  }
+
   jumpToIndex(index: number): void {
     this.adapter.jumpToIndex(index);
     this._bump();

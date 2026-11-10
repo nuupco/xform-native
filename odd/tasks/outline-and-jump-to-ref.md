@@ -14,7 +14,7 @@ Objective: additive `adapter.getOutline()` and `adapter.jumpToRef(ref)` (also on
 ## Tasks
 
 - [x] T1 (S1-S3) `getOutline` + tests + store passthrough. inline (commit: see git log)
-- [ ] T2 (S4, S5) `jumpToRef` + cache rebuild + tests (read Form.tsx field-list/inject-values first). inline
+- [x] T2 (S4, S5) `jumpToRef` + cache rebuild + tests; field-list ancestor landing (path-based match). inject-values ancestors land on the group likewise.
 - [x] T3 (S6) ts-rosa pinned to v0.8.0; group/repeat labels via `navigator.getLabelAt`.
 - [ ] T4 README/CHANGELOG, version 1.6.0, release.
 
