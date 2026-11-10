@@ -114,8 +114,8 @@ export interface ValidationFailure {
  *
  * - `depth` is 0 for top-level nodes; a repeat instance is a `repeat` node
  *   (its `ref` is the concrete instance) whose children are one deeper.
- * - `label` of `group`/`repeat` comes from `FormElement.labelText` (inline
- *   labels only; itext labels need ts-rosa >= 0.8.0).
+ * - `label` of `group`/`repeat` is resolved with ts-rosa's `getLabelAt`
+ *   (active-language itext + `<output>` substitution; inline fallback).
  * - `value` is the unwrapped raw answer (`resolveValue`); `displayValue` is
  *   the selected choice label(s) for selects (joined with ", ") and the
  *   stringified value for string/number/boolean answers, else `null`.

@@ -108,3 +108,48 @@ describe('FormAdapter.getOutline', () => {
     expect(store.getOutline()).toEqual(store.adapter.getOutline());
   });
 });
+
+const ITEXT_FORM_XML = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Itext</h:title>
+    <model>
+      <itext>
+        <translation lang="es" default="true()">
+          <text id="sec:label"><value>Datos generales</value></text>
+          <text id="plot:label"><value>Parcela</value></text>
+        </translation>
+      </itext>
+      <instance>
+        <data id="itext"><sec><name/></sec><plots><plot jr:template=""><area/></plot></plots></data>
+      </instance>
+      <bind nodeset="/data/sec/name" type="string"/>
+      <bind nodeset="/data/plots/plot/area" type="int"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/sec">
+      <label ref="jr:itext('sec:label')"/>
+      <input ref="/data/sec/name"><label>Nombre</label></input>
+    </group>
+    <group ref="/data/plots">
+      <repeat nodeset="/data/plots/plot">
+        <label ref="jr:itext('plot:label')"/>
+        <input ref="/data/plots/plot/area"><label>Área</label></input>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>`;
+
+describe('FormAdapter.getOutline group/repeat labels', () => {
+  it('resolves itext labels of groups and repeats', async () => {
+    const store = await createFormStore(ITEXT_FORM_XML, {
+      instanceXml: `<?xml version="1.0"?><data id="itext" xmlns:jr="http://openrosa.org/javarosa"><sec><name>x</name></sec><plots><plot><area>1</area></plot></plots></data>`,
+    });
+    const labels = store.adapter
+      .getOutline()
+      .filter((n) => n.kind !== 'question')
+      .map((n) => n.label);
+    expect(labels).toEqual(['Datos generales', null, 'Parcela']);
+  });
+});

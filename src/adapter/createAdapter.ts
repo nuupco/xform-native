@@ -434,12 +434,12 @@ export function createAdapter(session: FormSession): FormAdapter {
               displayValue: outlineDisplayValue(ref, controlType, value),
             });
           } else if (kind === 'group') {
-            out.push({ kind: 'group', ref, label: navigator.resolvePath?.(idx.path)?.element.labelText ?? null, depth });
+            out.push({ kind: 'group', ref, label: navigator.getLabelAt(idx), depth });
           } else if (kind === 'repeat') {
             out.push({
               kind: 'repeat',
               ref,
-              label: navigator.resolvePath?.(idx.path)?.element.labelText ?? null,
+              label: navigator.getLabelAt(idx),
               depth,
               multiplicity: idx.path[idx.path.length - 1]?.multiplicity ?? 0,
             });
