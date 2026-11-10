@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (1.6.0)
+## 1.6.0
 
 Additive. Requires `@nuup/ts-rosa` v0.8.0.
 
