@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased (1.6.0)
+
+Additive. Requires `@nuup/ts-rosa` v0.8.0.
+
+- `adapter.getOutline()` / `store.getOutline()`: non-mutating, relevance-aware
+  list of groups, repeat instances and questions with values (`OutlineNode`).
+- `adapter.jumpToRef(ref)` / `store.jumpToRef(ref)`: jump to any relevant
+  position, keeping `visitedCache` and the step counter coherent.
+
 ## 1.2.1
 
 Bumps `@nuup/ts-rosa` to `v0.5.3`, which fixes `evaluator.validate()` to
