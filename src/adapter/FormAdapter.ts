@@ -107,6 +107,47 @@ export interface ValidationFailure {
 }
 
 /**
+ * OutlineNode — one relevant entry of the whole-form outline returned by
+ * `FormAdapter.getOutline()`. Plain primitives only (same firewall as
+ * `AdaptedEvent`). Non-relevant nodes are never listed, so there is no
+ * `relevant` flag.
+ *
+ * - `depth` is 0 for top-level nodes; a repeat instance is a `repeat` node
+ *   (its `ref` is the concrete instance) whose children are one deeper.
+ * - `label` of `group`/`repeat` comes from `FormElement.labelText` (inline
+ *   labels only; itext labels need ts-rosa >= 0.8.0).
+ * - `value` is the unwrapped raw answer (`resolveValue`); `displayValue` is
+ *   the selected choice label(s) for selects (joined with ", ") and the
+ *   stringified value for string/number/boolean answers, else `null`.
+ */
+export type OutlineNode =
+  | {
+      readonly kind: 'group';
+      readonly ref: NodeRef;
+      readonly label: string | null;
+      readonly depth: number;
+    }
+  | {
+      readonly kind: 'repeat';
+      readonly ref: NodeRef;
+      readonly label: string | null;
+      readonly depth: number;
+      readonly multiplicity: number;
+    }
+  | {
+      readonly kind: 'question';
+      readonly ref: NodeRef;
+      readonly label: string | null;
+      readonly depth: number;
+      readonly dataType: DataType;
+      readonly controlType: ControlType;
+      readonly required: boolean;
+      readonly answered: boolean;
+      readonly value: unknown;
+      readonly displayValue: string | null;
+    };
+
+/**
  * FormAdapter — the sole translation layer between ts-rosa session internals
  * and the widget/Form layer.
  */
@@ -127,6 +168,14 @@ export interface FormAdapter {
    * `resolvePath` support (defensive — keeps older test doubles working).
    */
   getCurrentPath(): readonly PathSegment[];
+  /**
+   * Every relevant group / repeat instance / question of the form in
+   * document order, WITHOUT moving the cursor (`visitedCache` and the step
+   * counter are untouched) and without writing to the instance. Repeats are
+   * expanded per existing instance; `prompt-new-repeat` stops are not
+   * listed. O(form size): memoize per `store.getSnapshot().version`.
+   */
+  getOutline(): readonly OutlineNode[];
   stepForward(): void;
   stepBackward(): void;
   /** Jump to a previously-visited position by its 0-based numeric index. */
