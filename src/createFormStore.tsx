@@ -47,6 +47,15 @@ export interface MediaResolver {
 export interface CreateFormStoreOpts {
   /** Edit-mode hydration passthrough. */
   instanceXml?: string;
+  /**
+   * With `instanceXml`: load the stored values literally. ts-rosa skips the
+   * initial `calculate` cascade and the first-load `setvalue` actions
+   * (relevance/required/readonly are still evaluated against the stored
+   * values). For read-only views (document view); mutating the session
+   * afterwards re-enables normal recalculation. Ignored without
+   * `instanceXml`. Requires `@nuup/ts-rosa` >= 0.9.0.
+   */
+  skipInitialCascade?: boolean;
   /** Host fetch seam for `jr://` external instance URIs. */
   externalInstanceResolver?: ExternalDataFetcher;
   /** Optional host override of the XmlParser seam. */
@@ -171,16 +180,24 @@ async function runCreateFormStore(
       : await resolveExternalInstancesPhase();
   }
 
+  const sessionOpts =
+    opts?.instanceXml !== undefined
+      ? {
+          instanceXml: opts.instanceXml,
+          ...(opts.skipInitialCascade ? { skipInitialCascade: true } : {}),
+        }
+      : undefined;
+
   const session = timer
     ? timer.run('createFormSession', () =>
         createFormSession(
           def,
-          opts?.instanceXml !== undefined ? { instanceXml: opts.instanceXml } : undefined
+          sessionOpts
         )
       )
     : createFormSession(
         def,
-        opts?.instanceXml !== undefined ? { instanceXml: opts.instanceXml } : undefined
+        sessionOpts
       );
 
   return new FormSessionStore(session, opts?.mediaResolver);

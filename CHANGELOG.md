@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.0
+
+Additive. Requires `@nuup/ts-rosa` v0.9.0.
+
+- `createFormStore(xml, { instanceXml, skipInitialCascade: true })`: load the
+  stored values literally (no initial `calculate` cascade, no first-load
+  `setvalue`) for read-only document views. Default behavior unchanged.
+
 ## 1.6.0
 
 Additive. Requires `@nuup/ts-rosa` v0.8.0.
